@@ -62,6 +62,10 @@ export default function RootLayout({
           {children}
         </main>
         <Footer />
+        <div
+          className="md:hidden h-[calc(72px+env(safe-area-inset-bottom))] bg-zinc-900"
+          aria-hidden="true"
+        />
         <MobileNav />
         <CartDrawer />
         <AIAssistant />

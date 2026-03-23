@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Zap, Phone, Mail, MapPin } from 'lucide-react'
+import { Phone, Mail, MapPin, Instagram, Facebook } from 'lucide-react'
 
 const SHOP_LINKS = [
   { href: '/shop/avtozvuk', label: 'Автозвук' },
@@ -16,27 +16,24 @@ const INFO_LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="bg-bg-surface border-t border-border mt-auto">
+    <footer className="mt-auto bg-zinc-900 border-t border-zinc-700/80 text-zinc-100">
       <div className="container-xl py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <span className="flex items-center justify-center size-8 bg-accent rounded text-white">
-                <Zap size={16} strokeWidth={2.5} />
-              </span>
-              <span className="font-bold text-lg tracking-tight text-text-primary">
+              <span className="font-bold text-lg tracking-tight text-zinc-100">
                 AUTO<span className="text-accent">CAST</span>
               </span>
             </Link>
-            <p className="text-sm text-text-secondary leading-relaxed">
+            <p className="text-sm text-zinc-300 leading-relaxed">
               Преміальні автозапчастини та електроніка. Якість, яка говорить сама за себе.
             </p>
           </div>
 
           {/* Catalog */}
           <div>
-            <h4 className="text-sm font-semibold text-text-primary mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
               Каталог
             </h4>
             <ul className="flex flex-col gap-2.5">
@@ -44,7 +41,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                    className="text-sm text-zinc-300 hover:text-white transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -55,7 +52,7 @@ export default function Footer() {
 
           {/* Info */}
           <div>
-            <h4 className="text-sm font-semibold text-text-primary mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
               Інформація
             </h4>
             <ul className="flex flex-col gap-2.5">
@@ -63,7 +60,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                    className="text-sm text-zinc-300 hover:text-white transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -74,39 +71,68 @@ export default function Footer() {
 
           {/* Contacts */}
           <div>
-            <h4 className="text-sm font-semibold text-text-primary mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
               Контакти
             </h4>
             <ul className="flex flex-col gap-3">
-              <li className="flex items-center gap-2.5 text-sm text-text-secondary">
+              <li className="flex items-center gap-2.5 text-sm text-zinc-300">
                 <Phone size={15} className="text-accent shrink-0" />
-                <a href="tel:+380672391640" className="hover:text-text-primary transition-colors">
+                <a href="tel:+380672391640" className="hover:text-white transition-colors">
                   +38 067 239 1640
                 </a>
               </li>
-              <li className="flex items-center gap-2.5 text-sm text-text-secondary">
+              <li className="flex items-center gap-2.5 text-sm text-zinc-300">
                 <Mail size={15} className="text-accent shrink-0" />
-                <a href="mailto:info@autocast.com.ua" className="hover:text-text-primary transition-colors">
-                  info@autocast.com.ua
+                <a href="mailto:autocast.com.ua@gmail.com" className="hover:text-white transition-colors">
+                  autocast.com.ua@gmail.com
                 </a>
               </li>
-              <li className="flex items-start gap-2.5 text-sm text-text-secondary">
+              <li className="flex items-start gap-2.5 text-sm text-zinc-300">
                 <MapPin size={15} className="text-accent shrink-0 mt-0.5" />
-                <span>Україна, Київ</span>
+                <span>м. Житомир, вулиця Вітрука, 12в</span>
               </li>
             </ul>
+            <div className="flex items-center gap-3 mt-5">
+              <a
+                href="https://www.instagram.com/autocast.com.ua/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-zinc-300 hover:text-white transition-colors"
+              >
+                <Instagram size={15} className="text-accent" />
+                Instagram
+              </a>
+              <a
+                href="https://autocast.com.ua/about-us/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-zinc-300 hover:text-white transition-colors"
+              >
+                <Facebook size={15} className="text-accent" />
+                Facebook
+              </a>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-border">
-        <div className="container-xl py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-text-muted">
+      <div>
+        <div className="container-xl py-5 grid grid-cols-1 md:grid-cols-3 items-center gap-2">
+          <p className="text-xs text-zinc-400 text-center md:text-left">
             © {new Date().getFullYear()} Autocast. Усі права захищено.
           </p>
-          <p className="text-xs text-text-muted">
-            Розроблено з увагою до деталей
+          <p className="text-xs text-zinc-400 text-center">
+            Developed by{' '}
+            <a
+              href="https://stepslab.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-300 hover:text-white transition-colors underline-offset-2 hover:underline"
+            >
+              STEPS LAB
+            </a>
           </p>
+          <div className="hidden md:block" />
         </div>
       </div>
     </footer>
