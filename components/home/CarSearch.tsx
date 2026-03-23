@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { Car, ChevronDown, Search } from 'lucide-react'
+import { Check, ChevronDown, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { CAR_MAKES, CAR_MODELS } from '@/lib/data/seed'
 
@@ -18,31 +18,118 @@ interface SelectProps {
   options: { value: string; label: string }[]
   disabled?: boolean
   placeholder?: string
+  searchable?: boolean
+  searchPlaceholder?: string
 }
 
-function Select({ label, value, onChange, options, disabled, placeholder }: SelectProps) {
+function Select({
+  label,
+  value,
+  onChange,
+  options,
+  disabled,
+  placeholder,
+  searchable = false,
+  searchPlaceholder,
+}: SelectProps) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const selectedOption = options.find(o => o.value === value)
+
+  const filteredOptions = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return options
+    return options.filter(o => o.label.toLowerCase().includes(q))
+  }, [options, search])
+
+  useEffect(() => {
+    if (!open) setSearch('')
+  }, [open])
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
+  useEffect(() => {
+    if (disabled) setOpen(false)
+  }, [disabled])
+
   return (
-    <div className="flex flex-col gap-1">
+    <div ref={containerRef} className="flex flex-col gap-1 relative">
       <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
         {label}
       </label>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          disabled={disabled}
-          className="w-full h-11 bg-bg-elevated border border-border rounded px-3 pr-8 text-sm text-text-primary appearance-none cursor-pointer focus:outline-none focus:border-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          <option value="">{placeholder ?? `Виберіть ${label.toLowerCase()}`}</option>
-          {options.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(v => !v)}
+        className={cn(
+          'w-full h-11 bg-bg-surface border border-border rounded px-3 pr-8 text-sm text-left text-text-primary',
+          'focus:outline-none focus:border-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+          open && 'border-accent'
+        )}
+      >
+        <span className={cn(!selectedOption && 'text-text-muted')}>
+          {selectedOption?.label ?? placeholder ?? `Виберіть ${label.toLowerCase()}`}
+        </span>
         <ChevronDown
           size={14}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+          className={cn(
+            'absolute right-3 top-[calc(50%+11px)] -translate-y-1/2 text-text-muted pointer-events-none transition-transform',
+            open && 'rotate-180'
+          )}
         />
-      </div>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-20 rounded-md border border-border bg-bg-surface shadow-lg overflow-hidden">
+          {searchable && (
+            <div className="p-2 border-b border-border">
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder={searchPlaceholder ?? `Пошук: ${label.toLowerCase()}`}
+                  className="w-full h-9 rounded border border-border bg-bg-surface pl-8 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="max-h-56 overflow-y-auto py-1">
+            {filteredOptions.length === 0 && (
+              <p className="px-3 py-2 text-sm text-text-muted">Нічого не знайдено</p>
+            )}
+            {filteredOptions.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value)
+                  setOpen(false)
+                }}
+                className={cn(
+                  'w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left transition-colors',
+                  'hover:bg-bg-elevated',
+                  value === option.value && 'text-accent'
+                )}
+              >
+                <span className="truncate">{option.label}</span>
+                {value === option.value && <Check size={14} className="shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -79,8 +166,7 @@ export default function CarSearch() {
           transition={{ duration: 0.5 }}
           className="text-center mb-8"
         >
-          <div className="inline-flex items-center gap-2 mb-3">
-            <Car size={20} className="text-accent" />
+          <div className="mb-3">
             <h2 className="text-headline text-text-primary">Пошук по авто</h2>
           </div>
           <p className="text-text-secondary text-sm">
@@ -109,78 +195,58 @@ export default function CarSearch() {
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-[1fr_280px] gap-6 items-start">
-              <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
-                  <Select
-                    label="Марка"
-                    value={make}
-                    onChange={v => {
-                      setMake(v)
-                      setModel('')
-                    }}
-                    options={CAR_MAKES.map(m => ({ value: m.id, label: m.name }))}
-                    placeholder="Виберіть марку"
-                  />
-                  <Select
-                    label="Модель"
-                    value={model}
-                    onChange={setModel}
-                    options={models.map(m => ({ value: m, label: m }))}
-                    disabled={!make}
-                    placeholder="Виберіть модель"
-                  />
-                  <Select
-                    label="Двигун"
-                    value={engine}
-                    onChange={setEngine}
-                    options={ENGINES.map(item => ({ value: item, label: item }))}
-                    placeholder="Виберіть двигун"
-                  />
-                  <Select
-                    label="Рік"
-                    value={year}
-                    onChange={setYear}
-                    options={YEARS.map(y => ({ value: String(y), label: String(y) }))}
-                    placeholder="Виберіть рік"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSearch}
-                  disabled={!make}
-                  fullWidth
-                  size="lg"
-                  className="gap-2 micro-pop"
-                >
-                  <Search size={18} />
-                  Знайти запчастини
-                </Button>
-              </div>
-
-              <div className="relative rounded-md overflow-hidden border border-border bg-bg-surface min-h-48">
-                <Image
-                  src={
-                    selectedMake
-                      ? 'https://images.unsplash.com/photo-1617814065893-00757125efec?w=900&auto=format&fit=crop&q=80'
-                      : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=900&auto=format&fit=crop&q=80'
-                  }
-                  alt="Підбір по авто"
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 280px"
-                  className="object-cover"
+            <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+                <Select
+                  label="Марка"
+                  value={make}
+                  onChange={v => {
+                    setMake(v)
+                    setModel('')
+                  }}
+                  options={CAR_MAKES.map(m => ({ value: m.id, label: m.name }))}
+                  placeholder="Виберіть марку"
+                  searchable
+                  searchPlaceholder="Пошук марки..."
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/90 via-bg-primary/30 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3">
-                  <p className="text-xs text-accent uppercase tracking-widest mb-1">Вибране авто</p>
-                  <p className="text-sm text-white font-semibold">
-                    {selectedMake ?? 'Оберіть марку'} {model ? `• ${model}` : ''}
-                  </p>
-                  <p className="text-xs text-white/75 mt-0.5">
-                    {engine || 'Двигун не вибрано'} {year ? `• ${year}` : ''}
-                  </p>
-                </div>
+                <Select
+                  label="Модель"
+                  value={model}
+                  onChange={setModel}
+                  options={models.map(m => ({ value: m, label: m }))}
+                  disabled={!make}
+                  placeholder="Виберіть модель"
+                  searchable
+                  searchPlaceholder="Пошук моделі..."
+                />
+                <Select
+                  label="Двигун"
+                  value={engine}
+                  onChange={setEngine}
+                  options={ENGINES.map(item => ({ value: item, label: item }))}
+                  placeholder="Виберіть двигун"
+                />
+                <Select
+                  label="Рік"
+                  value={year}
+                  onChange={setYear}
+                  options={YEARS.map(y => ({ value: String(y), label: String(y) }))}
+                  placeholder="Виберіть рік"
+                  searchable
+                  searchPlaceholder="Пошук року..."
+                />
               </div>
+
+              <Button
+                onClick={handleSearch}
+                disabled={!make}
+                fullWidth
+                size="lg"
+                className="gap-2 micro-pop"
+              >
+                <Search size={18} />
+                Знайти запчастини
+              </Button>
             </div>
           </div>
         </motion.div>
