@@ -3,15 +3,15 @@
 /* ─── Design Tokens ────────────────────────────────────────────── */
 @theme inline {
   /* Background layers */
-  --color-bg-primary:   #09090B;
-  --color-bg-surface:   #18181B;
-  --color-bg-elevated:  #27272A;
-  --color-bg-overlay:   #3F3F46;
+  --color-bg-primary:   #F7F8FA;
+  --color-bg-surface:   #FFFFFF;
+  --color-bg-elevated:  #F1F3F7;
+  --color-bg-overlay:   #E2E8F0;
 
   /* Text */
-  --color-text-primary:   #FAFAFA;
-  --color-text-secondary: #A1A1AA;
-  --color-text-muted:     #71717A;
+  --color-text-primary:   #0F172A;
+  --color-text-secondary: #334155;
+  --color-text-muted:     #64748B;
 
   /* Accent — automotive red */
   --color-accent:       #DC2626;
@@ -19,8 +19,8 @@
   --color-accent-light: #FCA5A5;
 
   /* Borders */
-  --color-border:       #3F3F46;
-  --color-border-light: #52525B;
+  --color-border:       #CBD5E1;
+  --color-border-light: #94A3B8;
 
   /* Status */
   --color-success: #22C55E;
@@ -39,15 +39,15 @@
   --radius-xl:  16px;
 
   /* Shadows */
-  --shadow-sm:  0 1px 2px 0 rgb(0 0 0 / 0.5);
-  --shadow:     0 4px 12px 0 rgb(0 0 0 / 0.6);
-  --shadow-lg:  0 12px 32px 0 rgb(0 0 0 / 0.7);
+  --shadow-sm:  0 1px 2px 0 rgb(15 23 42 / 0.08);
+  --shadow:     0 6px 20px 0 rgb(15 23 42 / 0.10);
+  --shadow-lg:  0 20px 44px 0 rgb(15 23 42 / 0.14);
   --shadow-glow: 0 0 24px rgb(220 38 38 / 0.2);
 }
 
 /* ─── Base ─────────────────────────────────────────────────────── */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 *,
@@ -111,17 +111,17 @@ body {
 
 /* ─── Glassmorphism utility ────────────────────────────────────── */
 .glass {
-  background: rgb(9 9 11 / 0.7);
+  background: rgb(255 255 255 / 0.78);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgb(63 63 70 / 0.5);
+  border: 1px solid rgb(203 213 225 / 0.7);
 }
 
 .glass-light {
-  background: rgb(24 24 27 / 0.6);
+  background: rgb(248 250 252 / 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgb(63 63 70 / 0.4);
+  border: 1px solid rgb(203 213 225 / 0.6);
 }
 
 /* ─── Shimmer skeleton animation ──────────────────────────────── */
