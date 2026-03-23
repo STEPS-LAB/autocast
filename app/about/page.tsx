@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Shield, Zap, Award, Users, MapPin, Phone, Mail } from 'lucide-react'
 import PageTransition from '@/components/layout/PageTransition'
@@ -37,14 +38,24 @@ export default function AboutPage() {
       {/* Hero */}
       <section className="py-20 border-b border-border">
         <div className="container-xl max-w-3xl">
-          <p className="text-xs text-accent uppercase tracking-widest font-medium mb-3">Про компанію</p>
           <h1 className="text-display text-text-primary mb-6">
             Ми — Autocast
           </h1>
           <p className="text-lg text-text-secondary leading-relaxed">
-            Autocast — це команда ентузіастів та авто-фахівців, які з 2019 року постачають преміальну
-            автоелектроніку та запчастини для водіїв, що цінують якість.
+            Ми займаємось продажем автотоварів та автоаксесуарів вже понад 10 років. Наша команда здатна
+            підібрати саме те, що вам потрібно як можна швидше. Також ми маємо майстерю, в якій можемо
+            покращити, модернізувати ваш автомобіль та зробити справжнє чудо для вашого авто!
           </p>
+          <div className="mt-8 rounded-lg overflow-hidden border border-border">
+            <Image
+              src="/images/for-pro-nas.jpg"
+              alt="Наша команда та майстерня"
+              width={1200}
+              height={700}
+              className="w-full h-auto object-cover"
+              priority
+            />
+          </div>
         </div>
       </section>
 
@@ -71,7 +82,7 @@ export default function AboutPage() {
         <div className="container-xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { value: '2019', label: 'Рік заснування' },
+              { value: '2016', label: 'Рік заснування' },
               { value: '500+', label: 'Товарів' },
               { value: '12K+', label: 'Клієнтів' },
               { value: '50+', label: 'Брендів' },
