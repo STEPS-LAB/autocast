@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, User, Menu, X, Zap, Search } from 'lucide-react'
+import { ShoppingCart, User, Menu, X, Search } from 'lucide-react'
 import { useCartStore, selectCartCount } from '@/lib/store/cart'
 import { cn } from '@/lib/utils'
 import SmartSearchBar from '@/components/search/SmartSearchBar'
@@ -49,10 +49,7 @@ export default function Header() {
           <div className="flex items-center justify-between h-[70px] gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group">
-              <span className="flex items-center justify-center size-8 bg-accent rounded text-white">
-                <Zap size={16} strokeWidth={2.5} />
-              </span>
-              <span className="font-bold text-lg tracking-tight text-text-primary">
+              <span className="font-bold text-[22px] tracking-tight text-text-primary">
                 AUTO<span className="text-accent">CAST</span>
               </span>
             </Link>
@@ -179,8 +176,16 @@ export default function Header() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            className="fixed inset-y-0 right-0 z-50 w-full max-w-xs glass border-l border-border/50 flex flex-col pt-20 pb-8 px-6"
+            className="fixed inset-y-0 right-0 z-50 w-full max-w-xs border-l border-border bg-bg-surface/95 backdrop-blur-xl shadow-2xl flex flex-col pt-20 pb-8 px-6"
           >
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="absolute top-5 right-5 p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+              aria-label="Закрити меню"
+            >
+              <X size={20} />
+            </button>
+
             <nav className="flex flex-col gap-1">
               <Link
                 href="/account"
@@ -226,7 +231,7 @@ export default function Header() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm md:hidden"
             onClick={() => setMobileOpen(false)}
           />
         )}

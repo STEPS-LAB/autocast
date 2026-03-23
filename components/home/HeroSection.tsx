@@ -123,12 +123,12 @@ export default function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="flex flex-wrap lg:flex-nowrap gap-6 lg:gap-10 lg:justify-end lg:ml-auto lg:text-right"
+              className="grid grid-cols-3 gap-4 lg:flex lg:flex-nowrap lg:gap-10 lg:justify-end lg:ml-auto lg:text-right"
             >
               {STATS.map(({ label, value }) => (
                 <div key={label} className="text-center">
                   <p className="text-impact text-text-primary">{value}</p>
-                  <p className="text-xs text-text-secondary mt-0.5">{label}</p>
+                  <p className="text-[11px] leading-tight text-text-secondary mt-0.5">{label}</p>
                 </div>
               ))}
             </motion.div>
