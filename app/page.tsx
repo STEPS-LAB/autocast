@@ -3,6 +3,8 @@ import HeroSection from '@/components/home/HeroSection'
 import CarSearch from '@/components/home/CarSearch'
 import FeaturedCategories from '@/components/home/FeaturedCategories'
 import FeaturedProducts from '@/components/home/FeaturedProducts'
+import TrustHighlights from '@/components/home/TrustHighlights'
+import HomeNews from '@/components/home/HomeNews'
 import VINSearch from '@/components/vin/VINSearch'
 import PageTransition from '@/components/layout/PageTransition'
 
@@ -19,6 +21,8 @@ export default function HomePage() {
       <CarSearch />
       <FeaturedCategories />
       <FeaturedProducts />
+      <TrustHighlights />
+      <HomeNews />
       <VINSearch />
     </PageTransition>
   )

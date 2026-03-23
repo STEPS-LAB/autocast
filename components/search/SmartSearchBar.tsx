@@ -114,13 +114,13 @@ export default function SmartSearchBar({
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Пошук товарів…"
+          placeholder="Введіть назву товару..."
           autoComplete="off"
           className={cn(
-            'w-full bg-bg-surface border border-border rounded',
+            'no-focus-outline w-full bg-bg-surface border border-border rounded',
             'text-text-primary placeholder:text-text-muted text-sm',
             'pl-9 pr-8 transition-colors duration-150',
-            'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20',
+            'focus:outline-none focus-visible:outline-none focus-visible:outline-0 focus:border-border-light focus:ring-0 focus-visible:ring-0',
             compact ? 'h-9' : 'h-11'
           )}
         />

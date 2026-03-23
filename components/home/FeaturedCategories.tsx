@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Shield, Speaker, Sparkles, Zap } from 'lucide-react'
 import { CATEGORIES } from '@/lib/data/seed'
 
 const container = {
@@ -18,6 +18,8 @@ const item = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 }
+
+const ICONS = [Speaker, Sparkles, Zap, Shield]
 
 export default function FeaturedCategories() {
   return (
@@ -52,9 +54,11 @@ export default function FeaturedCategories() {
           viewport={{ once: true }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
         >
-          {CATEGORIES.map(cat => (
+          {CATEGORIES.map((cat, index) => {
+            const Icon = ICONS[index % ICONS.length]
+            return (
             <motion.div key={cat.id} variants={item}>
-              <Link href={`/shop/${cat.slug}`} className="group block">
+              <Link href={`/shop/${cat.slug}`} className="group block micro-lift">
                 <div className="relative aspect-[4/3] rounded-md overflow-hidden bg-bg-surface border border-border mb-3">
                   {cat.image_url && (
                     <Image
@@ -66,10 +70,14 @@ export default function FeaturedCategories() {
                     />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/80 via-transparent to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-3">
-                    <span className="text-xs text-text-muted">Переглянути</span>
+                  <div className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded border border-white/35 bg-bg-primary/50 px-2 py-1 backdrop-blur-sm">
+                    <Icon size={12} className="text-white" />
+                    <span className="text-[10px] uppercase tracking-wider text-white">Категорія</span>
                   </div>
-                  {/* Hover overlay */}
+                  <div className="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between">
+                    <span className="text-xs text-white">Переглянути</span>
+                    <ArrowRight size={14} className="text-white transition-transform group-hover:translate-x-0.5" />
+                  </div>
                   <div className="absolute inset-0 bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
                 <div className="flex items-center justify-between px-0.5">
@@ -83,7 +91,8 @@ export default function FeaturedCategories() {
                 </div>
               </Link>
             </motion.div>
-          ))}
+            )
+          })}
         </motion.div>
       </div>
     </section>

@@ -99,6 +99,24 @@ body {
   border-radius: var(--radius-sm);
 }
 
+.no-focus-outline:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
+.no-focus-outline:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: var(--color-border-light) !important;
+}
+
+.no-focus-outline:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border-color: var(--color-border-light) !important;
+}
+
 /* ─── Noise texture overlay ────────────────────────────────────── */
 .noise-overlay::after {
   content: '';
@@ -157,6 +175,13 @@ body {
   line-height: 1.2;
 }
 
+.text-impact {
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
 /* ─── Price display ────────────────────────────────────────────── */
 .price {
   font-family: var(--font-mono, monospace);
@@ -183,4 +208,23 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ─── Micro interactions ───────────────────────────────────────── */
+.micro-lift {
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.micro-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+  border-color: var(--color-border-light);
+}
+
+.micro-pop {
+  transition: transform 160ms ease;
+}
+
+.micro-pop:hover {
+  transform: translateY(-1px) scale(1.01);
 }

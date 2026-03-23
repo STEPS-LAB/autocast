@@ -44,7 +44,7 @@ export default function Header() {
         )}
       >
         <div className="container-xl">
-          <div className="flex items-center justify-between h-16 gap-4">
+          <div className="flex items-center justify-between h-[70px] gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group">
               <span className="flex items-center justify-center size-8 bg-accent rounded text-white">
@@ -67,13 +67,18 @@ export default function Header() {
                     key={link.href}
                     href={link.href}
                     className={cn(
-                      'relative text-sm font-medium transition-colors duration-150',
+                      'relative px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300',
+                      !isActive &&
+                        'after:absolute after:-bottom-1 after:left-3 after:right-3 after:h-[2px] after:rounded-full after:scale-x-0 after:origin-left',
+                      !isActive &&
+                        'after:bg-gradient-to-r after:from-accent/80 after:to-accent/40 after:transition-transform after:duration-300',
+                      !isActive && 'hover:after:scale-x-100',
                       isActive
                         ? 'text-text-primary'
                         : 'text-text-secondary hover:text-text-primary'
                     )}
                   >
-                    {link.label}
+                    <span className="relative z-10">{link.label}</span>
                     {isActive && (
                       <motion.span
                         layoutId="nav-indicator"
