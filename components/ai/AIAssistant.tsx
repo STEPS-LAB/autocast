@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageCircle, X, Send, Bot, ChevronDown } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import type { AIMessage } from '@/types'
 import { generateId } from '@/lib/utils'
@@ -94,7 +95,9 @@ function renderMessage(content: string) {
 }
 
 export default function AIAssistant() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [inHeroSection, setInHeroSection] = useState(pathname === '/')
   const [messages, setMessages] = useState<AIMessage[]>([GREETING])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
@@ -107,6 +110,29 @@ export default function AIAssistant() {
       setTimeout(() => inputRef.current?.focus(), 300)
     }
   }, [messages, open])
+
+  useEffect(() => {
+    const updateHeroVisibility = () => {
+      if (pathname !== '/') {
+        setInHeroSection(false)
+        return
+      }
+      const heroThreshold = Math.max(window.innerHeight - 140, 360)
+      setInHeroSection(window.scrollY < heroThreshold)
+    }
+
+    updateHeroVisibility()
+    window.addEventListener('scroll', updateHeroVisibility, { passive: true })
+    window.addEventListener('resize', updateHeroVisibility)
+    return () => {
+      window.removeEventListener('scroll', updateHeroVisibility)
+      window.removeEventListener('resize', updateHeroVisibility)
+    }
+  }, [pathname])
+
+  useEffect(() => {
+    if (inHeroSection && open) setOpen(false)
+  }, [inHeroSection, open])
 
   function sendMessage(text: string) {
     const q = text.trim()
@@ -139,47 +165,55 @@ export default function AIAssistant() {
   return (
     <>
       {/* Floating button */}
-      <motion.button
-        onClick={() => setOpen(v => !v)}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className={cn(
-          'fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40',
-          'size-12 rounded-full bg-accent text-white shadow-lg',
-          'flex items-center justify-center',
-          'transition-colors duration-200',
-          open && 'bg-bg-elevated text-text-primary'
+      <AnimatePresence>
+        {!inHeroSection && (
+          <motion.button
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 28 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            onClick={() => setOpen(v => !v)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={cn(
+              'fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40',
+              'size-12 rounded-full bg-accent text-white shadow-lg',
+              'flex items-center justify-center',
+              'transition-colors duration-200',
+              open && 'bg-bg-elevated text-text-primary'
+            )}
+            aria-label="AI консультант"
+          >
+            <AnimatePresence mode="wait">
+              {open ? (
+                <motion.span
+                  key="close"
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <X size={20} />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="open"
+                  initial={{ rotate: 90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: -90, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <MessageCircle size={20} />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         )}
-        aria-label="AI консультант"
-      >
-        <AnimatePresence mode="wait">
-          {open ? (
-            <motion.span
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <X size={20} />
-            </motion.span>
-          ) : (
-            <motion.span
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <MessageCircle size={20} />
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
+      </AnimatePresence>
 
       {/* Chat window */}
       <AnimatePresence>
-        {open && (
+        {open && !inHeroSection && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20, originX: 1, originY: 1 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
