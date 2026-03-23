@@ -60,7 +60,6 @@ export default function Header() {
       >
         <div className="container-xl">
           <div className="flex items-center justify-between h-[70px] gap-4">
-            {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group">
               <span className="font-bold text-[22px] tracking-tight text-text-primary">
                 AUTO<span className="text-accent">CAST</span>
@@ -133,7 +132,7 @@ export default function Header() {
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       exit={{ scale: 0 }}
-                      className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-accent text-white text-xs font-bold rounded-full flex items-center justify-center"
+                      className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-accent text-text-primary text-xs font-bold rounded-full flex items-center justify-center"
                     >
                       {count > 99 ? '99+' : count}
                     </motion.span>

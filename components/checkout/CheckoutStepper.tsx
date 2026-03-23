@@ -26,7 +26,7 @@ export default function CheckoutStepper({ steps, current }: CheckoutStepperProps
                 className={cn(
                   'size-8 rounded-full flex items-center justify-center border-2 text-sm font-semibold transition-all',
                   isDone && 'border-success bg-success text-white',
-                  isActive && 'border-accent bg-accent text-white',
+                  isActive && 'border-accent bg-accent text-text-primary',
                   !isDone && !isActive && 'border-border bg-bg-elevated text-text-muted'
                 )}
               >

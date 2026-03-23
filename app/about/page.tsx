@@ -46,7 +46,7 @@ export default function AboutPage() {
             підібрати саме те, що вам потрібно як можна швидше. Також ми маємо майстерю, в якій можемо
             покращити, модернізувати ваш автомобіль та зробити справжнє чудо для вашого авто!
           </p>
-          <div className="mt-8 w-[70%] mx-auto rounded-lg overflow-hidden border border-border">
+          <div className="mt-8 w-full md:w-[70%] mx-auto rounded-lg overflow-hidden border border-border">
             <Image
               src="/images/for-pro-nas.jpg"
               alt="Наша команда та майстерня"

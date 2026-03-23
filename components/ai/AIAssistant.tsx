@@ -188,7 +188,7 @@ export default function AIAssistant() {
             whileTap={{ scale: 0.95 }}
             className={cn(
               'fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50',
-              'size-12 rounded-full bg-accent text-white shadow-lg',
+              'size-12 rounded-full bg-accent text-text-primary shadow-lg',
               'flex items-center justify-center',
               'transition-colors duration-200',
               open && 'bg-bg-elevated text-text-primary'
@@ -251,7 +251,7 @@ export default function AIAssistant() {
             {/* Header */}
             <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-bg-surface/80">
               <div className="size-7 rounded-full bg-accent flex items-center justify-center shrink-0">
-                <Bot size={14} className="text-white" />
+                <Bot size={14} className="text-text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-text-primary">AI Консультант</p>
@@ -283,14 +283,14 @@ export default function AIAssistant() {
                 >
                   {msg.role === 'assistant' && (
                     <div className="size-6 rounded-full bg-accent flex items-center justify-center shrink-0 mr-2 mt-0.5">
-                      <Bot size={12} className="text-white" />
+                      <Bot size={12} className="text-text-primary" />
                     </div>
                   )}
                   <div
                     className={cn(
                       'max-w-[80%] px-3 py-2 rounded-lg text-sm leading-relaxed',
                       msg.role === 'user'
-                        ? 'bg-accent text-white rounded-br-sm'
+                        ? 'bg-accent text-text-primary rounded-br-sm'
                         : 'bg-bg-elevated text-text-primary border border-border rounded-bl-sm'
                     )}
                   >
@@ -305,7 +305,7 @@ export default function AIAssistant() {
               {typing && (
                 <div className="flex justify-start">
                   <div className="size-6 rounded-full bg-accent flex items-center justify-center shrink-0 mr-2 mt-0.5">
-                    <Bot size={12} className="text-white" />
+                    <Bot size={12} className="text-text-primary" />
                   </div>
                   <div className="bg-bg-elevated border border-border px-3 py-2.5 rounded-lg rounded-bl-sm">
                     <div className="flex gap-1 items-center h-3">
@@ -369,7 +369,7 @@ export default function AIAssistant() {
                   type="submit"
                   disabled={!input.trim() || typing}
                   className={cn(
-                    'size-9 rounded bg-accent text-white flex items-center justify-center',
+                    'size-9 rounded bg-accent text-text-primary flex items-center justify-center',
                     'hover:bg-accent-hover transition-colors',
                     'disabled:opacity-40 disabled:cursor-not-allowed'
                   )}

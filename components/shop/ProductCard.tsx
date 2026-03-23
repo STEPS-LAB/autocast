@@ -134,7 +134,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
             'flex items-center justify-center gap-2 h-9 rounded text-sm font-medium',
             'transition-all duration-150 active:scale-[0.98]',
             product.stock > 0
-              ? 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white'
+              ? 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-text-primary'
               : 'bg-bg-elevated text-text-muted cursor-not-allowed border border-border'
           )}
         >

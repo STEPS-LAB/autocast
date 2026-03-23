@@ -90,7 +90,7 @@ export default function RegisterPage() {
           className="w-full max-w-sm"
         >
           <div className="flex items-center justify-center gap-2 mb-8">
-            <span className="flex items-center justify-center size-9 bg-accent rounded text-white">
+            <span className="flex items-center justify-center size-9 bg-accent rounded text-text-primary">
               <Zap size={18} strokeWidth={2.5} />
             </span>
             <span className="font-bold text-xl text-text-primary">

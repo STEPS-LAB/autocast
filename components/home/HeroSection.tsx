@@ -55,7 +55,7 @@ export default function HeroSection() {
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-bg-primary/95 via-bg-primary/70 to-bg-primary/40" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_45%_at_30%_40%,rgba(220,38,38,0.25),transparent)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_45%_at_30%_40%,rgb(255_193_7/0.22),transparent)]" />
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-bg-primary to-transparent" />
       </motion.div>

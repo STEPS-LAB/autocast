@@ -13,10 +13,10 @@
   --color-text-secondary: #334155;
   --color-text-muted:     #64748B;
 
-  /* Accent — automotive red */
-  --color-accent:       #DC2626;
-  --color-accent-hover: #B91C1C;
-  --color-accent-light: #FCA5A5;
+  /* Accent — amber yellow */
+  --color-accent:       #FFC107;
+  --color-accent-hover: #E0A800;
+  --color-accent-light: #FFD54F;
 
   /* Borders */
   --color-border:       #CBD5E1;
@@ -42,7 +42,7 @@
   --shadow-sm:  0 1px 2px 0 rgb(15 23 42 / 0.08);
   --shadow:     0 6px 20px 0 rgb(15 23 42 / 0.10);
   --shadow-lg:  0 20px 44px 0 rgb(15 23 42 / 0.14);
-  --shadow-glow: 0 0 24px rgb(220 38 38 / 0.2);
+  --shadow-glow: 0 0 24px rgb(255 193 7 / 0.35);
 }
 
 /* ─── Base ─────────────────────────────────────────────────────── */
@@ -72,7 +72,7 @@ body {
 
 /* ─── Selection ────────────────────────────────────────────────── */
 ::selection {
-  background-color: rgb(220 38 38 / 0.3);
+  background-color: rgb(255 213 79 / 0.55);
   color: var(--color-text-primary);
 }
 

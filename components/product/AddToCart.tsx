@@ -68,7 +68,7 @@ export default function AddToCart({ product, sticky }: AddToCartProps) {
           'transition-all duration-200 active:scale-[0.98]',
           added
             ? 'bg-success text-white'
-            : 'bg-accent text-white hover:bg-accent-hover'
+            : 'bg-accent text-text-primary hover:bg-accent-hover'
         )}
       >
         <AnimatePresence mode="wait">

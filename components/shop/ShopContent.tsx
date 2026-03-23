@@ -106,7 +106,7 @@ export default function ShopContent() {
                 <SlidersHorizontal size={14} />
                 Фільтри
                 {hasFilters && (
-                  <span className="size-4 rounded-full bg-accent text-white text-[10px] flex items-center justify-center">!</span>
+                  <span className="size-4 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">!</span>
                 )}
               </button>
               <div className="flex items-center gap-2 ml-auto">

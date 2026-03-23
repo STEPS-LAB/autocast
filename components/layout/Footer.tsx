@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Phone, Mail, MapPin, Instagram, Facebook } from 'lucide-react'
+import SiteLogo from '@/components/layout/SiteLogo'
 
 const SHOP_LINKS = [
   { href: '/shop/avtozvuk', label: 'Автозвук' },
@@ -21,11 +22,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link href="/" className="flex items-center mb-4">
-              <span className="font-bold text-lg tracking-tight text-zinc-100">
-                AUTO<span className="text-accent">CAST</span>
-              </span>
-            </Link>
+            <SiteLogo variant="footer" className="mb-4" />
             <p className="text-sm text-zinc-300 leading-relaxed">
               Преміальні автозапчастини та електроніка. Якість, яка говорить сама за себе.
             </p>
