@@ -1,0 +1,150 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import ProductGrid from '@/components/shop/ProductGrid'
+import ProductFilters from '@/components/shop/ProductFilters'
+import SortSelect from '@/components/shop/SortSelect'
+import PageTransition from '@/components/layout/PageTransition'
+import { getProductCards } from '@/lib/data/seed'
+import { SlidersHorizontal } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+export default function ShopContent() {
+  const searchParams = useSearchParams()
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  const query = searchParams.get('q') ?? ''
+  const category = searchParams.get('category') ?? ''
+  const brand = searchParams.get('brand') ?? ''
+  const minPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined
+  const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined
+  const inStock = searchParams.get('inStock') === '1'
+  const sort = searchParams.get('sort') ?? 'default'
+  const make = searchParams.get('make') ?? ''
+
+  const filters = { category, brand, minPrice, maxPrice, inStock }
+
+  const allProducts = getProductCards()
+
+  const filtered = useMemo(() => {
+    let products = allProducts
+
+    if (query) {
+      const q = query.toLowerCase()
+      products = products.filter(p => p.name_ua.toLowerCase().includes(q))
+    }
+    if (category) {
+      products = products.filter(p => p.category?.slug === category)
+    }
+    if (brand) {
+      products = products.filter(p => p.brand?.name === brand)
+    }
+    if (minPrice !== undefined) {
+      products = products.filter(p => (p.sale_price ?? p.price) >= minPrice)
+    }
+    if (maxPrice !== undefined) {
+      products = products.filter(p => (p.sale_price ?? p.price) <= maxPrice)
+    }
+    if (inStock) {
+      products = products.filter(p => p.stock > 0)
+    }
+
+    switch (sort) {
+      case 'price_asc':
+        products = [...products].sort((a, b) => (a.sale_price ?? a.price) - (b.sale_price ?? b.price))
+        break
+      case 'price_desc':
+        products = [...products].sort((a, b) => (b.sale_price ?? b.price) - (a.sale_price ?? a.price))
+        break
+      case 'sale':
+        products = [...products].sort((a, b) => {
+          const aDisc = a.sale_price ? 1 : 0
+          const bDisc = b.sale_price ? 1 : 0
+          return bDisc - aDisc
+        })
+        break
+    }
+
+    return products
+  }, [allProducts, query, category, brand, minPrice, maxPrice, inStock, sort])
+
+  const hasFilters = Object.values(filters).some(Boolean)
+
+  const headingText = category
+    ? allProducts.find(p => p.category?.slug === category)?.category?.name_ua ?? 'Каталог'
+    : make
+    ? `Запчастини для ${make}`
+    : query
+    ? `Результати: «${query}»`
+    : 'Магазин'
+
+  return (
+    <PageTransition>
+      <div className="container-xl py-10">
+        <div className="mb-8">
+          <h1 className="text-headline text-text-primary mb-1">{headingText}</h1>
+          <p className="text-sm text-text-muted">
+            {filtered.length} товар{filtered.length === 1 ? '' : filtered.length < 5 ? 'и' : 'ів'}
+          </p>
+        </div>
+
+        <div className="flex gap-8">
+          <div className="hidden lg:block w-56 shrink-0">
+            <div className="sticky top-24">
+              <ProductFilters filters={filters} />
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-3 mb-6">
+              <button
+                onClick={() => setFiltersOpen(true)}
+                className="lg:hidden flex items-center gap-2 h-9 px-3 bg-bg-surface border border-border rounded text-sm text-text-secondary hover:text-text-primary hover:border-border-light transition-colors"
+              >
+                <SlidersHorizontal size={14} />
+                Фільтри
+                {hasFilters && (
+                  <span className="size-4 rounded-full bg-accent text-white text-[10px] flex items-center justify-center">!</span>
+                )}
+              </button>
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-xs text-text-muted hidden sm:block">Сортувати:</span>
+                <SortSelect />
+              </div>
+            </div>
+
+            <ProductGrid products={filtered} />
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {filtersOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60 lg:hidden"
+              onClick={() => setFiltersOpen(false)}
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              className={cn(
+                'fixed left-0 inset-y-0 z-50 w-72 bg-bg-surface border-r border-border',
+                'p-5 overflow-y-auto lg:hidden'
+              )}
+            >
+              <ProductFilters filters={filters} onClose={() => setFiltersOpen(false)} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </PageTransition>
+  )
+}
