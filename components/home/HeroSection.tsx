@@ -66,18 +66,6 @@ export default function HeroSection() {
           className="relative w-full"
         >
           <div className="max-w-3xl">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-accent/30 bg-accent/5 mb-8"
-            >
-              <span className="size-1.5 rounded-full bg-accent animate-pulse" />
-              <span className="text-xs font-medium text-accent uppercase tracking-wider">
-                {HERO_SLIDE.eyebrow}
-              </span>
-            </motion.div>
-
             <motion.h1
               key={HERO_SLIDE.id}
               initial={{ opacity: 0, y: 18 }}
@@ -138,9 +126,9 @@ export default function HeroSection() {
               className="flex flex-wrap lg:flex-nowrap gap-6 lg:gap-10 lg:justify-end lg:ml-auto lg:text-right"
             >
               {STATS.map(({ label, value }) => (
-                <div key={label}>
+                <div key={label} className="text-center">
                   <p className="text-impact text-text-primary">{value}</p>
-                  <p className="text-xs text-text-muted mt-0.5">{label}</p>
+                  <p className="text-xs text-text-secondary mt-0.5">{label}</p>
                 </div>
               ))}
             </motion.div>
