@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, User, Menu, X, Zap } from 'lucide-react'
+import { ShoppingCart, User, Menu, X, Zap, Search } from 'lucide-react'
 import { useCartStore, selectCartCount } from '@/lib/store/cart'
 import { cn } from '@/lib/utils'
 import SmartSearchBar from '@/components/search/SmartSearchBar'
@@ -20,6 +20,7 @@ export default function Header() {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const count = useCartStore(selectCartCount)
   const openCart = useCartStore(s => s.openCart)
 
@@ -31,6 +32,7 @@ export default function Header() {
 
   useEffect(() => {
     setMobileOpen(false)
+    setMobileSearchOpen(false)
   }, [pathname])
 
   return (
@@ -98,13 +100,15 @@ export default function Header() {
 
             {/* Actions */}
             <div className="flex items-center gap-1">
-              <Link
-                href="/account"
-                className="p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
-                aria-label="Акаунт"
+              <button
+                className="md:hidden p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                onClick={() => setMobileSearchOpen(v => !v)}
+                aria-label="Пошук"
+                aria-expanded={mobileSearchOpen}
+                aria-controls="mobile-header-search"
               >
-                <User size={20} />
-              </Link>
+                {mobileSearchOpen ? <X size={20} /> : <Search size={20} />}
+              </button>
 
               <button
                 onClick={openCart}
@@ -127,10 +131,21 @@ export default function Header() {
                 </AnimatePresence>
               </button>
 
+              <Link
+                href="/account"
+                className="hidden md:inline-flex p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                aria-label="Акаунт"
+              >
+                <User size={20} />
+              </Link>
+
               {/* Mobile menu toggle */}
               <button
                 className="md:hidden p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
-                onClick={() => setMobileOpen(v => !v)}
+                onClick={() => {
+                  setMobileSearchOpen(false)
+                  setMobileOpen(v => !v)
+                }}
                 aria-label="Меню"
               >
                 {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -139,9 +154,20 @@ export default function Header() {
           </div>
 
           {/* Mobile search */}
-          <div className="md:hidden pb-3">
-            <SmartSearchBar compact />
-          </div>
+          <AnimatePresence initial={false}>
+            {mobileSearchOpen && (
+              <motion.div
+                id="mobile-header-search"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18 }}
+                className="md:hidden pb-3"
+              >
+                <SmartSearchBar compact autoFocus />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
@@ -156,6 +182,18 @@ export default function Header() {
             className="fixed inset-y-0 right-0 z-50 w-full max-w-xs glass border-l border-border/50 flex flex-col pt-20 pb-8 px-6"
           >
             <nav className="flex flex-col gap-1">
+              <Link
+                href="/account"
+                className={cn(
+                  'px-3 py-3 rounded text-base font-medium transition-colors',
+                  pathname.startsWith('/account')
+                    ? 'bg-accent/10 text-accent'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                )}
+              >
+                Акаунт
+              </Link>
+
               {NAV_LINKS.map(link => {
                 const isActive =
                   link.href === '/'
