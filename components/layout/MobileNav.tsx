@@ -45,7 +45,7 @@ export default function MobileNav() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 28 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="fixed bottom-0 left-0 right-0 z-40 md:hidden glass border-t border-border/50 safe-area-inset-bottom"
+          className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-white/15 bg-bg-surface/85 backdrop-blur-xl shadow-[0_-8px_28px_rgba(0,0,0,0.18)] safe-area-inset-bottom"
         >
           <div className="flex items-center justify-around py-2 px-4">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => {

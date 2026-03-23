@@ -25,7 +25,8 @@ export default function Header() {
   const openCart = useCartStore(s => s.openCart)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20)
+    const onScroll = () => setScrolled(window.scrollY > 1)
+    onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
@@ -51,9 +52,10 @@ export default function Header() {
       <header
         className={cn(
           'fixed top-0 left-0 right-0 z-40 transition-all duration-300',
-          scrolled
-            ? 'glass border-b border-border/50 shadow-lg'
-            : 'bg-transparent'
+          !scrolled
+            ? 'bg-transparent'
+            : 'border-b border-white/15 bg-bg-surface/85 backdrop-blur-xl shadow-[0_8px_28px_rgba(0,0,0,0.18)]',
+          scrolled && 'shadow-[0_10px_32px_rgba(0,0,0,0.22)]'
         )}
       >
         <div className="container-xl">
@@ -187,7 +189,7 @@ export default function Header() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            className="fixed inset-y-0 right-0 z-50 w-full max-w-xs border-l border-border bg-bg-surface/95 backdrop-blur-xl shadow-2xl flex flex-col pt-20 pb-8 px-6"
+            className="fixed inset-y-0 right-0 z-[70] w-full max-w-xs border-l border-border bg-bg-surface/95 backdrop-blur-xl shadow-2xl flex flex-col pt-20 pb-8 px-6"
           >
             <button
               onClick={() => setMobileOpen(false)}
@@ -242,7 +244,7 @@ export default function Header() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-[65] bg-black/35 backdrop-blur-sm md:hidden"
             onClick={() => setMobileOpen(false)}
           />
         )}
