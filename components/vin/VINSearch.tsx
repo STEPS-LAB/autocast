@@ -64,18 +64,15 @@ export default function VINSearch() {
   }
 
   return (
-    <section className="py-20">
+    <section className="py-16 bg-bg-surface border-y border-border">
       <div className="container-xl">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-center mb-8"
           >
-            <p className="text-xs text-accent uppercase tracking-widest font-medium mb-2">
-              Точний підбір
-            </p>
             <h2 className="text-headline text-text-primary mb-3">
               Пошук за VIN-кодом
             </h2>
@@ -89,24 +86,24 @@ export default function VINSearch() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="bg-bg-surface border border-border rounded-md p-6"
+            className="bg-bg-elevated border border-border rounded-md p-6 md:p-8"
           >
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
                 <input
                   type="text"
                   value={vin}
                   onChange={e => { setVin(e.target.value.toUpperCase()); setError('') }}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  placeholder="Наприклад: WBA3A5C51CF256985"
+                  placeholder="WBA3A5C51CF256985"
                   maxLength={17}
                   className={cn(
-                    'w-full h-11 bg-bg-elevated border rounded px-4 font-mono text-sm tracking-widest',
+                    'w-full h-11 bg-bg-surface border rounded px-4 font-mono text-sm tracking-widest',
                     'text-text-primary placeholder:text-text-muted placeholder:font-sans placeholder:tracking-normal',
-                    'focus:outline-none focus:ring-1 transition-colors uppercase',
+                    'focus:outline-none transition-colors uppercase',
                     error
-                      ? 'border-error focus:border-error focus:ring-error/20'
-                      : 'border-border focus:border-accent focus:ring-accent/20'
+                      ? 'border-error focus:border-error'
+                      : 'border-border focus:border-accent'
                   )}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted tabular-nums">
@@ -117,7 +114,8 @@ export default function VINSearch() {
                 onClick={handleSearch}
                 loading={loading}
                 disabled={vin.length < 17}
-                className="gap-2 shrink-0"
+                size="lg"
+                className="gap-2 shrink-0 sm:min-w-[11rem] micro-pop"
               >
                 <Search size={16} />
                 Перевірити

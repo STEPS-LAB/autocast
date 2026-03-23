@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Headphones, ShieldCheck, Truck } from 'lucide-react'
+import { BadgeCheck, ShieldCheck, Truck } from 'lucide-react'
 
 const ITEMS = [
   {
@@ -15,9 +15,9 @@ const ITEMS = [
     text: 'Відправка в день замовлення та зручні служби доставки по Україні.',
   },
   {
-    icon: Headphones,
-    title: 'Підтримка 7 днів',
-    text: 'Підкажемо сумісність і допоможемо підібрати комплект під ваше авто.',
+    icon: BadgeCheck,
+    title: 'Гарантія',
+    text: 'Надаємо гарантію на товари та допомагаємо з обміном або сервісом за потреби.',
   },
 ]
 
