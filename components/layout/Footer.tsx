@@ -21,7 +21,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
+            <Link href="/" className="flex items-center mb-4">
               <span className="font-bold text-lg tracking-tight text-zinc-100">
                 AUTO<span className="text-accent">CAST</span>
               </span>

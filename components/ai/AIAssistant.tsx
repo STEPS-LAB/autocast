@@ -134,6 +134,17 @@ export default function AIAssistant() {
     if (inHeroSection && open) setOpen(false)
   }, [inHeroSection, open])
 
+  useEffect(() => {
+    if (!open) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [open])
+
   function sendMessage(text: string) {
     const q = text.trim()
     if (!q) return
@@ -176,7 +187,7 @@ export default function AIAssistant() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className={cn(
-              'fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40',
+              'fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50',
               'size-12 rounded-full bg-accent text-white shadow-lg',
               'flex items-center justify-center',
               'transition-colors duration-200',
@@ -214,21 +225,31 @@ export default function AIAssistant() {
       {/* Chat window */}
       <AnimatePresence>
         {open && !inHeroSection && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20, originX: 1, originY: 1 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className={cn(
-              'fixed bottom-36 right-4 md:bottom-24 md:right-6 z-40',
-              'w-[calc(100vw-2rem)] max-w-sm',
-              'glass border border-border/70 rounded-lg shadow-xl',
-              'flex flex-col',
-              'max-h-[70vh] h-[480px]'
-            )}
-          >
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20, originX: 1, originY: 1 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className={cn(
+                'fixed bottom-36 right-4 md:bottom-24 md:right-6 z-50',
+                'w-[calc(100vw-2rem)] max-w-sm',
+                'rounded-[8px] overflow-hidden border border-border/70 bg-bg-surface/92 backdrop-blur-xl',
+                'shadow-[0_20px_60px_rgba(15,23,42,0.28)]',
+                'flex flex-col',
+                'max-h-[70vh] h-[480px]'
+              )}
+            >
             {/* Header */}
-            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-bg-surface/80">
               <div className="size-7 rounded-full bg-accent flex items-center justify-center shrink-0">
                 <Bot size={14} className="text-white" />
               </div>
@@ -248,7 +269,10 @@ export default function AIAssistant() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            <div
+              className="flex-1 overflow-y-auto overscroll-contain touch-pan-y px-4 py-3 space-y-3"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {messages.map(msg => (
                 <div
                   key={msg.id}
@@ -323,7 +347,7 @@ export default function AIAssistant() {
             )}
 
             {/* Input */}
-            <div className="px-3 py-3 border-t border-border">
+            <div className="px-3 py-3 border-t border-border bg-bg-surface/80">
               <form
                 onSubmit={e => { e.preventDefault(); sendMessage(input) }}
                 className="flex items-center gap-2"
@@ -354,7 +378,8 @@ export default function AIAssistant() {
                 </button>
               </form>
             </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
