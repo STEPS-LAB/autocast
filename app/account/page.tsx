@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { User, Package, LogOut, Settings, ShoppingBag, Shield } from 'lucide-react'
@@ -15,7 +15,7 @@ interface AuthUser {
   created_at: string
 }
 
-export default function AccountPage() {
+function AccountPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -179,5 +179,20 @@ export default function AccountPage() {
         </div>
       </div>
     </PageTransition>
+  )
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={(
+      <PageTransition>
+        <div className="container-xl py-16 flex items-center justify-center">
+          <div className="size-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      </PageTransition>
+    )}
+    >
+      <AccountPageContent />
+    </Suspense>
   )
 }

@@ -200,6 +200,7 @@ export default function AdminProductsPage() {
       if (nextIndex < 0 || nextIndex >= prev.length) return prev
       const next = [...prev]
       const [item] = next.splice(index, 1)
+      if (item === undefined) return prev
       next.splice(nextIndex, 0, item)
       return next
     })

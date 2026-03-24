@@ -34,8 +34,8 @@ interface DbProductRow {
   images: string[]
   is_featured: boolean
   created_at: string
-  category?: DbCategoryRow
-  brand?: DbBrandRow
+  category?: DbCategoryRow | DbCategoryRow[]
+  brand?: DbBrandRow | DbBrandRow[]
 }
 
 interface DbCarMakeRow {
@@ -72,7 +72,14 @@ function rowToBrand(row: DbBrandRow): Brand {
   }
 }
 
+function unwrapRelation<T>(value?: T | T[]): T | undefined {
+  if (!value) return undefined
+  return Array.isArray(value) ? value[0] : value
+}
+
 function rowToProduct(row: DbProductRow): Product {
+  const category = unwrapRelation(row.category)
+  const brand = unwrapRelation(row.brand)
   return {
     id: row.id,
     slug: row.slug,
@@ -87,12 +94,14 @@ function rowToProduct(row: DbProductRow): Product {
     images: row.images ?? [],
     is_featured: row.is_featured,
     created_at: row.created_at,
-    category: row.category ? rowToCategory(row.category) : undefined,
-    brand: row.brand ? rowToBrand(row.brand) : undefined,
+    category: category ? rowToCategory(category) : undefined,
+    brand: brand ? rowToBrand(brand) : undefined,
   }
 }
 
 function rowToProductCard(row: DbProductRow): ProductCard {
+  const category = unwrapRelation(row.category)
+  const brand = unwrapRelation(row.brand)
   return {
     id: row.id,
     slug: row.slug,
@@ -101,10 +110,10 @@ function rowToProductCard(row: DbProductRow): ProductCard {
     sale_price: row.sale_price === null ? null : Number(row.sale_price),
     images: row.images ?? [],
     stock: row.stock,
-    category: row.category
-      ? { name_ua: row.category.name_ua, slug: row.category.slug }
+    category: category
+      ? { name_ua: category.name_ua, slug: category.slug }
       : undefined,
-    brand: row.brand ? { name: row.brand.name } : undefined,
+    brand: brand ? { name: brand.name } : undefined,
   }
 }
 
@@ -227,8 +236,9 @@ export async function getCarModelsByMake(): Promise<Record<string, string[]>> {
     if (error || !data) return allowSeedFallback() ? CAR_MODELS : {}
     if (data.length === 0) return allowSeedFallback() ? CAR_MODELS : {}
     return (data as DbCarModelRow[]).reduce<Record<string, string[]>>((acc, row) => {
-      if (!acc[row.make_id]) acc[row.make_id] = []
-      acc[row.make_id].push(row.name)
+      const bucket = acc[row.make_id] ?? []
+      bucket.push(row.name)
+      acc[row.make_id] = bucket
       return acc
     }, {})
   } catch {

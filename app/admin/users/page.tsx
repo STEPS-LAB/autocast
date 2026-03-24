@@ -41,12 +41,13 @@ export default function AdminUsersPage() {
 
   async function handleUpdate(id: string, key: string, value: string | number) {
     if (key !== 'role') return
+    const nextRole = String(value)
     await fetch('/api/admin/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, role: value }),
+      body: JSON.stringify({ id, role: nextRole }),
     })
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, [key]: value } : u))
+    setUsers(prev => prev.map(u => (u.id === id ? { ...u, role: nextRole } : u)))
   }
 
   const columns: Column<AdminUser>[] = [
