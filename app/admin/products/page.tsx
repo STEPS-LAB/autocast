@@ -84,11 +84,20 @@ export default function AdminProductsPage() {
     setProducts(prev => prev.map(p => applyDiscountToProduct(p, overrides)))
   }, [overrides])
 
+  async function syncCatalogAfterChange() {
+    try {
+      await fetch('/api/admin/bootstrap', { method: 'POST' })
+    } catch {
+      // Ignore sync errors to keep CRUD responsive.
+    }
+  }
+
   async function handleUpdate(id: string, key: string, value: string | number) {
     await supabase.from('products').update({ [key]: value }).eq('id', id)
     setProducts(prev => prev.map(p =>
       p.id === id ? { ...p, [key]: value } : p
     ))
+    await syncCatalogAfterChange()
   }
 
   function handleDelete(id: string) {
@@ -101,6 +110,7 @@ export default function AdminProductsPage() {
     await supabase.from('products').delete().eq('id', id)
     setProducts(prev => prev.filter(p => p.id !== id))
     setDeleteProductId(null)
+    await syncCatalogAfterChange()
   }
 
   function openProductImageEditor(id: string) {
@@ -148,6 +158,7 @@ export default function AdminProductsPage() {
         : p
     ))
     setEditingImageProductId(null)
+    await syncCatalogAfterChange()
   }
 
   function handleProductImageFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -293,6 +304,7 @@ export default function AdminProductsPage() {
       setProducts(prev => prev.map(p => (p.id === discountProductId ? { ...p, sale_price: null } : p)))
       clearDiscount(discountProductId)
       setDiscountProductId(null)
+      await syncCatalogAfterChange()
       return
     }
 
@@ -307,6 +319,7 @@ export default function AdminProductsPage() {
     ))
     setDiscountPercent(discountProductId, percent)
     setDiscountProductId(null)
+    await syncCatalogAfterChange()
   }
 
   function openCreateProductModal() {
@@ -358,6 +371,7 @@ export default function AdminProductsPage() {
 
     setProducts(prev => [data as ProductRow, ...prev])
     setShowAddInfo(false)
+    await syncCatalogAfterChange()
   }
 
   function specsToText(specs: Record<string, string>): string {
@@ -425,6 +439,7 @@ export default function AdminProductsPage() {
 
     setProducts(prev => prev.map(p => p.id === editingProductId ? data as ProductRow : p))
     setEditingProductId(null)
+    await syncCatalogAfterChange()
   }
 
   return (

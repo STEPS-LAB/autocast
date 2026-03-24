@@ -47,9 +47,18 @@ export default function AdminCategoriesPage() {
     }
   }, [supabase])
 
+  async function syncCatalogAfterChange() {
+    try {
+      await fetch('/api/admin/bootstrap', { method: 'POST' })
+    } catch {
+      // Ignore sync errors to keep CRUD responsive.
+    }
+  }
+
   async function handleUpdate(id: string, key: string, value: string | number) {
     await supabase.from('categories').update({ [key]: value }).eq('id', id)
     setCategories(prev => prev.map(c => c.id === id ? { ...c, [key]: value } : c))
+    await syncCatalogAfterChange()
   }
 
   function handleDelete(id: string) {
@@ -62,6 +71,7 @@ export default function AdminCategoriesPage() {
     await supabase.from('categories').delete().eq('id', id)
     setCategories(prev => prev.filter(c => c.id !== id))
     setDeleteCategoryId(null)
+    await syncCatalogAfterChange()
   }
 
   function openImageEditor(id: string) {
@@ -104,6 +114,7 @@ export default function AdminCategoriesPage() {
     if (data) {
       setCategories(prev => [...prev, data as Category].sort((a, b) => a.sort_order - b.sort_order))
       setShowAddInfo(false)
+      await syncCatalogAfterChange()
     }
   }
 
@@ -118,6 +129,7 @@ export default function AdminCategoriesPage() {
         c.id === editingImageCategoryId ? { ...c, image_url: null } : c
       ))
       setEditingImageCategoryId(null)
+      await syncCatalogAfterChange()
       return
     }
 
@@ -141,6 +153,7 @@ export default function AdminCategoriesPage() {
       c.id === editingImageCategoryId ? { ...c, image_url: imageUrl } : c
     ))
     setEditingImageCategoryId(null)
+    await syncCatalogAfterChange()
   }
 
   function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
