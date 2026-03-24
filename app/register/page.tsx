@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
-import { Zap, Mail, Lock, User } from 'lucide-react'
+import { Mail, Lock } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
@@ -39,19 +39,41 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      const { error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
       })
-      if (authError) {
-        setError(authError.message)
+
+      const result = (await response.json()) as { error?: string }
+      if (!response.ok) {
+        setError(result.error ?? 'Щось пішло не так. Спробуйте ще раз.')
         return
       }
+
+      // Try auto-login right after successful signup.
+      const loginResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
+      })
+
+      if (loginResponse.ok) {
+        router.replace('/account')
+        router.refresh()
+        return
+      }
+
       setSuccess(true)
     } catch {
       setError('Щось пішло не так. Спробуйте ще раз.')
@@ -71,9 +93,10 @@ export default function RegisterPage() {
             <h2 className="text-xl font-bold text-text-primary mb-2">Перевірте email</h2>
             <p className="text-sm text-text-secondary">
               Ми надіслали посилання для підтвердження реєстрації на вашу адресу.
+              Після підтвердження ви увійдете в акаунт автоматично.
             </p>
             <Link href="/login" className="inline-block mt-6 text-sm text-accent hover:underline">
-              Повернутися до входу
+              Перейти до входу
             </Link>
           </div>
         </div>
@@ -90,9 +113,6 @@ export default function RegisterPage() {
           className="w-full max-w-sm"
         >
           <div className="flex items-center justify-center gap-2 mb-8">
-            <span className="flex items-center justify-center size-9 bg-accent rounded text-text-primary">
-              <Zap size={18} strokeWidth={2.5} />
-            </span>
             <span className="font-bold text-xl text-text-primary">
               AUTO<span className="text-accent">CAST</span>
             </span>

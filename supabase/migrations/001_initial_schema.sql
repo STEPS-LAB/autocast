@@ -95,9 +95,17 @@ CREATE TABLE product_compatibility (
   make_id     UUID NOT NULL REFERENCES car_makes(id) ON DELETE CASCADE,
   model_id    UUID REFERENCES car_models(id) ON DELETE CASCADE,
   year_from   INT,
-  year_to     INT,
-  PRIMARY KEY (product_id, make_id, COALESCE(model_id, '00000000-0000-0000-0000-000000000000'::UUID))
+  year_to     INT
 );
+
+-- Allow one compatibility row for (product, make, model),
+-- treating NULL model_id as a single bucket.
+CREATE UNIQUE INDEX idx_product_compatibility_unique
+  ON product_compatibility (
+    product_id,
+    make_id,
+    COALESCE(model_id, '00000000-0000-0000-0000-000000000000'::UUID)
+  );
 
 -- ─── Profiles (extends auth.users) ───────────────────────────────
 CREATE TABLE profiles (
@@ -112,12 +120,12 @@ CREATE TABLE profiles (
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO profiles (id, role)
+  INSERT INTO public.profiles (id, role)
   VALUES (NEW.id, 'user')
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

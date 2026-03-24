@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
-import { Zap, Mail, Lock, Chrome } from 'lucide-react'
+import { Mail, Lock, Chrome } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
@@ -80,9 +80,6 @@ export default function LoginPage() {
         >
           {/* Logo */}
           <div className="flex items-center justify-center gap-2 mb-8">
-            <span className="flex items-center justify-center size-9 bg-accent rounded text-text-primary">
-              <Zap size={18} strokeWidth={2.5} />
-            </span>
             <span className="font-bold text-xl text-text-primary">
               AUTO<span className="text-accent">CAST</span>
             </span>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { User, Package, LogOut, Settings, ShoppingBag } from 'lucide-react'
+import { User, Package, LogOut, Settings, ShoppingBag, Shield } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
 import { formatDate } from '@/lib/utils'
@@ -27,17 +27,17 @@ export default function AccountPage() {
         const { createClient } = await import('@/lib/supabase/client')
         const supabase = createClient()
         const { data: { user: authUser } } = await supabase.auth.getUser()
-        if (!authUser) { router.push('/login'); return }
+        if (!authUser) { router.replace('/login'); return }
         setUser({ id: authUser.id, email: authUser.email, created_at: authUser.created_at })
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', authUser.id)
-          .single()
+          .maybeSingle()
         if (profileData) setProfile(profileData as Profile)
       } catch {
-        // Supabase not configured — show demo UI
-        setUser({ id: 'demo', email: 'demo@autocast.com.ua', created_at: new Date().toISOString() })
+        // If auth backend is unavailable, treat user as signed out.
+        router.replace('/login')
       } finally {
         setLoading(false)
       }
@@ -79,18 +79,32 @@ export default function AccountPage() {
               { icon: User, label: 'Профіль', active: true },
               { icon: Package, label: 'Замовлення', active: false },
               { icon: Settings, label: 'Налаштування', active: false },
-            ].map(({ icon: Icon, label, active }) => (
-              <button
-                key={label}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded text-sm transition-colors ${
-                  active
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                }`}
-              >
-                <Icon size={16} />
-                {label}
-              </button>
+              ...(profile?.role === 'admin'
+                ? [{ icon: Shield, label: 'Адмін-панель', active: false, href: '/admin' }]
+                : []),
+            ].map(({ icon: Icon, label, active, href }) => (
+              href ? (
+                <Link
+                  key={label}
+                  href={href}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded text-sm transition-colors text-text-secondary hover:text-text-primary hover:bg-bg-elevated"
+                >
+                  <Icon size={16} />
+                  {label}
+                </Link>
+              ) : (
+                <button
+                  key={label}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded text-sm transition-colors ${
+                    active
+                      ? 'bg-accent/30 text-black'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
+              )
             ))}
           </nav>
 
@@ -143,15 +157,6 @@ export default function AccountPage() {
                 </Link>
               </div>
             </div>
-
-            {/* Admin link */}
-            {profile?.role === 'admin' && (
-              <Link href="/admin">
-                <Button variant="outline" fullWidth>
-                  Відкрити адмін-панель
-                </Button>
-              </Link>
-            )}
 
             {/* Sign out */}
             <button
