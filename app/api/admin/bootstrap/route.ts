@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { BRANDS, CAR_MAKES, CAR_MODELS, CATEGORIES, PRODUCTS } from '@/lib/data/seed'
+import { BRANDS, CAR_MAKES, CAR_MODELS, CATEGORIES } from '@/lib/data/seed'
 
 async function isCurrentUserAdmin() {
   const supabase = await createClient()
@@ -34,11 +34,6 @@ export async function POST() {
     }, { onConflict: 'slug' })
   }
 
-  const { data: dbCategories } = await supabase
-    .from('categories')
-    .select('id,slug')
-  const categoryIdBySlug = new Map((dbCategories ?? []).map((c) => [c.slug, c.id]))
-
   // Brands
   for (const brand of BRANDS) {
     await supabase.from('brands').upsert({
@@ -47,33 +42,9 @@ export async function POST() {
     }, { onConflict: 'name' })
   }
 
-  const { data: dbBrands } = await supabase
-    .from('brands')
-    .select('id,name')
-  const brandIdByName = new Map((dbBrands ?? []).map((b) => [b.name, b.id]))
-
-  // Products
-  for (const product of PRODUCTS) {
-    const seedCategory = CATEGORIES.find((c) => c.id === product.category_id)
-    const seedBrand = BRANDS.find((b) => b.id === product.brand_id)
-    const categoryId = seedCategory ? categoryIdBySlug.get(seedCategory.slug) : undefined
-    const brandId = seedBrand ? brandIdByName.get(seedBrand.name) : null
-    if (!categoryId) continue
-
-    await supabase.from('products').upsert({
-      slug: product.slug,
-      name_ua: product.name_ua,
-      description_ua: product.description_ua,
-      price: product.price,
-      sale_price: product.sale_price,
-      stock: product.stock,
-      category_id: categoryId,
-      brand_id: brandId ?? null,
-      specs: product.specs ?? {},
-      images: product.images ?? [],
-      is_featured: product.is_featured,
-    }, { onConflict: 'slug' })
-  }
+  // Intentionally do NOT upsert seed products here.
+  // Admin CRUD calls this route after each change; re-seeding PRODUCTS would
+  // flood the catalog with demo items and undo a real-only shop.
 
   // Car makes/models
   for (const make of CAR_MAKES) {
