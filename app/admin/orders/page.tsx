@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { Eye, Pencil } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
 import Badge from '@/components/ui/Badge'
+import Button from '@/components/ui/Button'
+import Modal from '@/components/ui/Modal'
 import { formatPrice, formatDate } from '@/lib/utils'
 import type { Column } from '@/components/admin/AdminTable'
-import { useEffect } from 'react'
 
 interface AdminOrder {
   id: string
@@ -31,6 +34,8 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [statusOrderId, setStatusOrderId] = useState<string | null>(null)
+  const [statusValue, setStatusValue] = useState('pending')
 
   async function getSupabase() {
     const mod = await import('@/lib/supabase/client')
@@ -79,6 +84,17 @@ export default function AdminOrdersPage() {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, [key]: value } : o))
   }
 
+  function openStatusModal(order: AdminOrder) {
+    setStatusOrderId(order.id)
+    setStatusValue(order.status)
+  }
+
+  async function saveOrderStatus() {
+    if (!statusOrderId) return
+    await handleUpdate(statusOrderId, 'status', statusValue)
+    setStatusOrderId(null)
+  }
+
   const columns: Column<AdminOrder>[] = [
     {
       key: 'id',
@@ -112,9 +128,6 @@ export default function AdminOrdersPage() {
     {
       key: 'status',
       label: 'Статус',
-      editable: true,
-      type: 'select',
-      options: STATUS_OPTIONS,
       render: (row) => {
         const s = STATUS_LABELS[row.status] ?? STATUS_LABELS.pending!
         return <Badge variant={s.variant}>{s.label}</Badge>
@@ -139,8 +152,62 @@ export default function AdminOrdersPage() {
         data={orders}
         columns={columns}
         onUpdate={handleUpdate}
+        actionsAlwaysVisible
+        renderActions={(row) => (
+          <>
+            <Link
+              href={`/admin/orders/${row.db_id}`}
+              className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+              aria-label="Переглянути замовлення"
+              title="Переглянути замовлення"
+            >
+              <Eye size={14} />
+            </Link>
+            <button
+              onClick={() => openStatusModal(row)}
+              className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+              aria-label="Змінити статус"
+              title="Змінити статус"
+            >
+              <Pencil size={14} />
+            </button>
+          </>
+        )}
       />
       {loading && <p className="text-sm text-text-muted mt-3">Завантаження...</p>}
+
+      <Modal
+        open={!!statusOrderId}
+        onClose={() => setStatusOrderId(null)}
+        title="Змінити статус замовлення"
+        description="Оберіть новий статус і збережіть зміни."
+        size="sm"
+      >
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-xs text-text-muted">Статус</span>
+            <select
+              value={statusValue}
+              onChange={(e) => setStatusValue(e.target.value)}
+              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+            >
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABELS[status]?.label ?? status}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setStatusOrderId(null)}>
+              Скасувати
+            </Button>
+            <Button onClick={saveOrderStatus}>
+              Зберегти
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

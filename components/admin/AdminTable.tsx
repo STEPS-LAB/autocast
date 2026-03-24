@@ -78,7 +78,7 @@ export default function AdminTable<T extends { id: string }>({
                     {col.label}
                   </th>
                 ))}
-                {(onUpdate || onDelete || renderActions) && (
+                {(onUpdate || onDelete) && (
                   <th className="px-4 py-3 text-xs font-bold text-text-primary uppercase tracking-wider text-right">
                     Дії
                   </th>
@@ -149,7 +149,7 @@ export default function AdminTable<T extends { id: string }>({
                     )
                   })}
 
-                  {(onUpdate || onDelete || renderActions) && (
+                  {(onUpdate || onDelete) && (
                     <td className="px-4 py-3">
                       <div className={cn(
                         'flex items-center justify-end gap-1 transition-opacity',
@@ -177,7 +177,7 @@ export default function AdminTable<T extends { id: string }>({
               {data.length === 0 && (
                 <tr>
                   <td
-                    colSpan={columns.length + ((onUpdate || onDelete || renderActions) ? 1 : 0)}
+                    colSpan={columns.length + 1}
                     className="px-4 py-12 text-center text-sm text-text-muted"
                   >
                     Немає даних

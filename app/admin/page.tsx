@@ -106,18 +106,24 @@ export default async function AdminDashboard() {
             <a href="/admin/products" className="text-xs text-accent hover:underline transition-colors duration-300">Всі →</a>
           </div>
           <div className="divide-y divide-border">
-            {products.filter(p => p.is_featured).slice(0, 5).map((product, i) => (
-              <div key={product.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out">
-                <span className="text-xs text-text-muted w-5 shrink-0">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary line-clamp-1">{product.name_ua}</p>
-                  <p className="text-xs text-text-muted">{product.stock} шт. залишок</p>
+            {products.filter(p => p.is_featured).slice(0, 5).length > 0 ? (
+              products.filter(p => p.is_featured).slice(0, 5).map((product, i) => (
+                <div key={product.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out">
+                  <span className="text-xs text-text-muted w-5 shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-text-primary line-clamp-1">{product.name_ua}</p>
+                    <p className="text-xs text-text-muted">{product.stock} шт. залишок</p>
+                  </div>
+                  <span className="text-sm font-semibold text-text-primary price shrink-0">
+                    {formatPrice(product.sale_price ?? product.price)}
+                  </span>
                 </div>
-                <span className="text-sm font-semibold text-text-primary price shrink-0">
-                  {formatPrice(product.sale_price ?? product.price)}
-                </span>
+              ))
+            ) : (
+              <div className="px-5 py-6 text-sm text-text-muted">
+                Товари ще не додано
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
