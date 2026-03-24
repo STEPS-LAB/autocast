@@ -5,8 +5,7 @@ import AdminTable from '@/components/admin/AdminTable'
 import Badge from '@/components/ui/Badge'
 import { formatPrice, formatDate } from '@/lib/utils'
 import type { Column } from '@/components/admin/AdminTable'
-import { createClient } from '@/lib/supabase/client'
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 
 interface AdminOrder {
   id: string
@@ -32,11 +31,16 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
+
+  async function getSupabase() {
+    const mod = await import('@/lib/supabase/client')
+    return mod.createClient()
+  }
 
   useEffect(() => {
     let isMounted = true
     async function loadOrders() {
+      const supabase = await getSupabase()
       const { data } = await supabase
         .from('orders')
         .select('id,total,status,created_at,shipping_info,order_items(id)')
@@ -65,11 +69,12 @@ export default function AdminOrdersPage() {
     return () => {
       isMounted = false
     }
-  }, [supabase])
+  }, [])
 
   async function handleUpdate(id: string, key: string, value: string | number) {
     const order = orders.find(o => o.id === id)
     if (!order) return
+    const supabase = await getSupabase()
     await supabase.from('orders').update({ [key]: value }).eq('id', order.db_id)
     setOrders(prev => prev.map(o => o.id === id ? { ...o, [key]: value } : o))
   }

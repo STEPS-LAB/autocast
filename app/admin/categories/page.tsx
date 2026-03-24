@@ -6,7 +6,6 @@ import type { Category } from '@/types'
 import type { Column } from '@/components/admin/AdminTable'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { createClient } from '@/lib/supabase/client'
 import { useEffect } from 'react'
 import { slugify } from '@/lib/utils'
 
@@ -17,11 +16,16 @@ export default function AdminCategoriesPage() {
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategorySortOrder, setNewCategorySortOrder] = useState('0')
   const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
+
+  async function getSupabase() {
+    const mod = await import('@/lib/supabase/client')
+    return mod.createClient()
+  }
 
   useEffect(() => {
     let isMounted = true
     async function loadCategories() {
+      const supabase = await getSupabase()
       const { data } = await supabase
         .from('categories')
         .select('id,slug,name_ua,parent_id,image_url,sort_order')
@@ -35,7 +39,7 @@ export default function AdminCategoriesPage() {
     return () => {
       isMounted = false
     }
-  }, [supabase])
+  }, [])
 
   async function syncCatalogAfterChange() {
     try {
@@ -46,6 +50,7 @@ export default function AdminCategoriesPage() {
   }
 
   async function handleUpdate(id: string, key: string, value: string | number) {
+    const supabase = await getSupabase()
     await supabase.from('categories').update({ [key]: value }).eq('id', id)
     setCategories(prev => prev.map(c => c.id === id ? { ...c, [key]: value } : c))
     await syncCatalogAfterChange()
@@ -58,6 +63,7 @@ export default function AdminCategoriesPage() {
   async function confirmDelete() {
     if (!deleteCategoryId) return
     const id = deleteCategoryId
+    const supabase = await getSupabase()
     await supabase.from('categories').delete().eq('id', id)
     setCategories(prev => prev.filter(c => c.id !== id))
     setDeleteCategoryId(null)
@@ -78,6 +84,7 @@ export default function AdminCategoriesPage() {
     if (!name) return
     const slug = slugify(name)
     const sortOrder = Math.max(0, Number(newCategorySortOrder || '0'))
+    const supabase = await getSupabase()
     const { data } = await supabase
       .from('categories')
       .insert({

@@ -12,7 +12,6 @@ import type { Brand, Product } from '@/types'
 import Image from 'next/image'
 import { applyDiscountToProduct, clampDiscountPercent, salePriceFromPercent } from '@/lib/discounts'
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
-import { createClient } from '@/lib/supabase/client'
 import type { Category } from '@/types'
 import ImageCropModal from '@/components/admin/ImageCropModal'
 
@@ -54,11 +53,16 @@ export default function AdminProductsPage() {
   const overrides = useDiscountStore(selectDiscountOverrides)
   const setDiscountPercent = useDiscountStore(s => s.setDiscountPercent)
   const clearDiscount = useDiscountStore(s => s.clearDiscount)
-  const supabase = useMemo(() => createClient(), [])
+
+  async function getSupabase() {
+    const mod = await import('@/lib/supabase/client')
+    return mod.createClient()
+  }
 
   useEffect(() => {
     let isMounted = true
     async function loadData() {
+      const supabase = await getSupabase()
       const [{ data: productsData }, { data: categoriesData }, { data: brandsData }] = await Promise.all([
         supabase
           .from('products')
@@ -78,7 +82,7 @@ export default function AdminProductsPage() {
     return () => {
       isMounted = false
     }
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     setProducts(prev => prev.map(p => applyDiscountToProduct(p, overrides)))
@@ -93,6 +97,7 @@ export default function AdminProductsPage() {
   }
 
   async function handleUpdate(id: string, key: string, value: string | number) {
+    const supabase = await getSupabase()
     await supabase.from('products').update({ [key]: value }).eq('id', id)
     setProducts(prev => prev.map(p =>
       p.id === id ? { ...p, [key]: value } : p
@@ -107,6 +112,7 @@ export default function AdminProductsPage() {
   async function confirmDelete() {
     if (!deleteProductId) return
     const id = deleteProductId
+    const supabase = await getSupabase()
     await supabase.from('products').delete().eq('id', id)
     setProducts(prev => prev.filter(p => p.id !== id))
     setDeleteProductId(null)
@@ -127,6 +133,7 @@ export default function AdminProductsPage() {
     if (!editingImageProductId) return
     const product = products.find(p => p.id === editingImageProductId)
     if (!product) return
+    const supabase = await getSupabase()
 
     const nextImages: string[] = []
     for (const image of pendingImages.slice(0, 6)) {
@@ -308,6 +315,7 @@ export default function AdminProductsPage() {
 
   async function applyDiscountFromModal() {
     if (!discountProductId) return
+    const supabase = await getSupabase()
     const parsed = Number(discountInput.trim())
     if (!Number.isFinite(parsed)) {
       setDiscountError('Введіть коректне число.')
@@ -374,6 +382,7 @@ export default function AdminProductsPage() {
       is_featured: false,
     }
 
+    const supabase = await getSupabase()
     const { data, error } = await supabase
       .from('products')
       .insert(payload)
@@ -440,6 +449,7 @@ export default function AdminProductsPage() {
       specs: textToSpecs(editSpecsText),
     }
 
+    const supabase = await getSupabase()
     const { data, error } = await supabase
       .from('products')
       .update(payload)
