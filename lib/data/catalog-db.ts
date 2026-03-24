@@ -2,7 +2,8 @@ import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
 import { BRANDS, CATEGORIES, getProductCards, getProductBySlug, PRODUCTS } from '@/lib/data/seed'
-import type { Brand, Category, Product, ProductCard } from '@/types'
+import type { Brand, CarMake, CarModel, Category, Product, ProductCard } from '@/types'
+import { CAR_MAKES, CAR_MODELS } from '@/lib/data/seed'
 
 interface DbCategoryRow {
   id: string
@@ -35,6 +36,17 @@ interface DbProductRow {
   created_at: string
   category?: DbCategoryRow
   brand?: DbBrandRow
+}
+
+interface DbCarMakeRow {
+  id: string
+  name: string
+}
+
+interface DbCarModelRow {
+  id: string
+  make_id: string
+  name: string
 }
 
 function rowToCategory(row: DbCategoryRow): Category {
@@ -100,7 +112,7 @@ export async function getCategories(): Promise<Category[]> {
       .select('id,slug,name_ua,parent_id,image_url,sort_order')
       .order('sort_order', { ascending: true })
 
-    if (error || !data) return CATEGORIES
+    if (error || !data || data.length === 0) return CATEGORIES
     return (data as DbCategoryRow[]).map(rowToCategory)
   } catch {
     return CATEGORIES
@@ -115,7 +127,7 @@ export async function getBrands(): Promise<Brand[]> {
       .select('id,name,logo_url')
       .order('name', { ascending: true })
 
-    if (error || !data) return BRANDS
+    if (error || !data || data.length === 0) return BRANDS
     return (data as DbBrandRow[]).map(rowToBrand)
   } catch {
     return BRANDS
@@ -134,7 +146,7 @@ export async function getProductCardsFromDb(): Promise<ProductCard[]> {
       `)
       .order('created_at', { ascending: false })
 
-    if (error || !data) return getProductCards()
+    if (error || !data || data.length === 0) return getProductCards()
     return (data as DbProductRow[]).map(rowToProductCard)
   } catch {
     return getProductCards()
@@ -153,7 +165,7 @@ export async function getProductsFromDb(): Promise<Product[]> {
       `)
       .order('created_at', { ascending: false })
 
-    if (error || !data) return PRODUCTS
+    if (error || !data || data.length === 0) return PRODUCTS
     return (data as DbProductRow[]).map(rowToProduct)
   } catch {
     return PRODUCTS
@@ -177,5 +189,39 @@ export async function getProductBySlugFromDb(slug: string): Promise<Product | un
     return rowToProduct(data as DbProductRow)
   } catch {
     return getProductBySlug(slug)
+  }
+}
+
+export async function getCarMakes(): Promise<CarMake[]> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('car_makes')
+      .select('id,name')
+      .order('name', { ascending: true })
+
+    if (error || !data || data.length === 0) return CAR_MAKES
+    return (data as DbCarMakeRow[]).map((row) => ({ id: row.id, name: row.name }))
+  } catch {
+    return CAR_MAKES
+  }
+}
+
+export async function getCarModelsByMake(): Promise<Record<string, string[]>> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('car_models')
+      .select('id,make_id,name')
+      .order('name', { ascending: true })
+
+    if (error || !data || data.length === 0) return CAR_MODELS
+    return (data as DbCarModelRow[]).reduce<Record<string, string[]>>((acc, row) => {
+      if (!acc[row.make_id]) acc[row.make_id] = []
+      acc[row.make_id].push(row.name)
+      return acc
+    }, {})
+  } catch {
+    return CAR_MODELS
   }
 }

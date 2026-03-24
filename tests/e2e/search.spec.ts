@@ -13,13 +13,13 @@ test.describe('Smart Search', () => {
     const searchInput = page.locator('input[placeholder="Пошук товарів…"]').first()
     await searchInput.fill('Alpine')
     await page.waitForTimeout(400)
-    await expect(page.getByText('Результати')).toBeVisible()
+    await expect(page.getByText('Результати', { exact: true })).toBeVisible()
   })
 
   test('shows popular searches when focused empty', async ({ page }) => {
     const searchInput = page.locator('input[placeholder="Пошук товарів…"]').first()
     await searchInput.click()
-    await expect(page.getByText('Популярні')).toBeVisible()
+    await expect(page.getByText('Популярні', { exact: true })).toBeVisible()
   })
 
   test('clears search with X button', async ({ page }) => {

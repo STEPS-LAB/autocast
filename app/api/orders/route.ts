@@ -10,6 +10,10 @@ interface CreateOrderBody {
   }>
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const body = await request.json() as CreateOrderBody
@@ -40,7 +44,7 @@ export async function POST(request: Request) {
 
   const orderItems = items.map((item) => ({
     order_id: order.id,
-    product_id: item.product_id,
+    product_id: isUuid(item.product_id) ? item.product_id : null,
     qty: item.qty,
     unit_price: item.unit_price,
   }))

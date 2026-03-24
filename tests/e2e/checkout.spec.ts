@@ -12,9 +12,9 @@ test.describe('Checkout flow', () => {
     await page.getByText('В кошик').first().click()
     await page.goto('/checkout')
 
-    await expect(page.getByText('Кошик')).toBeVisible()
-    await expect(page.getByText('Дані')).toBeVisible()
-    await expect(page.getByText('Підтвердження')).toBeVisible()
+    await expect(page.getByText('Кошик', { exact: true })).toBeVisible()
+    await expect(page.getByText('Дані', { exact: true })).toBeVisible()
+    await expect(page.getByText('Підтвердження', { exact: true })).toBeVisible()
   })
 
   test('checkout step 1 shows order summary', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('Checkout flow', () => {
     await page.goto('/checkout')
 
     await expect(page.getByText('Підсумок')).toBeVisible()
-    await expect(page.getByText('Оформити замовлення')).toBeVisible()
+    await expect(page.getByText('Далі')).toBeVisible()
   })
 
   test('can proceed to step 2', async ({ page }) => {
@@ -33,8 +33,8 @@ test.describe('Checkout flow', () => {
 
     await page.getByText('Далі').click()
     await expect(page.getByText('Особисті дані')).toBeVisible()
-    await expect(page.getByText('Доставка')).toBeVisible()
-    await expect(page.getByText('Оплата')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Доставка' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Оплата' })).toBeVisible()
   })
 
   test('form validation in step 2', async ({ page }) => {

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
-import { CAR_MAKES, CAR_MODELS } from '@/lib/data/seed'
+import type { CarMake } from '@/types'
 
 const YEARS = Array.from({ length: 30 }, (_, i) => 2025 - i)
 const ENGINES = ['1.4', '1.6', '2.0', '2.5', '3.0', 'Hybrid', 'EV']
@@ -134,17 +134,22 @@ function Select({
   )
 }
 
-export default function CarSearch() {
+interface CarSearchProps {
+  makes: CarMake[]
+  modelsByMake: Record<string, string[]>
+}
+
+export default function CarSearch({ makes, modelsByMake }: CarSearchProps) {
   const router = useRouter()
   const [make, setMake] = useState('')
   const [model, setModel] = useState('')
   const [engine, setEngine] = useState('')
   const [year, setYear] = useState('')
 
-  const models = make ? (CAR_MODELS[make] ?? []) : []
+  const models = make ? (modelsByMake[make] ?? []) : []
   const progress = [make, model, engine, year].filter(Boolean).length
   const progressPercent = (progress / 4) * 100
-  const selectedMake = CAR_MAKES.find(m => m.id === make)?.name
+  const selectedMake = makes.find(m => m.id === make)?.name
 
   function handleSearch() {
     if (!make) return
@@ -204,7 +209,7 @@ export default function CarSearch() {
                     setMake(v)
                     setModel('')
                   }}
-                  options={CAR_MAKES.map(m => ({ value: m.id, label: m.name }))}
+                  options={makes.map(m => ({ value: m.id, label: m.name }))}
                   placeholder="Виберіть марку"
                   searchable
                   searchPlaceholder="Пошук марки..."

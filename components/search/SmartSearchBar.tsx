@@ -94,7 +94,7 @@ export default function SmartSearchBar({
     setOpen(false)
   }
 
-  const showDropdown = open && (query.trim() || recent.length > 0)
+  const showDropdown = open && (query.trim() || recent.length > 0 || popularSearches.length > 0)
 
   return (
     <div ref={containerRef} className={cn('relative w-full', className)}>
@@ -114,7 +114,7 @@ export default function SmartSearchBar({
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Введіть назву товару..."
+          placeholder="Пошук товарів…"
           autoComplete="off"
           className={cn(
             'no-focus-outline w-full bg-bg-surface border border-border rounded',

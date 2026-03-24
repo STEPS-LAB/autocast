@@ -11,7 +11,7 @@ test.describe('Cart functionality', () => {
 
   test('clicking cart icon opens cart drawer', async ({ page }) => {
     await page.locator('button[aria-label*="Кошик"]').click()
-    await expect(page.getByText('Кошик')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Кошик' })).toBeVisible()
   })
 
   test('empty cart shows appropriate message', async ({ page }) => {

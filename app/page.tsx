@@ -5,7 +5,7 @@ import FeaturedCategories from '@/components/home/FeaturedCategories'
 import TrustHighlights from '@/components/home/TrustHighlights'
 import HomeReviews from '@/components/home/HomeReviews'
 import PageTransition from '@/components/layout/PageTransition'
-import { getCategories } from '@/lib/data/catalog-db'
+import { getCarMakes, getCarModelsByMake, getCategories } from '@/lib/data/catalog-db'
 
 export const metadata: Metadata = {
   title: 'Autocast — Преміальні автозапчастини',
@@ -14,12 +14,16 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const categories = await getCategories()
+  const [categories, makes, modelsByMake] = await Promise.all([
+    getCategories(),
+    getCarMakes(),
+    getCarModelsByMake(),
+  ])
 
   return (
     <PageTransition>
       <HeroSection />
-      <CarSearch />
+      <CarSearch makes={makes} modelsByMake={modelsByMake} />
       <FeaturedCategories categories={categories} />
       <TrustHighlights />
       <HomeReviews />

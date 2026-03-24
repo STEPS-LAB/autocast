@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { SearchResult } from '@/types'
-import { POPULAR_SEARCHES } from '@/lib/data/seed'
+
+const POPULAR_SEARCHES = [
+  'Автомагнітола Pioneer',
+  'GPS навігатор',
+  'Відеореєстратор 4K',
+  'LED лампи H7',
+  'Автосигналізація StarLine',
+  'Android магнітола',
+]
 
 const RECENT_KEY = 'autocast-recent-searches'
 const MAX_RECENT = 5
