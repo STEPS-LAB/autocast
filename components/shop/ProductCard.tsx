@@ -89,19 +89,13 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
           </div>
         )}
 
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {discount && (
+        {discount && (
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
             <Badge variant="accent" className="text-xs">
               -{discount}%
             </Badge>
-          )}
-          {displayProduct.stock === 0 && (
-            <Badge variant="error" className="text-xs">
-              Немає
-            </Badge>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Wishlist */}
         <button

@@ -1,15 +1,15 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChevronRight, Package, Truck, ShieldCheck } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { cookies } from 'next/headers'
 import ProductGallery from '@/components/product/ProductGallery'
 import ProductSpecs from '@/components/product/ProductSpecs'
+import ProductDetailPanel from '@/components/product/ProductDetailPanel'
 import AddToCart from '@/components/product/AddToCart'
 import RelatedProducts from '@/components/product/RelatedProducts'
-import Badge from '@/components/ui/Badge'
 import PageTransition from '@/components/layout/PageTransition'
-import { formatPrice, getDiscountPercent } from '@/lib/utils'
+import { getDiscountPercent } from '@/lib/utils'
 import RecentlyViewedTracker from '@/components/product/RecentlyViewedTracker'
 import { applyDiscountToProduct, DISCOUNTS_COOKIE_KEY, parseDiscountOverrides } from '@/lib/discounts'
 import { getProductBySlugFromDb, getProductCardsFromDb } from '@/lib/data/catalog-db'
@@ -35,12 +35,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 export const dynamic = 'force-dynamic'
-
-const GUARANTEES = [
-  { icon: Package, label: 'Офіційна гарантія', desc: '12 місяців' },
-  { icon: Truck, label: 'Доставка', desc: 'Нова Пошта, 1-2 дні' },
-  { icon: ShieldCheck, label: 'Повернення', desc: '14 днів' },
-]
 
 export default async function ProductPage({ params }: Props) {
   const cookieStore = await cookies()
@@ -106,69 +100,17 @@ export default async function ProductPage({ params }: Props) {
             <ProductGallery images={product.images} name={product.name_ua} />
           </div>
 
-          {/* Details */}
-          <div className="flex flex-col gap-6">
-            {/* Tags */}
-            <div className="flex flex-wrap gap-2">
-              {brand && (
-                <Badge variant="default">{brand.name}</Badge>
-              )}
-              {category && (
-                <Badge variant="muted">{category.name_ua}</Badge>
-              )}
-              {discount && (
-                <Badge variant="accent">-{discount}%</Badge>
-              )}
-            </div>
-
-            {/* Name */}
-            <h1 className="text-xl sm:text-2xl font-bold text-text-primary leading-snug">
-              {product.name_ua}
-            </h1>
-
-            {/* Price */}
-            <div className="flex items-center gap-4">
-              <span className="text-3xl font-bold text-text-primary price">
-                {formatPrice(displayPrice)}
-              </span>
-              {product.sale_price && (
-                <span className="text-lg text-text-muted line-through price">
-                  {formatPrice(product.price)}
-                </span>
-              )}
-            </div>
-
-            {/* Stock */}
-            <div className="flex items-center gap-2">
-              <span
-                className={`size-2 rounded-full ${product.stock > 0 ? 'bg-success' : 'bg-error'}`}
-              />
-              <span className={`text-sm ${product.stock > 0 ? 'text-success' : 'text-error'}`}>
-                {product.stock > 0
-                  ? `В наявності (${product.stock} шт.)`
-                  : 'Немає в наявності'}
-              </span>
-            </div>
-
-            {/* Description */}
-            <p className="text-sm text-text-secondary leading-relaxed">
-              {product.description_ua}
-            </p>
-
-            {/* Add to cart */}
-            <AddToCart product={productCard} />
-
-            {/* Guarantees */}
-            <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border">
-              {GUARANTEES.map(({ icon: Icon, label, desc }) => (
-                <div key={label} className="flex flex-col items-center text-center gap-1.5">
-                  <Icon size={18} className="text-accent" />
-                  <p className="text-xs font-medium text-text-primary">{label}</p>
-                  <p className="text-[11px] text-text-muted">{desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ProductDetailPanel
+            nameUa={product.name_ua}
+            displayPrice={displayPrice}
+            basePrice={product.price}
+            hasSale={!!product.sale_price}
+            stock={product.stock}
+            brandName={brand?.name}
+            categoryName={category?.name_ua}
+            discountPercent={discount}
+            productCard={productCard}
+          />
         </div>
 
         {/* Specs + Description tabs */}

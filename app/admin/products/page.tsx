@@ -341,11 +341,9 @@ export default function AdminProductsPage() {
       editable: true,
       type: 'number',
       render: (row) => (
-        <div className={row.stock === 0 ? 'rounded border border-error/40 bg-error/10 px-2 py-1 inline-flex' : ''}>
-          <Badge variant={row.stock > 5 ? 'success' : row.stock > 0 ? 'warning' : 'error'}>
-            {row.stock} шт.
-          </Badge>
-        </div>
+        <Badge variant={row.stock > 5 ? 'success' : row.stock > 0 ? 'warning' : 'error'}>
+          {row.stock} шт.
+        </Badge>
       ),
     },
   ]
