@@ -101,6 +101,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<AIMessage[]>([GREETING])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
+  const [keyboardLift, setKeyboardLift] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -142,6 +143,40 @@ export default function AIAssistant() {
 
     return () => {
       document.body.style.overflow = previousOverflow
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      setKeyboardLift(0)
+      return
+    }
+
+    const isIOSSafari =
+      /iP(hone|od|ad)/.test(window.navigator.userAgent) &&
+      /Safari/i.test(window.navigator.userAgent) &&
+      !/CriOS|FxiOS|EdgiOS/i.test(window.navigator.userAgent)
+
+    if (!isIOSSafari || !window.visualViewport) return
+
+    const syncKeyboardOffset = () => {
+      const vv = window.visualViewport
+      if (!vv) return
+
+      const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      // Keep chat mostly in place on iOS Safari and lift only as much as needed.
+      const nextLift = keyboardHeight > 0 ? Math.min(120, keyboardHeight * 0.35) : 0
+      setKeyboardLift(nextLift)
+    }
+
+    syncKeyboardOffset()
+    window.visualViewport.addEventListener('resize', syncKeyboardOffset)
+    window.visualViewport.addEventListener('scroll', syncKeyboardOffset)
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', syncKeyboardOffset)
+      window.visualViewport?.removeEventListener('scroll', syncKeyboardOffset)
+      setKeyboardLift(0)
     }
   }, [open])
 
@@ -236,7 +271,7 @@ export default function AIAssistant() {
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20, originX: 1, originY: 1 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              animate={{ opacity: 1, scale: 1, y: -keyboardLift }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               className={cn(
@@ -359,9 +394,9 @@ export default function AIAssistant() {
                   placeholder="Запитайте про товар…"
                   disabled={typing}
                   className={cn(
-                    'flex-1 h-9 bg-bg-elevated border border-border rounded',
+                    'no-focus-outline flex-1 h-9 bg-bg-elevated border border-border rounded',
                     'text-sm text-text-primary placeholder:text-text-muted px-3',
-                    'focus:outline-none focus:border-accent',
+                    'focus:border-accent',
                     'disabled:opacity-50'
                   )}
                 />
