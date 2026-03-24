@@ -114,7 +114,7 @@ export default function BrandCombobox({
         placeholder={placeholder}
         autoComplete="off"
         className={cn(
-          'w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted',
+          'w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted',
           inputClassName
         )}
       />

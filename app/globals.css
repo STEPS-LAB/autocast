@@ -6,6 +6,8 @@
   --color-bg-primary:   #F7F8FA;
   --color-bg-surface:   #FFFFFF;
   --color-bg-elevated:  #F1F3F7;
+  /** Поля форм: майже білий, трохи світліше ніж elevated */
+  --color-bg-input:     #FAFBFC;
   --color-bg-overlay:   #E2E8F0;
 
   /* Text */

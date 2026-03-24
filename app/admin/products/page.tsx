@@ -1,6 +1,7 @@
 'use client'
 
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { FilePenLine, Pencil, Percent, Plus } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
@@ -499,7 +500,7 @@ export default function AdminProductsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Пошук товарів..."
-            className="w-full h-9 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
+            className="w-full h-9 rounded border border-border bg-bg-input px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
           />
         </div>
         <Link
@@ -590,7 +591,7 @@ export default function AdminProductsPage() {
                 if (e.key === 'Enter') applyDiscountFromModal()
               }}
               placeholder="Напр. 15 (0 — без знижки)"
-              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+              className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
             />
           </label>
           {discountError && (
@@ -623,7 +624,7 @@ export default function AdminProductsPage() {
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Повна назва товару"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted"
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted"
               />
             </label>
             <label className="block col-span-2">
@@ -633,7 +634,7 @@ export default function AdminProductsPage() {
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 placeholder="Опис, комплектація, особливості"
-                className="mt-1 w-full rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary resize-none placeholder:text-text-muted"
+                className="mt-1 w-full rounded border border-border bg-bg-input px-3 py-2 text-sm text-text-primary resize-none placeholder:text-text-muted"
               />
             </label>
             <label className="block">
@@ -644,7 +645,7 @@ export default function AdminProductsPage() {
                 value={editPrice}
                 onChange={(e) => setEditPrice(e.target.value)}
                 placeholder="Ціна, ₴"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted"
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted"
               />
             </label>
             <label className="block">
@@ -655,7 +656,7 @@ export default function AdminProductsPage() {
                 value={editStock}
                 onChange={(e) => setEditStock(e.target.value)}
                 placeholder="Кількість на складі"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted"
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted"
               />
             </label>
             <label className="block">
@@ -664,7 +665,7 @@ export default function AdminProductsPage() {
                 value={editCategoryId}
                 onChange={(e) => setEditCategoryId(e.target.value)}
                 title="Категорія в каталозі"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary"
               >
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -690,12 +691,12 @@ export default function AdminProductsPage() {
                 rows={4}
                 value={editSpecsText}
                 onChange={(e) => setEditSpecsText(e.target.value)}
-                className="mt-1 w-full rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary font-mono resize-y placeholder:text-text-muted"
+                className="mt-1 w-full rounded border border-border bg-bg-input px-3 py-2 text-sm text-text-primary font-mono resize-y placeholder:text-text-muted"
                 placeholder={'Кожен рядок: «Назва: значення».\nПотужність: 4×50 Вт\nBluetooth: Так'}
               />
             </label>
             <label
-              className="col-span-2 flex items-center gap-2 rounded border border-border bg-bg-elevated px-3 py-2 cursor-pointer"
+              className="col-span-2 flex items-center gap-2 rounded border border-border bg-bg-input px-3 py-2 cursor-pointer"
               title="Товар може з’являтися у блоці топ-товарів на головній та в адмін-дашборді"
             >
               <input
@@ -728,11 +729,17 @@ export default function AdminProductsPage() {
       >
         <div className="space-y-3">
           {pendingImages.length > 0 && (
-            <div className="rounded border border-border bg-bg-elevated p-2">
+            <div className="rounded border border-border bg-bg-input p-2">
               <p className="text-xs text-text-muted mb-2">Галерея товару (перше фото — головне)</p>
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {pendingImages.map((image, index) => (
-                  <div key={`${image}-${index}`} className="flex items-center gap-2 rounded border border-border bg-bg-surface p-1.5">
+                  <motion.div
+                    key={image}
+                    layout
+                    initial={false}
+                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    className="flex items-center gap-2 rounded border border-border bg-bg-surface p-1.5"
+                  >
                     <div className="relative size-12 rounded overflow-hidden border border-border shrink-0">
                       <Image src={image} alt={`Фото ${index + 1}`} fill className="object-cover" sizes="48px" />
                     </div>
@@ -766,7 +773,7 @@ export default function AdminProductsPage() {
                         ×
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
@@ -775,7 +782,7 @@ export default function AdminProductsPage() {
           <label className="block">
             <span className="text-xs text-text-muted">Файл зображення</span>
             <p className="text-xs text-text-muted mt-0.5 mb-1">JPEG, PNG або WebP, до 6 файлів за раз.</p>
-            <div className="mt-1 h-10 w-full rounded border border-border bg-bg-elevated px-2 flex items-center gap-2">
+            <div className="mt-1 h-10 w-full rounded border border-border bg-bg-input px-2 flex items-center gap-2">
               <label
                 htmlFor="product-image-upload"
                 className="inline-flex h-7 items-center rounded border border-border px-2.5 text-xs text-text-primary bg-bg-surface hover:bg-bg-primary cursor-pointer shrink-0"
