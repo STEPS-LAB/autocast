@@ -92,6 +92,7 @@ export default function ImageCropModal({
       <div className="space-y-4">
         <div className="relative h-72 rounded border border-border bg-bg-elevated overflow-hidden">
           <Cropper
+            key={imageSrc}
             image={imageSrc}
             crop={crop}
             zoom={zoom}

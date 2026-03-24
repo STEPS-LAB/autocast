@@ -1,9 +1,10 @@
 'use client'
 
-import { type ChangeEvent, useEffect, useMemo, useState } from 'react'
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { FilePenLine, Pencil, Percent, Plus } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
-import { formatPrice, slugify } from '@/lib/utils'
+import { cn, formatPrice, slugify } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -14,6 +15,8 @@ import { applyDiscountToProduct, clampDiscountPercent, salePriceFromPercent } fr
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
 import type { Category } from '@/types'
 import ImageCropModal from '@/components/admin/ImageCropModal'
+import BrandCombobox from '@/components/admin/BrandCombobox'
+import { mergeBrandIntoList, resolveBrandId } from '@/lib/admin/resolve-brand'
 
 type ProductRow = Product & { id: string }
 
@@ -25,20 +28,14 @@ export default function AdminProductsPage() {
   const [discountProductId, setDiscountProductId] = useState<string | null>(null)
   const [discountInput, setDiscountInput] = useState('')
   const [discountError, setDiscountError] = useState('')
-  const [showAddInfo, setShowAddInfo] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [newName, setNewName] = useState('')
-  const [newPrice, setNewPrice] = useState('0')
-  const [newStock, setNewStock] = useState('0')
-  const [newCategoryId, setNewCategoryId] = useState('')
-  const [createError, setCreateError] = useState('')
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editPrice, setEditPrice] = useState('0')
   const [editStock, setEditStock] = useState('0')
   const [editCategoryId, setEditCategoryId] = useState('')
-  const [editBrandId, setEditBrandId] = useState('')
+  const [editBrandInput, setEditBrandInput] = useState('')
   const [editFeatured, setEditFeatured] = useState(false)
   const [editSpecsText, setEditSpecsText] = useState('')
   const [editError, setEditError] = useState('')
@@ -48,6 +45,7 @@ export default function AdminProductsPage() {
   const [cropSource, setCropSource] = useState('')
   const [cropFileName, setCropFileName] = useState('')
   const [imageError, setImageError] = useState('')
+  const imageCropQueueRef = useRef<string[]>([])
   const [loading, setLoading] = useState(true)
   const overrides = useDiscountStore(selectDiscountOverrides)
   const setDiscountPercent = useDiscountStore(s => s.setDiscountPercent)
@@ -126,6 +124,7 @@ export default function AdminProductsPage() {
     setCropSource('')
     setCropFileName('')
     setImageError('')
+    imageCropQueueRef.current = []
   }
 
   async function saveProductImage() {
@@ -171,37 +170,96 @@ export default function AdminProductsPage() {
     await syncCatalogAfterChange()
   }
 
-  function handleProductImageFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setImageError('Оберіть файл зображення.')
+  function openNextInCropQueue() {
+    const tail = imageCropQueueRef.current
+    if (tail.length === 0) {
+      setCropSource('')
+      setCropFileName('')
+      imageCropQueueRef.current = []
+      return
+    }
+    const [head, ...rest] = tail
+    if (head === undefined) {
+      setCropSource('')
+      setCropFileName('')
+      imageCropQueueRef.current = []
+      return
+    }
+    imageCropQueueRef.current = rest
+    setCropSource(head)
+    setCropFileName(rest.length > 0 ? `Ще ${rest.length + 1} у черзі` : '')
+  }
+
+  async function handleProductImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    if (files.length === 0) return
+
+    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    if (imageFiles.length === 0) {
+      setImageError('Оберіть файли зображень.')
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setCropSource(reader.result)
-        setCropFileName(file.name)
-        setImageError('')
-      }
+    const room = Math.max(0, 6 - pendingImages.length)
+    if (room === 0) {
+      setImageError('У галереї вже максимум 6 фото.')
+      return
     }
-    reader.onerror = () => {
-      setImageError('Не вдалося прочитати файл. Спробуйте інший.')
+
+    const toRead = imageFiles.slice(0, room)
+    setImageError(
+      imageFiles.length > room
+        ? `Обрано ${imageFiles.length} зображень; додано до кадрування перші ${room} (макс. 6 у галереї).`
+        : ''
+    )
+
+    try {
+      const dataUrls = await Promise.all(
+        toRead.map(
+          file =>
+            new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = () => {
+                if (typeof reader.result === 'string') resolve(reader.result)
+                else reject(new Error('read'))
+              }
+              reader.onerror = () => reject(new Error('read'))
+              reader.readAsDataURL(file)
+            })
+        )
+      )
+
+      const first = dataUrls[0]
+      if (!first) return
+      imageCropQueueRef.current = dataUrls.slice(1)
+      setCropSource(first)
+      setCropFileName(toRead.length > 1 ? `${toRead.length} зображень обрано` : toRead[0]!.name)
+      setSelectedFileName(toRead.length > 1 ? `${toRead.length} зображень` : toRead[0]!.name)
+    } catch {
+      setImageError('Не вдалося прочитати файли. Спробуйте інші.')
     }
-    reader.readAsDataURL(file)
   }
 
   function closeCropper() {
-    setCropSource('')
-    setCropFileName('')
+    openNextInCropQueue()
   }
 
   function applyCroppedImage(croppedImage: string) {
-    setPendingImages(prev => [croppedImage, ...prev].slice(0, 6))
-    setSelectedFileName(cropFileName)
-    closeCropper()
+    setPendingImages(prev => {
+      const next = [croppedImage, ...prev].slice(0, 6)
+      if (next.length >= 6) {
+        imageCropQueueRef.current = []
+        queueMicrotask(() => {
+          setCropSource('')
+          setCropFileName('')
+        })
+      }
+      else {
+        queueMicrotask(() => openNextInCropQueue())
+      }
+      return next
+    })
   }
 
   function movePendingImage(index: number, direction: -1 | 1) {
@@ -349,58 +407,6 @@ export default function AdminProductsPage() {
     await syncCatalogAfterChange()
   }
 
-  function openCreateProductModal() {
-    setNewName('')
-    setNewPrice('0')
-    setNewStock('0')
-    setNewCategoryId(categories[0]?.id ?? '')
-    setCreateError('')
-    setShowAddInfo(true)
-  }
-
-  async function createProduct() {
-    const name = newName.trim()
-    if (!name) {
-      setCreateError('Вкажіть назву товару.')
-      return
-    }
-    const categoryId = newCategoryId || categories[0]?.id
-    if (!categoryId) {
-      setCreateError('Немає доступної категорії.')
-      return
-    }
-
-    const payload = {
-      slug: slugify(name),
-      name_ua: name,
-      description_ua: '',
-      price: Math.max(0, Number(newPrice || '0')),
-      sale_price: null,
-      stock: Math.max(0, Number(newStock || '0')),
-      category_id: categoryId,
-      brand_id: null,
-      specs: {},
-      images: [],
-      is_featured: false,
-    }
-
-    const supabase = await getSupabase()
-    const { data, error } = await supabase
-      .from('products')
-      .insert(payload)
-      .select('id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at')
-      .single()
-
-    if (error || !data) {
-      setCreateError('Не вдалося створити товар.')
-      return
-    }
-
-    setProducts(prev => [data as ProductRow, ...prev])
-    setShowAddInfo(false)
-    await syncCatalogAfterChange()
-  }
-
   function specsToText(specs: Record<string, string>): string {
     return Object.entries(specs).map(([key, value]) => `${key}: ${value}`).join('\n')
   }
@@ -425,7 +431,7 @@ export default function AdminProductsPage() {
     setEditPrice(String(row.price))
     setEditStock(String(row.stock))
     setEditCategoryId(row.category_id)
-    setEditBrandId(row.brand_id ?? '')
+    setEditBrandInput(brands.find(b => b.id === row.brand_id)?.name ?? '')
     setEditFeatured(row.is_featured)
     setEditSpecsText(specsToText(row.specs ?? {}))
     setEditError('')
@@ -439,6 +445,17 @@ export default function AdminProductsPage() {
       return
     }
 
+    const supabase = await getSupabase()
+    let brand_id: string | null = null
+    try {
+      const { brandId: rid, newBrand } = await resolveBrandId(supabase, brands, editBrandInput)
+      brand_id = rid
+      if (newBrand) setBrands(prev => mergeBrandIntoList(prev, newBrand))
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Не вдалося зберегти бренд.')
+      return
+    }
+
     const payload = {
       name_ua: name,
       slug: slugify(name),
@@ -446,12 +463,10 @@ export default function AdminProductsPage() {
       price: Math.max(0, Number(editPrice || '0')),
       stock: Math.max(0, Number(editStock || '0')),
       category_id: editCategoryId,
-      brand_id: editBrandId || null,
+      brand_id,
       is_featured: editFeatured,
       specs: textToSpecs(editSpecsText),
     }
-
-    const supabase = await getSupabase()
     const { data, error } = await supabase
       .from('products')
       .update(payload)
@@ -487,10 +502,18 @@ export default function AdminProductsPage() {
             className="w-full h-9 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
           />
         </div>
-        <Button size="sm" onClick={openCreateProductModal} className="gap-1.5 shrink-0">
+        <Link
+          href="/admin/products/new"
+          className={cn(
+            'inline-flex items-center justify-center font-medium rounded transition-all duration-150',
+            'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
+            'bg-accent text-text-primary hover:bg-accent-hover active:scale-[0.98] shadow-sm',
+            'h-8 px-3 text-sm gap-1.5 shrink-0'
+          )}
+        >
           <Plus size={14} />
           Додати товар
-        </Button>
+        </Link>
       </div>
 
       <AdminTable
@@ -566,7 +589,8 @@ export default function AdminProductsPage() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') applyDiscountFromModal()
               }}
-              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary focus:outline-none focus:border-accent"
+              placeholder="Напр. 15 (0 — без знижки)"
+              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
             />
           </label>
           {discountError && (
@@ -598,7 +622,8 @@ export default function AdminProductsPage() {
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+                placeholder="Повна назва товару"
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted"
               />
             </label>
             <label className="block col-span-2">
@@ -607,7 +632,8 @@ export default function AdminProductsPage() {
                 rows={3}
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="mt-1 w-full rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary resize-none"
+                placeholder="Опис, комплектація, особливості"
+                className="mt-1 w-full rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary resize-none placeholder:text-text-muted"
               />
             </label>
             <label className="block">
@@ -617,7 +643,8 @@ export default function AdminProductsPage() {
                 min={0}
                 value={editPrice}
                 onChange={(e) => setEditPrice(e.target.value)}
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+                placeholder="Ціна, ₴"
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted"
               />
             </label>
             <label className="block">
@@ -627,7 +654,8 @@ export default function AdminProductsPage() {
                 min={0}
                 value={editStock}
                 onChange={(e) => setEditStock(e.target.value)}
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+                placeholder="Кількість на складі"
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary placeholder:text-text-muted"
               />
             </label>
             <label className="block">
@@ -635,6 +663,7 @@ export default function AdminProductsPage() {
               <select
                 value={editCategoryId}
                 onChange={(e) => setEditCategoryId(e.target.value)}
+                title="Категорія в каталозі"
                 className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
               >
                 {categories.map((category) => (
@@ -644,32 +673,31 @@ export default function AdminProductsPage() {
                 ))}
               </select>
             </label>
-            <label className="block">
+            <div className="block">
               <span className="text-xs text-text-muted">Бренд</span>
-              <select
-                value={editBrandId}
-                onChange={(e) => setEditBrandId(e.target.value)}
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
-              >
-                <option value="">Без бренду</option>
-                {brands.map((brand) => (
-                  <option key={brand.id} value={brand.id}>
-                    {brand.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <BrandCombobox
+                brands={brands}
+                value={editBrandInput}
+                onChange={setEditBrandInput}
+                placeholder="Без бренду (необов’язково) — введіть або оберіть"
+                className="mt-1"
+                inputClassName="h-10"
+              />
+            </div>
             <label className="block col-span-2">
               <span className="text-xs text-text-muted">Характеристики (формат: Ключ: Значення)</span>
               <textarea
                 rows={4}
                 value={editSpecsText}
                 onChange={(e) => setEditSpecsText(e.target.value)}
-                className="mt-1 w-full rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary font-mono resize-y"
-                placeholder={'Потужність: 4x50 Вт\nBluetooth: Так'}
+                className="mt-1 w-full rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary font-mono resize-y placeholder:text-text-muted"
+                placeholder={'Кожен рядок: «Назва: значення».\nПотужність: 4×50 Вт\nBluetooth: Так'}
               />
             </label>
-            <label className="col-span-2 flex items-center gap-2 rounded border border-border bg-bg-elevated px-3 py-2">
+            <label
+              className="col-span-2 flex items-center gap-2 rounded border border-border bg-bg-elevated px-3 py-2 cursor-pointer"
+              title="Товар може з’являтися у блоці топ-товарів на головній та в адмін-дашборді"
+            >
               <input
                 type="checkbox"
                 checked={editFeatured}
@@ -687,69 +715,6 @@ export default function AdminProductsPage() {
             <Button onClick={saveProductDetails}>
               Зберегти зміни
             </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={showAddInfo}
-        onClose={() => setShowAddInfo(false)}
-        title="Додати товар"
-        description="Створіть новий товар у каталозі."
-        size="sm"
-      >
-        <div className="space-y-3">
-          <label className="block">
-            <span className="text-xs text-text-muted">Назва</span>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-xs text-text-muted">Ціна</span>
-              <input
-                type="number"
-                min={0}
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-text-muted">Залишок</span>
-              <input
-                type="number"
-                min={0}
-                value={newStock}
-                onChange={(e) => setNewStock(e.target.value)}
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
-              />
-            </label>
-          </div>
-          <label className="block">
-            <span className="text-xs text-text-muted">Категорія</span>
-            <select
-              value={newCategoryId}
-              onChange={(e) => setNewCategoryId(e.target.value)}
-              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
-            >
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name_ua}
-                </option>
-              ))}
-            </select>
-          </label>
-          {createError && <p className="text-xs text-error">{createError}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setShowAddInfo(false)}>
-              Скасувати
-            </Button>
-            <Button onClick={createProduct}>Створити</Button>
           </div>
         </div>
       </Modal>
@@ -809,20 +774,22 @@ export default function AdminProductsPage() {
 
           <label className="block">
             <span className="text-xs text-text-muted">Файл зображення</span>
+            <p className="text-xs text-text-muted mt-0.5 mb-1">JPEG, PNG або WebP, до 6 файлів за раз.</p>
             <div className="mt-1 h-10 w-full rounded border border-border bg-bg-elevated px-2 flex items-center gap-2">
               <label
                 htmlFor="product-image-upload"
                 className="inline-flex h-7 items-center rounded border border-border px-2.5 text-xs text-text-primary bg-bg-surface hover:bg-bg-primary cursor-pointer shrink-0"
               >
-                Вибрати файл
+                Вибрати файли
               </label>
               <span className="text-sm text-text-secondary truncate">
-                {selectedFileName || 'Файл не вибрано (до 6 фото)'}
+                {selectedFileName || 'Файли не вибрано (до 6 фото, можна кілька)'}
               </span>
               <input
                 id="product-image-upload"
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleProductImageFileChange}
                 className="sr-only"
               />
