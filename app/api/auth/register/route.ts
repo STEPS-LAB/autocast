@@ -20,7 +20,8 @@ export async function POST(request: Request) {
 
     const supabaseUrl = getSupabaseUrl()
     const supabaseAnonKey = getSupabaseAnonKey()
-    const siteUrl = getSiteUrl()
+    const requestOrigin = new URL(request.url).origin
+    const siteUrl = requestOrigin || getSiteUrl()
 
     if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
