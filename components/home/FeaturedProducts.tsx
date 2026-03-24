@@ -7,9 +7,10 @@ import { ArrowRight, Clock3 } from 'lucide-react'
 import ProductCard from '@/components/shop/ProductCard'
 import { getFeaturedProducts } from '@/lib/data/seed'
 import { formatPrice } from '@/lib/utils'
+import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
 
 export default function FeaturedProducts() {
-  const products = getFeaturedProducts().slice(0, 8)
+  const products = useDiscountedProductCards(getFeaturedProducts()).slice(0, 8)
   const offerProducts = products.slice(0, 4)
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { SearchResult } from '@/types'
-import { POPULAR_SEARCHES, searchProducts } from '@/lib/data/seed'
+import { POPULAR_SEARCHES } from '@/lib/data/seed'
 
 const RECENT_KEY = 'autocast-recent-searches'
 const MAX_RECENT = 5
@@ -53,17 +53,16 @@ export function useSearch() {
     }
 
     setLoading(true)
-    timerRef.current = setTimeout(() => {
-      const found = searchProducts(query).slice(0, 6)
-      setResults(found.map(p => ({
-        id: p.id,
-        slug: p.slug,
-        name_ua: p.name_ua,
-        price: p.price,
-        sale_price: p.sale_price,
-        images: p.images,
-      })))
-      setLoading(false)
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        const payload = await res.json() as { results?: SearchResult[] }
+        setResults((payload.results ?? []).slice(0, 6))
+      } catch {
+        setResults([])
+      } finally {
+        setLoading(false)
+      }
     }, 300)
 
     return () => {

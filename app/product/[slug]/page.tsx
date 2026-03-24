@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight, Package, Truck, ShieldCheck } from 'lucide-react'
-import { PRODUCTS, getProductCards, CATEGORIES, BRANDS } from '@/lib/data/seed'
+import { cookies } from 'next/headers'
 import ProductGallery from '@/components/product/ProductGallery'
 import ProductSpecs from '@/components/product/ProductSpecs'
 import AddToCart from '@/components/product/AddToCart'
@@ -11,18 +11,20 @@ import Badge from '@/components/ui/Badge'
 import PageTransition from '@/components/layout/PageTransition'
 import { formatPrice, getDiscountPercent } from '@/lib/utils'
 import RecentlyViewedTracker from '@/components/product/RecentlyViewedTracker'
+import { applyDiscountToProduct, DISCOUNTS_COOKIE_KEY, parseDiscountOverrides } from '@/lib/discounts'
+import { getProductBySlugFromDb, getProductCardsFromDb } from '@/lib/data/catalog-db'
 
 interface Props {
   params: Promise<{ slug: string }>
 }
 
 export async function generateStaticParams() {
-  return PRODUCTS.map(p => ({ slug: p.slug }))
+  return []
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const product = PRODUCTS.find(p => p.slug === slug)
+  const product = await getProductBySlugFromDb(slug)
   if (!product) return { title: 'Товар не знайдено' }
   return {
     title: product.name_ua,
@@ -32,6 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
   }
 }
+export const dynamic = 'force-dynamic'
 
 const GUARANTEES = [
   { icon: Package, label: 'Офіційна гарантія', desc: '12 місяців' },
@@ -40,13 +43,16 @@ const GUARANTEES = [
 ]
 
 export default async function ProductPage({ params }: Props) {
+  const cookieStore = await cookies()
+  const discountOverrides = parseDiscountOverrides(cookieStore.get(DISCOUNTS_COOKIE_KEY)?.value)
   const { slug } = await params
-  const product = PRODUCTS.find(p => p.slug === slug)
-  if (!product) notFound()
+  const sourceProduct = await getProductBySlugFromDb(slug)
+  if (!sourceProduct) notFound()
+  const product = applyDiscountToProduct(sourceProduct, discountOverrides)
 
-  const category = CATEGORIES.find(c => c.id === product.category_id)
-  const brand = BRANDS.find(b => b.id === product.brand_id)
-  const allCards = getProductCards()
+  const category = product.category
+  const brand = product.brand
+  const allCards = (await getProductCardsFromDb()).map(card => applyDiscountToProduct(card, discountOverrides))
 
   const related = allCards
     .filter(p => p.id !== product.id && p.category?.slug === category?.slug)

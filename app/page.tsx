@@ -5,6 +5,7 @@ import FeaturedCategories from '@/components/home/FeaturedCategories'
 import TrustHighlights from '@/components/home/TrustHighlights'
 import HomeReviews from '@/components/home/HomeReviews'
 import PageTransition from '@/components/layout/PageTransition'
+import { getCategories } from '@/lib/data/catalog-db'
 
 export const metadata: Metadata = {
   title: 'Autocast — Преміальні автозапчастини',
@@ -12,12 +13,14 @@ export const metadata: Metadata = {
     'Інтернет-магазин преміальної автоелектроніки: автозвук, навігація, відеореєстратори, LED освітлення, системи безпеки. Доставка по всій Україні.',
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const categories = await getCategories()
+
   return (
     <PageTransition>
       <HeroSection />
       <CarSearch />
-      <FeaturedCategories />
+      <FeaturedCategories categories={categories} />
       <TrustHighlights />
       <HomeReviews />
     </PageTransition>

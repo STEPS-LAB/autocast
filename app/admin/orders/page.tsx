@@ -5,9 +5,12 @@ import AdminTable from '@/components/admin/AdminTable'
 import Badge from '@/components/ui/Badge'
 import { formatPrice, formatDate } from '@/lib/utils'
 import type { Column } from '@/components/admin/AdminTable'
+import { createClient } from '@/lib/supabase/client'
+import { useEffect, useMemo } from 'react'
 
-interface DemoOrder {
+interface AdminOrder {
   id: string
+  db_id: string
   customer: string
   email: string
   total: number
@@ -16,19 +19,10 @@ interface DemoOrder {
   items: number
 }
 
-const DEMO_ORDERS: DemoOrder[] = [
-  { id: 'AC-991234', customer: 'Іван Петренко', email: 'ivan@example.com', total: 13000, status: 'pending', date: '2026-03-23', items: 1 },
-  { id: 'AC-991235', customer: 'Марія Коваль', email: 'maria@example.com', total: 4450, status: 'processing', date: '2026-03-22', items: 2 },
-  { id: 'AC-991236', customer: 'Олег Бондар', email: 'oleg@example.com', total: 15200, status: 'shipped', date: '2026-03-21', items: 1 },
-  { id: 'AC-991237', customer: 'Наталія Шевченко', email: 'natalia@example.com', total: 8900, status: 'delivered', date: '2026-03-20', items: 3 },
-  { id: 'AC-991238', customer: 'Дмитро Мельник', email: 'dmytro@example.com', total: 2840, status: 'pending', date: '2026-03-19', items: 1 },
-  { id: 'AC-991239', customer: 'Тетяна Іваненко', email: 'tetiana@example.com', total: 6500, status: 'delivered', date: '2026-03-18', items: 2 },
-]
-
 const STATUS_OPTIONS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
 
 const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accent' | 'success' | 'error' | 'muted' }> = {
-  pending:    { label: 'Очікує', variant: 'warning' },
+  pending:    { label: 'Очікує відправки', variant: 'warning' },
   processing: { label: 'Обробляється', variant: 'accent' },
   shipped:    { label: 'Відправлено', variant: 'muted' },
   delivered:  { label: 'Доставлено', variant: 'success' },
@@ -36,13 +30,51 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 }
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState(DEMO_ORDERS)
+  const [orders, setOrders] = useState<AdminOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = useMemo(() => createClient(), [])
 
-  function handleUpdate(id: string, key: string, value: string | number) {
+  useEffect(() => {
+    let isMounted = true
+    async function loadOrders() {
+      const { data } = await supabase
+        .from('orders')
+        .select('id,total,status,created_at,shipping_info,order_items(id)')
+        .order('created_at', { ascending: false })
+
+      if (!isMounted) return
+      const mapped: AdminOrder[] = (data ?? []).map((row) => {
+        const shipping = (row.shipping_info ?? {}) as Record<string, string>
+        const firstName = shipping.first_name ?? ''
+        const lastName = shipping.last_name ?? ''
+        return {
+          id: row.id.slice(0, 8).toUpperCase(),
+          db_id: row.id,
+          customer: `${firstName} ${lastName}`.trim() || 'Клієнт',
+          email: shipping.email ?? '—',
+          total: Number(row.total),
+          status: row.status,
+          date: row.created_at,
+          items: Array.isArray(row.order_items) ? row.order_items.length : 0,
+        }
+      })
+      setOrders(mapped)
+      setLoading(false)
+    }
+    void loadOrders()
+    return () => {
+      isMounted = false
+    }
+  }, [supabase])
+
+  async function handleUpdate(id: string, key: string, value: string | number) {
+    const order = orders.find(o => o.id === id)
+    if (!order) return
+    await supabase.from('orders').update({ [key]: value }).eq('id', order.db_id)
     setOrders(prev => prev.map(o => o.id === id ? { ...o, [key]: value } : o))
   }
 
-  const columns: Column<DemoOrder>[] = [
+  const columns: Column<AdminOrder>[] = [
     {
       key: 'id',
       label: '№ Замовлення',
@@ -103,6 +135,7 @@ export default function AdminOrdersPage() {
         columns={columns}
         onUpdate={handleUpdate}
       />
+      {loading && <p className="text-sm text-text-muted mt-3">Завантаження...</p>}
     </div>
   )
 }

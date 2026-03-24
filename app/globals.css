@@ -117,6 +117,17 @@ body {
   border-color: var(--color-border-light) !important;
 }
 
+/* Inputs: no browser focus outline */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* ─── Noise texture overlay ────────────────────────────────────── */
 .noise-overlay::after {
   content: '';
@@ -184,7 +195,7 @@ body {
 
 /* ─── Price display ────────────────────────────────────────────── */
 .price {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-sans, system-ui, sans-serif);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }

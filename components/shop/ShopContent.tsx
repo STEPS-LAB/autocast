@@ -7,11 +7,18 @@ import ProductGrid from '@/components/shop/ProductGrid'
 import ProductFilters from '@/components/shop/ProductFilters'
 import SortSelect from '@/components/shop/SortSelect'
 import PageTransition from '@/components/layout/PageTransition'
-import { getProductCards } from '@/lib/data/seed'
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
+import type { Brand, Category, ProductCard } from '@/types'
 
-export default function ShopContent() {
+interface ShopContentProps {
+  products: ProductCard[]
+  categories: Category[]
+  brands: Brand[]
+}
+
+export default function ShopContent({ products, categories, brands }: ShopContentProps) {
   const searchParams = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -26,7 +33,7 @@ export default function ShopContent() {
 
   const filters = { category, brand, minPrice, maxPrice, inStock }
 
-  const allProducts = getProductCards()
+  const allProducts = useDiscountedProductCards(products)
 
   const filtered = useMemo(() => {
     let products = allProducts
@@ -93,7 +100,7 @@ export default function ShopContent() {
         <div className="flex gap-8">
           <div className="hidden lg:block w-56 shrink-0">
             <div className="sticky top-24">
-              <ProductFilters filters={filters} />
+              <ProductFilters filters={filters} categories={categories} brands={brands} />
             </div>
           </div>
 
@@ -140,7 +147,12 @@ export default function ShopContent() {
                 'p-5 overflow-y-auto lg:hidden'
               )}
             >
-              <ProductFilters filters={filters} onClose={() => setFiltersOpen(false)} />
+              <ProductFilters
+                filters={filters}
+                categories={categories}
+                brands={brands}
+                onClose={() => setFiltersOpen(false)}
+              />
             </motion.div>
           </>
         )}

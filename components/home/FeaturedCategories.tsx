@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { CATEGORIES } from '@/lib/data/seed'
+import type { Category } from '@/types'
 
 const container = {
   hidden: { opacity: 0 },
@@ -26,7 +26,11 @@ const CATEGORY_IMAGES: Record<string, string> = {
   'zakhyst-vid-uhonu': '/images/signalka.webp',
 }
 
-export default function FeaturedCategories() {
+interface FeaturedCategoriesProps {
+  categories: Category[]
+}
+
+export default function FeaturedCategories({ categories }: FeaturedCategoriesProps) {
   return (
     <section className="py-20">
       <div className="container-xl">
@@ -56,7 +60,7 @@ export default function FeaturedCategories() {
           viewport={{ once: true }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
         >
-          {CATEGORIES.map(cat => {
+          {categories.map(cat => {
             return (
             <motion.div key={cat.id} variants={item}>
               <Link href={`/shop/${cat.slug}`} className="group block">

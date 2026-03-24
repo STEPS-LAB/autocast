@@ -11,6 +11,7 @@ export interface Column<T> {
   render?: (row: T) => React.ReactNode
   editable?: boolean
   type?: 'text' | 'number' | 'select'
+  min?: number
   options?: string[]
 }
 
@@ -19,6 +20,8 @@ interface AdminTableProps<T extends { id: string }> {
   columns: Column<T>[]
   onUpdate?: (id: string, key: string, value: string | number) => void
   onDelete?: (id: string) => void
+  renderActions?: (row: T) => React.ReactNode
+  actionsAlwaysVisible?: boolean
   onAdd?: () => void
   addLabel?: string
 }
@@ -28,6 +31,8 @@ export default function AdminTable<T extends { id: string }>({
   columns,
   onUpdate,
   onDelete,
+  renderActions,
+  actionsAlwaysVisible = false,
   onAdd,
   addLabel = 'Додати',
 }: AdminTableProps<T>) {
@@ -68,13 +73,13 @@ export default function AdminTable<T extends { id: string }>({
                 {columns.map(col => (
                   <th
                     key={String(col.key)}
-                    className="text-left px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap"
+                    className="text-left px-4 py-3 text-xs font-bold text-text-primary uppercase tracking-wider whitespace-nowrap"
                   >
                     {col.label}
                   </th>
                 ))}
                 {(onUpdate || onDelete) && (
-                  <th className="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider text-right">
+                  <th className="px-4 py-3 text-xs font-bold text-text-primary uppercase tracking-wider text-right">
                     Дії
                   </th>
                 )}
@@ -100,7 +105,7 @@ export default function AdminTable<T extends { id: string }>({
                                 value={editValue}
                                 onChange={e => setEditValue(e.target.value)}
                                 autoFocus
-                                className="flex-1 h-7 bg-bg-elevated border border-accent rounded px-2 text-xs text-text-primary focus:outline-none"
+                                className="w-44 h-7 bg-bg-elevated border border-accent rounded px-2 text-xs text-text-primary focus:outline-none"
                               >
                                 {col.options.map(o => (
                                   <option key={o} value={o}>{o}</option>
@@ -109,11 +114,15 @@ export default function AdminTable<T extends { id: string }>({
                             ) : (
                               <input
                                 type={col.type ?? 'text'}
+                                min={col.type === 'number' ? col.min : undefined}
                                 value={editValue}
                                 onChange={e => setEditValue(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }}
                                 autoFocus
-                                className="flex-1 h-7 bg-bg-elevated border border-accent rounded px-2 text-xs text-text-primary focus:outline-none"
+                                className={cn(
+                                  'h-7 bg-bg-elevated border border-accent rounded px-2 text-xs text-text-primary focus:outline-none',
+                                  col.type === 'number' ? 'w-16 text-center' : 'w-56'
+                                )}
                               />
                             )}
                             <button onClick={saveEdit} className="p-1 text-success hover:bg-success/10 rounded transition-colors">
@@ -142,7 +151,11 @@ export default function AdminTable<T extends { id: string }>({
 
                   {(onUpdate || onDelete) && (
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className={cn(
+                        'flex items-center justify-end gap-1 transition-opacity',
+                        actionsAlwaysVisible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      )}>
+                        {renderActions?.(row)}
                         {onDelete && (
                           <button
                             onClick={() => onDelete(row.id)}

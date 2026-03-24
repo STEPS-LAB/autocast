@@ -3,9 +3,9 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback } from 'react'
 import { X, SlidersHorizontal } from 'lucide-react'
-import { CATEGORIES, BRANDS } from '@/lib/data/seed'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
+import type { Brand, Category } from '@/types'
 
 interface FiltersState {
   category?: string
@@ -18,6 +18,8 @@ interface FiltersState {
 interface ProductFiltersProps {
   filters: FiltersState
   onClose?: () => void
+  categories: Category[]
+  brands: Brand[]
 }
 
 const PRICE_RANGES = [
@@ -27,7 +29,7 @@ const PRICE_RANGES = [
   { label: 'Понад 10 000₴', min: 10000, max: 999999 },
 ]
 
-export default function ProductFilters({ filters, onClose }: ProductFiltersProps) {
+export default function ProductFilters({ filters, onClose, categories, brands }: ProductFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -105,7 +107,7 @@ export default function ProductFilters({ filters, onClose }: ProductFiltersProps
               Всі категорії
             </button>
           </li>
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <li key={cat.id}>
               <button
                 onClick={() => setFilter('category', cat.slug)}
@@ -182,7 +184,7 @@ export default function ProductFilters({ filters, onClose }: ProductFiltersProps
               Всі бренди
             </button>
           </li>
-          {BRANDS.map(brand => (
+          {brands.map(brand => (
             <li key={brand.id}>
               <button
                 onClick={() => setFilter('brand', brand.name)}

@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore } from '@/lib/store/cart'
 import { cn } from '@/lib/utils'
 import type { ProductCard } from '@/types'
+import { applyDiscountToProduct } from '@/lib/discounts'
+import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
 
 interface AddToCartProps {
   product: ProductCard
@@ -16,14 +18,16 @@ export default function AddToCart({ product, sticky }: AddToCartProps) {
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const addItem = useCartStore(s => s.addItem)
+  const overrides = useDiscountStore(selectDiscountOverrides)
+  const displayProduct = applyDiscountToProduct(product, overrides)
 
   function handleAdd() {
-    addItem(product, qty)
+    addItem(displayProduct, qty)
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }
 
-  if (product.stock === 0) {
+  if (displayProduct.stock === 0) {
     return (
       <div className={cn(
         'flex items-center justify-center h-12 rounded border border-border text-text-muted text-sm',
@@ -52,7 +56,7 @@ export default function AddToCart({ product, sticky }: AddToCartProps) {
           {qty}
         </span>
         <button
-          onClick={() => setQty(q => Math.min(product.stock, q + 1))}
+          onClick={() => setQty(q => Math.min(displayProduct.stock, q + 1))}
           className="px-3 h-12 text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
           aria-label="Збільшити"
         >

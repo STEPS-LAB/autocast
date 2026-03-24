@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className={cn(
                   'flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors',
                   isActive
-                    ? 'bg-accent/10 text-accent'
+                    ? 'bg-accent/20 text-black'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                 )}
               >
@@ -77,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs whitespace-nowrap transition-colors shrink-0',
                   isActive
-                    ? 'bg-accent/10 text-accent'
+                    ? 'bg-accent/20 text-black'
                     : 'text-text-muted hover:text-text-secondary hover:bg-bg-elevated'
                 )}
               >

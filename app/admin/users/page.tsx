@@ -5,8 +5,9 @@ import AdminTable from '@/components/admin/AdminTable'
 import Badge from '@/components/ui/Badge'
 import type { Column } from '@/components/admin/AdminTable'
 import { formatDate } from '@/lib/utils'
+import { useEffect } from 'react'
 
-interface DemoUser {
+interface AdminUser {
   id: string
   email: string
   role: string
@@ -14,22 +15,41 @@ interface DemoUser {
   joined: string
 }
 
-const DEMO_USERS: DemoUser[] = [
-  { id: 'u-001', email: 'admin@autocast.com.ua', role: 'admin', orders: 0, joined: '2024-01-01' },
-  { id: 'u-002', email: 'ivan@example.com', role: 'user', orders: 2, joined: '2024-03-15' },
-  { id: 'u-003', email: 'maria@example.com', role: 'user', orders: 1, joined: '2024-05-20' },
-  { id: 'u-004', email: 'oleg@example.com', role: 'user', orders: 3, joined: '2024-06-10' },
-  { id: 'u-005', email: 'natalia@example.com', role: 'user', orders: 1, joined: '2024-08-05' },
-]
-
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState(DEMO_USERS)
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [loading, setLoading] = useState(true)
 
-  function handleUpdate(id: string, key: string, value: string | number) {
+  useEffect(() => {
+    let isMounted = true
+    async function loadUsers() {
+      const res = await fetch('/api/admin/users', { cache: 'no-store' })
+      if (!res.ok) {
+        if (isMounted) setLoading(false)
+        return
+      }
+      const payload = await res.json() as { users: AdminUser[] }
+      if (!isMounted) return
+      setUsers(payload.users ?? [])
+      setLoading(false)
+    }
+
+    void loadUsers()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  async function handleUpdate(id: string, key: string, value: string | number) {
+    if (key !== 'role') return
+    await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, role: value }),
+    })
     setUsers(prev => prev.map(u => u.id === id ? { ...u, [key]: value } : u))
   }
 
-  const columns: Column<DemoUser>[] = [
+  const columns: Column<AdminUser>[] = [
     {
       key: 'email',
       label: 'Email',
@@ -70,6 +90,7 @@ export default function AdminUsersPage() {
         columns={columns}
         onUpdate={handleUpdate}
       />
+      {loading && <p className="text-sm text-text-muted mt-3">Завантаження...</p>}
     </div>
   )
 }

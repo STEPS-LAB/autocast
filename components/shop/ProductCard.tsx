@@ -9,6 +9,8 @@ import { useCartStore } from '@/lib/store/cart'
 import { formatPrice, getDiscountPercent, cn } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import type { ProductCard as ProductCardType } from '@/types'
+import { applyDiscountToProduct } from '@/lib/discounts'
+import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
 
 interface ProductCardProps {
   product: ProductCardType
@@ -19,15 +21,17 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
   const [imgError, setImgError] = useState(false)
   const [wished, setWished] = useState(false)
   const addItem = useCartStore(s => s.addItem)
+  const overrides = useDiscountStore(selectDiscountOverrides)
+  const displayProduct = applyDiscountToProduct(product, overrides)
 
   const discount =
-    product.sale_price
-      ? getDiscountPercent(product.price, product.sale_price)
+    displayProduct.sale_price
+      ? getDiscountPercent(displayProduct.price, displayProduct.sale_price)
       : null
 
-  const displayPrice = product.sale_price ?? product.price
+  const displayPrice = displayProduct.sale_price ?? displayProduct.price
   const displayPriceText = formatPrice(displayPrice)
-  const basePriceText = formatPrice(product.price)
+  const basePriceText = formatPrice(displayProduct.price)
 
   function renderPriceWithCurrency(priceText: string) {
     const amount = priceText.replace(/\s*₴$/, '')
@@ -41,21 +45,31 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
-    addItem(product)
+    addItem(displayProduct)
   }
 
   return (
     <motion.article
-      whileHover={{ y: -2 }}
+      whileHover={displayProduct.stock > 0 ? { y: -2 } : undefined}
       transition={{ duration: 0.2 }}
-      className="group relative bg-bg-surface border border-border rounded-md overflow-hidden flex flex-col"
+      className={cn(
+        'group relative bg-bg-surface border border-border rounded-md overflow-hidden flex flex-col',
+        displayProduct.stock === 0 && 'opacity-60 saturate-0'
+      )}
     >
       {/* Image */}
-      <Link href={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden bg-bg-elevated">
-        {product.images[0] && !imgError ? (
+      <Link
+        href={`/product/${displayProduct.slug}`}
+        onClick={displayProduct.stock === 0 ? (e) => e.preventDefault() : undefined}
+        className={cn(
+          'relative block aspect-square overflow-hidden bg-bg-elevated',
+          displayProduct.stock === 0 && 'pointer-events-none'
+        )}
+      >
+        {displayProduct.images[0] && !imgError ? (
           <Image
-            src={product.images[0]}
-            alt={product.name_ua}
+            src={displayProduct.images[0]}
+            alt={displayProduct.name_ua}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -67,6 +81,14 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
           </div>
         )}
 
+        {displayProduct.stock === 0 && (
+          <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+            <span className="px-3 py-1 rounded border border-white/20 bg-black/40 text-white text-xs sm:text-sm font-semibold tracking-wide uppercase">
+              Немає в наявності
+            </span>
+          </div>
+        )}
+
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           {discount && (
@@ -74,7 +96,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
               -{discount}%
             </Badge>
           )}
-          {product.stock === 0 && (
+          {displayProduct.stock === 0 && (
             <Badge variant="error" className="text-xs">
               Немає
             </Badge>
@@ -101,7 +123,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
         {/* Quick view */}
         {onQuickView && (
           <button
-            onClick={e => { e.preventDefault(); onQuickView(product) }}
+            onClick={e => { e.preventDefault(); onQuickView(displayProduct) }}
             className={cn(
               'absolute inset-x-0 bottom-0 py-2 flex items-center justify-center gap-1.5',
               'bg-bg-primary/80 backdrop-blur-sm text-text-primary text-xs font-medium',
@@ -117,22 +139,27 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
 
       {/* Info */}
       <div className="flex flex-col flex-1 p-3 gap-2">
-        {product.brand && (
-          <span className="text-xs text-text-muted">{product.brand.name}</span>
+        {displayProduct.brand && (
+          <span className="text-xs text-text-muted">{displayProduct.brand.name}</span>
         )}
 
         <Link
-          href={`/product/${product.slug}`}
-          className="text-sm font-medium text-text-primary hover:text-accent transition-colors line-clamp-2 leading-snug"
+          href={`/product/${displayProduct.slug}`}
+          onClick={displayProduct.stock === 0 ? (e) => e.preventDefault() : undefined}
+          className={cn(
+            'text-sm font-medium text-text-primary line-clamp-2 leading-snug',
+            displayProduct.stock > 0 && 'hover:text-accent transition-colors',
+            displayProduct.stock === 0 && 'pointer-events-none'
+          )}
         >
-          {product.name_ua}
+          {displayProduct.name_ua}
         </Link>
 
         <div className="flex items-center gap-2 mt-auto pt-1">
           <span className="text-base font-bold text-text-primary">
             {renderPriceWithCurrency(displayPriceText)}
           </span>
-          {product.sale_price && (
+          {displayProduct.sale_price && (
             <span className="text-xs text-text-muted line-through">
               {renderPriceWithCurrency(basePriceText)}
             </span>
@@ -141,17 +168,17 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
 
         <button
           onClick={handleAddToCart}
-          disabled={product.stock === 0}
+          disabled={displayProduct.stock === 0}
           className={cn(
             'flex items-center justify-center gap-2 h-9 rounded text-sm font-medium',
             'transition-all duration-150 active:scale-[0.98]',
-            product.stock > 0
+            displayProduct.stock > 0
               ? 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-text-primary'
               : 'bg-bg-elevated text-text-muted cursor-not-allowed border border-border'
           )}
         >
           <ShoppingCart size={14} />
-          {product.stock > 0 ? 'В кошик' : 'Немає в наявності'}
+          {displayProduct.stock > 0 ? 'В кошик' : 'Немає в наявності'}
         </button>
       </div>
     </motion.article>

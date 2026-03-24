@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -41,7 +40,6 @@ const slideVariants = {
 }
 
 export default function CheckoutPage() {
-  const router = useRouter()
   const { items, clearCart } = useCartStore()
   const total = useCartStore(selectCartTotal)
   const count = useCartStore(selectCartCount)
@@ -53,7 +51,6 @@ export default function CheckoutPage() {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<ShippingInfoInput>({
     resolver: zodResolver(shippingInfoSchema),
     defaultValues: {
@@ -61,8 +58,6 @@ export default function CheckoutPage() {
       payment_method: 'cash_on_delivery',
     },
   })
-
-  const formValues = watch()
 
   if (items.length === 0 && step !== 3) {
     return (
@@ -84,10 +79,24 @@ export default function CheckoutPage() {
     setStep(next)
   }
 
-  function onSubmit(data: ShippingInfoInput) {
-    void data
-    const num = 'AC-' + Date.now().toString().slice(-6)
-    setOrderNumber(num)
+  async function onSubmit(data: ShippingInfoInput) {
+    const payload = {
+      shipping_info: data,
+      items: items.map(item => ({
+        product_id: item.product.id,
+        qty: item.quantity,
+        unit_price: item.product.sale_price ?? item.product.price,
+      })),
+    }
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) return
+
+    const created = await response.json() as { number?: string }
+    setOrderNumber(created.number ?? '')
     clearCart()
     goTo(3)
   }

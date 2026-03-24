@@ -1,29 +1,33 @@
 import { ShoppingCart, Package, Users, TrendingUp } from 'lucide-react'
 import AnalyticsCard from '@/components/admin/AnalyticsCard'
-import { PRODUCTS, CATEGORIES } from '@/lib/data/seed'
+import Badge from '@/components/ui/Badge'
 import { formatPrice } from '@/lib/utils'
 import type { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/server'
+import { getCategories, getProductsFromDb } from '@/lib/data/catalog-db'
 
 export const metadata: Metadata = { title: 'Адмін — Дашборд' }
 
-const DEMO_ORDERS = [
-  { id: 'AC-991234', status: 'pending', total: 13000, customer: 'Іван Петренко', date: '23.03.2026' },
-  { id: 'AC-991235', status: 'processing', total: 4450, customer: 'Марія Коваль', date: '22.03.2026' },
-  { id: 'AC-991236', status: 'shipped', total: 15200, customer: 'Олег Бондар', date: '21.03.2026' },
-  { id: 'AC-991237', status: 'delivered', total: 8900, customer: 'Наталія Шевченко', date: '20.03.2026' },
-  { id: 'AC-991238', status: 'pending', total: 2840, customer: 'Дмитро Мельник', date: '19.03.2026' },
-]
-
-const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  pending:    { label: 'Очікує', cls: 'text-warning bg-warning/10 border-warning/20' },
-  processing: { label: 'Обробляється', cls: 'text-accent bg-accent/10 border-accent/20' },
-  shipped:    { label: 'Відправлено', cls: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
-  delivered:  { label: 'Доставлено', cls: 'text-success bg-success/10 border-success/20' },
-  cancelled:  { label: 'Скасовано', cls: 'text-error bg-error/10 border-error/20' },
+const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accent' | 'success' | 'error' | 'muted' }> = {
+  pending:    { label: 'Очікує відправки', variant: 'warning' },
+  processing: { label: 'Обробляється', variant: 'accent' },
+  shipped:    { label: 'Відправлено', variant: 'muted' },
+  delivered:  { label: 'Доставлено', variant: 'success' },
+  cancelled:  { label: 'Скасовано', variant: 'error' },
 }
 
-export default function AdminDashboard() {
-  const totalRevenue = DEMO_ORDERS.reduce((s, o) => s + o.total, 0)
+export default async function AdminDashboard() {
+  const supabase = await createClient()
+  const [products, categories, ordersResult, profilesResult] = await Promise.all([
+    getProductsFromDb(),
+    getCategories(),
+    supabase.from('orders').select('id,status,total,shipping_info,created_at').order('created_at', { ascending: false }).limit(5),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+  ])
+
+  const orders = ordersResult.data ?? []
+  const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0)
+  const usersCount = profilesResult.count ?? 0
 
   return (
     <div>
@@ -44,7 +48,7 @@ export default function AdminDashboard() {
         />
         <AnalyticsCard
           title="Замовлення"
-          value={String(DEMO_ORDERS.length)}
+          value={String(orders.length)}
           change="8%"
           positive
           icon={ShoppingCart}
@@ -52,15 +56,13 @@ export default function AdminDashboard() {
         />
         <AnalyticsCard
           title="Товарів"
-          value={String(PRODUCTS.length)}
+          value={String(products.length)}
           icon={Package}
-          description={`${CATEGORIES.length} категорій`}
+          description={`${categories.length} категорій`}
         />
         <AnalyticsCard
           title="Клієнти"
-          value="247"
-          change="5%"
-          positive
+          value={String(usersCount)}
           icon={Users}
           description="Зареєстровані"
         />
@@ -74,17 +76,17 @@ export default function AdminDashboard() {
             <a href="/admin/orders" className="text-xs text-accent hover:underline">Всі →</a>
           </div>
           <div className="divide-y divide-border">
-            {DEMO_ORDERS.map(order => {
+            {orders.map(order => {
               const s = STATUS_LABELS[order.status] ?? STATUS_LABELS.pending!
+              const shipping = (order.shipping_info ?? {}) as Record<string, string>
+              const customerName = `${shipping.first_name ?? ''} ${shipping.last_name ?? ''}`.trim() || 'Клієнт'
               return (
                 <div key={order.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-colors">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-primary">{order.id}</p>
-                    <p className="text-xs text-text-muted truncate">{order.customer}</p>
+                    <p className="text-sm font-medium text-text-primary">{order.id.slice(0, 8).toUpperCase()}</p>
+                    <p className="text-xs text-text-muted truncate">{customerName}</p>
                   </div>
-                  <span className={`text-[11px] px-2 py-0.5 rounded border font-medium ${s.cls}`}>
-                    {s.label}
-                  </span>
+                  <Badge variant={s.variant}>{s.label}</Badge>
                   <span className="text-sm font-semibold text-text-primary price shrink-0">
                     {formatPrice(order.total)}
                   </span>
@@ -97,11 +99,11 @@ export default function AdminDashboard() {
         {/* Top products */}
         <div className="bg-bg-surface border border-border rounded-md overflow-hidden">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-primary">Топ товарів</h2>
+            <h2 className="text-sm font-semibold text-text-primary">Товари</h2>
             <a href="/admin/products" className="text-xs text-accent hover:underline">Всі →</a>
           </div>
           <div className="divide-y divide-border">
-            {PRODUCTS.filter(p => p.is_featured).slice(0, 5).map((product, i) => (
+            {products.filter(p => p.is_featured).slice(0, 5).map((product, i) => (
               <div key={product.id} className="flex items-center gap-3 px-5 py-3">
                 <span className="text-xs text-text-muted w-5 shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0">
