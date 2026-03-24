@@ -18,6 +18,7 @@ const NAV_LINKS = [
 
 export default function Header() {
   const pathname = usePathname()
+  const isAdminPage = pathname.startsWith('/admin')
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
@@ -53,9 +54,10 @@ export default function Header() {
         className={cn(
           'fixed top-0 left-0 right-0 z-40 transition-all duration-300',
           !scrolled
-            ? 'bg-transparent'
+            ? (isAdminPage ? 'bg-bg-surface/95 border-b border-border/70 backdrop-blur-xl' : 'bg-transparent')
             : 'border-b border-white/15 bg-bg-surface/85 backdrop-blur-xl shadow-[0_8px_28px_rgba(0,0,0,0.18)]',
-          scrolled && 'shadow-[0_10px_32px_rgba(0,0,0,0.22)]'
+          scrolled && 'shadow-[0_10px_32px_rgba(0,0,0,0.22)]',
+          isAdminPage && scrolled && 'border-border/70'
         )}
       >
         <div className="container-xl">

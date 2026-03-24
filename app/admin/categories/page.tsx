@@ -15,7 +15,6 @@ export default function AdminCategoriesPage() {
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null)
   const [showAddInfo, setShowAddInfo] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
-  const [newCategorySlug, setNewCategorySlug] = useState('')
   const [newCategorySortOrder, setNewCategorySortOrder] = useState('0')
   const [loading, setLoading] = useState(true)
   const supabase = useMemo(() => createClient(), [])
@@ -70,7 +69,6 @@ export default function AdminCategoriesPage() {
       ? Math.max(...categories.map(c => c.sort_order)) + 1
       : 1
     setNewCategoryName('')
-    setNewCategorySlug('')
     setNewCategorySortOrder(String(nextSort))
     setShowAddInfo(true)
   }
@@ -78,7 +76,7 @@ export default function AdminCategoriesPage() {
   async function createCategory() {
     const name = newCategoryName.trim()
     if (!name) return
-    const slug = (newCategorySlug.trim() || slugify(name))
+    const slug = slugify(name)
     const sortOrder = Math.max(0, Number(newCategorySortOrder || '0'))
     const { data } = await supabase
       .from('categories')
@@ -159,23 +157,9 @@ export default function AdminCategoriesPage() {
             <input
               type="text"
               value={newCategoryName}
-              onChange={(e) => {
-                const value = e.target.value
-                setNewCategoryName(value)
-                setNewCategorySlug(slugify(value))
-              }}
+              onChange={(e) => setNewCategoryName(e.target.value)}
               className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
               placeholder="Напр. Автосвітло"
-            />
-          </label>
-          <label className="block">
-            <span className="text-xs text-text-muted">Slug</span>
-            <input
-              type="text"
-              value={newCategorySlug}
-              onChange={(e) => setNewCategorySlug(e.target.value)}
-              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
-              placeholder="avtosvitlo"
             />
           </label>
           <label className="block">

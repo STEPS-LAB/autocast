@@ -27,6 +27,7 @@ export default function AdminProductsPage() {
   const [discountInput, setDiscountInput] = useState('')
   const [discountError, setDiscountError] = useState('')
   const [showAddInfo, setShowAddInfo] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [newName, setNewName] = useState('')
   const [newSlug, setNewSlug] = useState('')
   const [newPrice, setNewPrice] = useState('0')
@@ -35,7 +36,6 @@ export default function AdminProductsPage() {
   const [createError, setCreateError] = useState('')
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
-  const [editSlug, setEditSlug] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editPrice, setEditPrice] = useState('0')
   const [editStock, setEditStock] = useState('0')
@@ -240,7 +240,6 @@ export default function AdminProductsPage() {
       render: (row) => (
         <div className="max-w-[240px]">
           <p className="text-sm text-text-primary line-clamp-2">{row.name_ua}</p>
-          <p className="text-xs text-text-muted font-mono mt-0.5">{row.slug}</p>
         </div>
       ),
     },
@@ -280,6 +279,22 @@ export default function AdminProductsPage() {
       ),
     },
   ]
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return products
+
+    return products.filter((product) => {
+      const categoryName = categories.find(c => c.id === product.category_id)?.name_ua ?? ''
+      const brandName = brands.find(b => b.id === product.brand_id)?.name ?? ''
+      return (
+        product.name_ua.toLowerCase().includes(query)
+        || product.description_ua.toLowerCase().includes(query)
+        || categoryName.toLowerCase().includes(query)
+        || brandName.toLowerCase().includes(query)
+      )
+    })
+  }, [brands, categories, products, searchQuery])
 
   function handleDiscount(row: ProductRow) {
     const currentPercent = row.sale_price
@@ -394,7 +409,6 @@ export default function AdminProductsPage() {
   function openEditProductModal(row: ProductRow) {
     setEditingProductId(row.id)
     setEditName(row.name_ua)
-    setEditSlug(row.slug)
     setEditDescription(row.description_ua)
     setEditPrice(String(row.price))
     setEditStock(String(row.stock))
@@ -415,7 +429,7 @@ export default function AdminProductsPage() {
 
     const payload = {
       name_ua: name,
-      slug: editSlug.trim() || slugify(name),
+      slug: slugify(name),
       description_ua: editDescription.trim(),
       price: Math.max(0, Number(editPrice || '0')),
       stock: Math.max(0, Number(editStock || '0')),
@@ -447,7 +461,18 @@ export default function AdminProductsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Товари</h1>
-          <p className="text-sm text-text-muted">{products.length} товарів</p>
+          <p className="text-sm text-text-muted">{filteredProducts.length} товарів</p>
+        </div>
+        <div className="flex-1 max-w-md">
+          <label className="sr-only" htmlFor="products-search">Пошук товарів</label>
+          <input
+            id="products-search"
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Пошук товарів..."
+            className="w-full h-9 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
+          />
         </div>
         <Button size="sm" onClick={openCreateProductModal} className="gap-1.5 shrink-0">
           <Plus size={14} />
@@ -456,7 +481,7 @@ export default function AdminProductsPage() {
       </div>
 
       <AdminTable
-        data={products}
+        data={filteredProducts}
         columns={columns}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
@@ -559,20 +584,7 @@ export default function AdminProductsPage() {
               <input
                 type="text"
                 value={editName}
-                onChange={(e) => {
-                  const value = e.target.value
-                  setEditName(value)
-                  setEditSlug(slugify(value))
-                }}
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
-              />
-            </label>
-            <label className="block col-span-2">
-              <span className="text-xs text-text-muted">Slug</span>
-              <input
-                type="text"
-                value={editSlug}
-                onChange={(e) => setEditSlug(e.target.value)}
+                onChange={(e) => setEditName(e.target.value)}
                 className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
               />
             </label>
