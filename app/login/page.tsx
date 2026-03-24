@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Chrome } from 'lucide-react'
+import { Mail, Lock } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
@@ -22,7 +22,6 @@ type LoginInput = z.infer<typeof loginSchema>
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
 
   const {
@@ -54,22 +53,6 @@ export default function LoginPage() {
     }
   }
 
-  async function handleGoogleLogin() {
-    setGoogleLoading(true)
-    try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
-      })
-    } catch {
-      setError('Помилка при вході через Google')
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
-
   return (
     <PageTransition>
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-16">
@@ -93,22 +76,6 @@ export default function LoginPage() {
                 Зареєструватися
               </Link>
             </p>
-
-            {/* Google */}
-            <button
-              onClick={handleGoogleLogin}
-              disabled={googleLoading}
-              className="w-full h-10 flex items-center justify-center gap-2.5 bg-bg-elevated border border-border rounded text-sm text-text-secondary hover:text-text-primary hover:border-border-light transition-colors mb-4 disabled:opacity-50"
-            >
-              <Chrome size={16} />
-              {googleLoading ? 'Завантаження…' : 'Увійти з Google'}
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-text-muted">або</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

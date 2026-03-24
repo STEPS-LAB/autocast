@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -9,8 +10,8 @@ const loginSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
-  const supabaseKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseKey = getSupabaseAnonKey()
 
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json(

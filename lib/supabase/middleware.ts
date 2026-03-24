@@ -1,9 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getSupabaseAnonKey, getSupabaseUrl } from './env'
 
 export async function updateSession(request: NextRequest) {
-  const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
-  const supabaseKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseKey = getSupabaseAnonKey()
 
   // Skip auth middleware if Supabase isn't configured
   if (!supabaseUrl || !supabaseKey) {

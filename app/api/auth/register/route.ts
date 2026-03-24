@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { getSiteUrl, getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -17,9 +18,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
-    const supabaseAnonKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
-    const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://localhost:3000'
+    const supabaseUrl = getSupabaseUrl()
+    const supabaseAnonKey = getSupabaseAnonKey()
+    const siteUrl = getSiteUrl()
 
     if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
