@@ -11,6 +11,8 @@ import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
 import type { Brand, Category, ProductCard } from '@/types'
+import Link from 'next/link'
+import Button from '@/components/ui/Button'
 
 interface ShopContentProps {
   products: ProductCard[]
@@ -19,6 +21,7 @@ interface ShopContentProps {
 }
 
 export default function ShopContent({ products, categories, brands }: ShopContentProps) {
+  const strictDb = process.env['NEXT_PUBLIC_CATALOG_STRICT_DB'] === 'true'
   const searchParams = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -78,6 +81,7 @@ export default function ShopContent({ products, categories, brands }: ShopConten
   }, [allProducts, query, category, brand, minPrice, maxPrice, inStock, sort])
 
   const hasFilters = Object.values(filters).some(Boolean)
+  const showCatalogNotReady = strictDb && allProducts.length === 0 && !query && !hasFilters
 
   const headingText = category
     ? allProducts.find(p => p.category?.slug === category)?.category?.name_ua ?? 'Каталог'
@@ -122,7 +126,23 @@ export default function ShopContent({ products, categories, brands }: ShopConten
               </div>
             </div>
 
-            <ProductGrid products={filtered} />
+            {showCatalogNotReady ? (
+              <div className="rounded-md border border-border bg-bg-surface p-8 text-center">
+                <h3 className="text-base font-semibold text-text-primary mb-1">Каталог не ініціалізовано</h3>
+                <p className="text-sm text-text-muted">
+                  Увімкнено strict DB режим і в БД немає товарів. Виконайте синхронізацію каталогу в адмін-панелі.
+                </p>
+                <div className="mt-4 flex justify-center">
+                  <Link href="/admin">
+                    <Button size="sm" variant="secondary">
+                      Відкрити адмінку
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <ProductGrid products={filtered} />
+            )}
           </div>
         </div>
       </div>

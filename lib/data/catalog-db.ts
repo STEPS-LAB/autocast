@@ -49,6 +49,10 @@ interface DbCarModelRow {
   name: string
 }
 
+function allowSeedFallback(): boolean {
+  return process.env['CATALOG_STRICT_DB'] !== 'true'
+}
+
 function rowToCategory(row: DbCategoryRow): Category {
   return {
     id: row.id,
@@ -112,10 +116,11 @@ export async function getCategories(): Promise<Category[]> {
       .select('id,slug,name_ua,parent_id,image_url,sort_order')
       .order('sort_order', { ascending: true })
 
-    if (error || !data || data.length === 0) return CATEGORIES
+    if (error || !data) return allowSeedFallback() ? CATEGORIES : []
+    if (data.length === 0) return allowSeedFallback() ? CATEGORIES : []
     return (data as DbCategoryRow[]).map(rowToCategory)
   } catch {
-    return CATEGORIES
+    return allowSeedFallback() ? CATEGORIES : []
   }
 }
 
@@ -127,10 +132,11 @@ export async function getBrands(): Promise<Brand[]> {
       .select('id,name,logo_url')
       .order('name', { ascending: true })
 
-    if (error || !data || data.length === 0) return BRANDS
+    if (error || !data) return allowSeedFallback() ? BRANDS : []
+    if (data.length === 0) return allowSeedFallback() ? BRANDS : []
     return (data as DbBrandRow[]).map(rowToBrand)
   } catch {
-    return BRANDS
+    return allowSeedFallback() ? BRANDS : []
   }
 }
 
@@ -146,10 +152,11 @@ export async function getProductCardsFromDb(): Promise<ProductCard[]> {
       `)
       .order('created_at', { ascending: false })
 
-    if (error || !data || data.length === 0) return getProductCards()
+    if (error || !data) return allowSeedFallback() ? getProductCards() : []
+    if (data.length === 0) return allowSeedFallback() ? getProductCards() : []
     return (data as DbProductRow[]).map(rowToProductCard)
   } catch {
-    return getProductCards()
+    return allowSeedFallback() ? getProductCards() : []
   }
 }
 
@@ -165,10 +172,11 @@ export async function getProductsFromDb(): Promise<Product[]> {
       `)
       .order('created_at', { ascending: false })
 
-    if (error || !data || data.length === 0) return PRODUCTS
+    if (error || !data) return allowSeedFallback() ? PRODUCTS : []
+    if (data.length === 0) return allowSeedFallback() ? PRODUCTS : []
     return (data as DbProductRow[]).map(rowToProduct)
   } catch {
-    return PRODUCTS
+    return allowSeedFallback() ? PRODUCTS : []
   }
 }
 
@@ -185,10 +193,10 @@ export async function getProductBySlugFromDb(slug: string): Promise<Product | un
       .eq('slug', slug)
       .maybeSingle()
 
-    if (error || !data) return getProductBySlug(slug)
+    if (error || !data) return allowSeedFallback() ? getProductBySlug(slug) : undefined
     return rowToProduct(data as DbProductRow)
   } catch {
-    return getProductBySlug(slug)
+    return allowSeedFallback() ? getProductBySlug(slug) : undefined
   }
 }
 
@@ -200,10 +208,11 @@ export async function getCarMakes(): Promise<CarMake[]> {
       .select('id,name')
       .order('name', { ascending: true })
 
-    if (error || !data || data.length === 0) return CAR_MAKES
+    if (error || !data) return allowSeedFallback() ? CAR_MAKES : []
+    if (data.length === 0) return allowSeedFallback() ? CAR_MAKES : []
     return (data as DbCarMakeRow[]).map((row) => ({ id: row.id, name: row.name }))
   } catch {
-    return CAR_MAKES
+    return allowSeedFallback() ? CAR_MAKES : []
   }
 }
 
@@ -215,13 +224,14 @@ export async function getCarModelsByMake(): Promise<Record<string, string[]>> {
       .select('id,make_id,name')
       .order('name', { ascending: true })
 
-    if (error || !data || data.length === 0) return CAR_MODELS
+    if (error || !data) return allowSeedFallback() ? CAR_MODELS : {}
+    if (data.length === 0) return allowSeedFallback() ? CAR_MODELS : {}
     return (data as DbCarModelRow[]).reduce<Record<string, string[]>>((acc, row) => {
       if (!acc[row.make_id]) acc[row.make_id] = []
       acc[row.make_id].push(row.name)
       return acc
     }, {})
   } catch {
-    return CAR_MODELS
+    return allowSeedFallback() ? CAR_MODELS : {}
   }
 }
