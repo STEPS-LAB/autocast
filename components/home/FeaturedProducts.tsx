@@ -56,11 +56,11 @@ export default function FeaturedProducts() {
                 </div>
                 <p className="text-xs text-text-muted line-clamp-2 mb-1">{product.name_ua}</p>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-text-primary price">
+                  <span className="text-sm font-bold text-text-primary font-sans tabular-nums">
                     {formatPrice(product.sale_price ?? product.price)}
                   </span>
                   {product.sale_price && (
-                    <span className="text-[11px] text-text-muted line-through price">
+                    <span className="text-[11px] text-text-muted line-through font-sans tabular-nums">
                       {formatPrice(product.price)}
                     </span>
                   )}

@@ -32,7 +32,7 @@ export default function CartDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
             onClick={closeCart}
           />
         )}
@@ -45,7 +45,7 @@ export default function CartDrawer() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            className="fixed right-0 inset-y-0 z-50 w-full max-w-sm bg-bg-surface border-l border-border flex flex-col"
+            className="fixed right-0 inset-y-0 z-[60] w-full max-w-sm bg-bg-surface border-l border-border flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">

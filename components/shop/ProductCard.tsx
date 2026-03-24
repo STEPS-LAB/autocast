@@ -26,6 +26,18 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
       : null
 
   const displayPrice = product.sale_price ?? product.price
+  const displayPriceText = formatPrice(displayPrice)
+  const basePriceText = formatPrice(product.price)
+
+  function renderPriceWithCurrency(priceText: string) {
+    const amount = priceText.replace(/\s*₴$/, '')
+    return (
+      <>
+        <span className="font-sans tabular-nums">{amount}</span>
+        <span className="font-sans"> ₴</span>
+      </>
+    )
+  }
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
@@ -117,12 +129,12 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
         </Link>
 
         <div className="flex items-center gap-2 mt-auto pt-1">
-          <span className="text-base font-bold text-text-primary price">
-            {formatPrice(displayPrice)}
+          <span className="text-base font-bold text-text-primary">
+            {renderPriceWithCurrency(displayPriceText)}
           </span>
           {product.sale_price && (
-            <span className="text-xs text-text-muted line-through price">
-              {formatPrice(product.price)}
+            <span className="text-xs text-text-muted line-through">
+              {renderPriceWithCurrency(basePriceText)}
             </span>
           )}
         </div>

@@ -98,7 +98,7 @@ export default function ProductFilters({ filters, onClose }: ProductFiltersProps
               className={cn(
                 'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
                 !filters.category
-                  ? 'text-accent bg-accent/10'
+                  ? 'text-black bg-accent/20'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
               )}
             >
@@ -112,7 +112,7 @@ export default function ProductFilters({ filters, onClose }: ProductFiltersProps
                 className={cn(
                   'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
                   filters.category === cat.slug
-                    ? 'text-accent bg-accent/10'
+                    ? 'text-black bg-accent/20'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                 )}
               >
@@ -135,7 +135,7 @@ export default function ProductFilters({ filters, onClose }: ProductFiltersProps
               className={cn(
                 'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
                 !filters.minPrice && !filters.maxPrice
-                  ? 'text-accent bg-accent/10'
+                  ? 'text-black bg-accent/20'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
               )}
             >
@@ -152,7 +152,7 @@ export default function ProductFilters({ filters, onClose }: ProductFiltersProps
                 className={cn(
                   'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
                   filters.minPrice === range.min && filters.maxPrice === range.max
-                    ? 'text-accent bg-accent/10'
+                    ? 'text-black bg-accent/20'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                 )}
               >
@@ -175,7 +175,7 @@ export default function ProductFilters({ filters, onClose }: ProductFiltersProps
               className={cn(
                 'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
                 !filters.brand
-                  ? 'text-accent bg-accent/10'
+                  ? 'text-black bg-accent/20'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
               )}
             >
@@ -189,7 +189,7 @@ export default function ProductFilters({ filters, onClose }: ProductFiltersProps
                 className={cn(
                   'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
                   filters.brand === brand.name
-                    ? 'text-accent bg-accent/10'
+                    ? 'text-black bg-accent/20'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                 )}
               >
