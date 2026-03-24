@@ -55,7 +55,7 @@ export default function AdminTable<T extends { id: string }>({
   }
 
   return (
-    <div>
+    <div className="fade-up-in">
       {onAdd && (
         <div className="flex justify-end mb-4">
           <Button size="sm" onClick={onAdd} className="gap-1.5">
@@ -65,7 +65,7 @@ export default function AdminTable<T extends { id: string }>({
         </div>
       )}
 
-      <div className="bg-bg-surface border border-border rounded-md overflow-hidden">
+      <div className="bg-bg-surface border border-border rounded-md overflow-hidden transition-shadow duration-300 hover:shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -87,7 +87,7 @@ export default function AdminTable<T extends { id: string }>({
             </thead>
             <tbody className="divide-y divide-border">
               {data.map(row => (
-                <tr key={row.id} className="hover:bg-bg-elevated transition-colors group">
+                <tr key={row.id} className="hover:bg-bg-elevated transition-all duration-300 ease-out group">
                   {columns.map(col => {
                     const isEditing =
                       editingCell?.id === row.id && editingCell?.key === String(col.key)

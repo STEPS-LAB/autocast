@@ -1,5 +1,6 @@
 import { ShoppingCart, Package, Users, TrendingUp } from 'lucide-react'
 import AnalyticsCard from '@/components/admin/AnalyticsCard'
+import Badge from '@/components/ui/Badge'
 import { formatPrice } from '@/lib/utils'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
@@ -28,8 +29,8 @@ export default async function AdminDashboard() {
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0)
   const usersCount = profilesResult.count ?? 0
   return (
-    <div>
-      <div className="mb-6">
+    <div className="fade-up-in">
+      <div className="mb-6 fade-up-in">
         <h1 className="text-xl font-bold text-text-primary">Дашборд</h1>
         <p className="text-sm text-text-muted">Огляд діяльності магазину</p>
       </div>
@@ -68,10 +69,10 @@ export default async function AdminDashboard() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent orders */}
-        <div className="bg-bg-surface border border-border rounded-md overflow-hidden">
+        <div className="bg-bg-surface border border-border rounded-md overflow-hidden fade-up-in transition-shadow duration-300 hover:shadow-sm">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-semibold text-text-primary">Останні замовлення</h2>
-            <a href="/admin/orders" className="text-xs text-accent hover:underline">Всі →</a>
+            <a href="/admin/orders" className="text-xs text-accent hover:underline transition-colors duration-300">Всі →</a>
           </div>
           <div className="divide-y divide-border">
             {orders.map(order => {
@@ -79,7 +80,7 @@ export default async function AdminDashboard() {
               const shipping = (order.shipping_info ?? {}) as Record<string, string>
               const customerName = `${shipping.first_name ?? ''} ${shipping.last_name ?? ''}`.trim() || 'Клієнт'
               return (
-                <div key={order.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-colors">
+                <div key={order.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text-primary">{order.id.slice(0, 8).toUpperCase()}</p>
                     <p className="text-xs text-text-muted truncate">{customerName}</p>
@@ -95,14 +96,14 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Top products */}
-        <div className="bg-bg-surface border border-border rounded-md overflow-hidden">
+        <div className="bg-bg-surface border border-border rounded-md overflow-hidden fade-up-in transition-shadow duration-300 hover:shadow-sm">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-semibold text-text-primary">Товари</h2>
-            <a href="/admin/products" className="text-xs text-accent hover:underline">Всі →</a>
+            <a href="/admin/products" className="text-xs text-accent hover:underline transition-colors duration-300">Всі →</a>
           </div>
           <div className="divide-y divide-border">
             {products.filter(p => p.is_featured).slice(0, 5).map((product, i) => (
-              <div key={product.id} className="flex items-center gap-3 px-5 py-3">
+              <div key={product.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out">
                 <span className="text-xs text-text-muted w-5 shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text-primary line-clamp-1">{product.name_ua}</p>

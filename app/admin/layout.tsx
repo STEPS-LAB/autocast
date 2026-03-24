@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-56 bg-bg-surface border-r border-border shrink-0 py-6">
+      <aside className="hidden md:flex flex-col w-56 bg-bg-surface border-r border-border shrink-0 py-6 fade-up-in">
         {/* Brand */}
         <div className="px-5 mb-6">
           <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key={href}
                 href={href}
                 className={cn(
-                  'flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors',
+                  'flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-all duration-300 ease-out',
                   isActive
                     ? 'bg-accent/20 text-black'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
@@ -75,7 +75,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key={href}
                 href={href}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs whitespace-nowrap transition-colors shrink-0',
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs whitespace-nowrap transition-all duration-300 ease-out shrink-0',
                   isActive
                     ? 'bg-accent/20 text-black'
                     : 'text-text-muted hover:text-text-secondary hover:bg-bg-elevated'
@@ -88,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </div>
 
-        <div className="p-5 md:p-8">
+        <div className="p-5 md:p-8 fade-up-in">
           {children}
         </div>
       </main>

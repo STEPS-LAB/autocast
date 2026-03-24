@@ -21,12 +21,12 @@ export default function AnalyticsCard({
   const isMoneyValue = value.includes('₴')
 
   return (
-    <div className="bg-bg-surface border border-border rounded-md p-5 flex flex-col gap-3">
+    <div className="bg-bg-surface border border-border rounded-md p-5 flex flex-col gap-3 fade-up-in micro-lift group">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           {title}
         </span>
-        <div className="size-8 rounded bg-accent/20 flex items-center justify-center">
+        <div className="size-8 rounded bg-accent/20 flex items-center justify-center transition-transform duration-300 ease-out group-hover:scale-105">
           <Icon size={15} className="text-black" />
         </div>
       </div>

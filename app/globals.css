@@ -240,6 +240,36 @@ select:focus-visible {
   transform: translateY(-1px) scale(1.01);
 }
 
+/* ─── Admin panel reveal animations ────────────────────────────── */
+@keyframes fade-up-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up-in {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-up-in {
+    animation: fade-up-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: opacity, transform;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up-in {
+    opacity: 1;
+    animation: none;
+  }
+}
+
 /* ─── Smooth hover/focus transitions ───────────────────────────── */
 @media (prefers-reduced-motion: no-preference) {
   a,
