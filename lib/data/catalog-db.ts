@@ -53,6 +53,10 @@ function allowSeedFallback(): boolean {
   return process.env['CATALOG_STRICT_DB'] !== 'true'
 }
 
+interface CatalogReadOptions {
+  dbOnly?: boolean
+}
+
 function rowToCategory(row: DbCategoryRow): Category {
   return {
     id: row.id,
@@ -117,7 +121,8 @@ function rowToProductCard(row: DbProductRow): ProductCard {
   }
 }
 
-export async function getCategories(): Promise<Category[]> {
+export async function getCategories(options?: CatalogReadOptions): Promise<Category[]> {
+  const useSeedFallback = !options?.dbOnly && allowSeedFallback()
   try {
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -125,15 +130,16 @@ export async function getCategories(): Promise<Category[]> {
       .select('id,slug,name_ua,parent_id,image_url,sort_order')
       .order('sort_order', { ascending: true })
 
-    if (error || !data) return allowSeedFallback() ? CATEGORIES : []
-    if (data.length === 0) return allowSeedFallback() ? CATEGORIES : []
+    if (error || !data) return useSeedFallback ? CATEGORIES : []
+    if (data.length === 0) return useSeedFallback ? CATEGORIES : []
     return (data as DbCategoryRow[]).map(rowToCategory)
   } catch {
-    return allowSeedFallback() ? CATEGORIES : []
+    return useSeedFallback ? CATEGORIES : []
   }
 }
 
-export async function getBrands(): Promise<Brand[]> {
+export async function getBrands(options?: CatalogReadOptions): Promise<Brand[]> {
+  const useSeedFallback = !options?.dbOnly && allowSeedFallback()
   try {
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -141,15 +147,16 @@ export async function getBrands(): Promise<Brand[]> {
       .select('id,name,logo_url')
       .order('name', { ascending: true })
 
-    if (error || !data) return allowSeedFallback() ? BRANDS : []
-    if (data.length === 0) return allowSeedFallback() ? BRANDS : []
+    if (error || !data) return useSeedFallback ? BRANDS : []
+    if (data.length === 0) return useSeedFallback ? BRANDS : []
     return (data as DbBrandRow[]).map(rowToBrand)
   } catch {
-    return allowSeedFallback() ? BRANDS : []
+    return useSeedFallback ? BRANDS : []
   }
 }
 
-export async function getProductCardsFromDb(): Promise<ProductCard[]> {
+export async function getProductCardsFromDb(options?: CatalogReadOptions): Promise<ProductCard[]> {
+  const useSeedFallback = !options?.dbOnly && allowSeedFallback()
   try {
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -161,11 +168,11 @@ export async function getProductCardsFromDb(): Promise<ProductCard[]> {
       `)
       .order('created_at', { ascending: false })
 
-    if (error || !data) return allowSeedFallback() ? getProductCards() : []
-    if (data.length === 0) return allowSeedFallback() ? getProductCards() : []
+    if (error || !data) return useSeedFallback ? getProductCards() : []
+    if (data.length === 0) return useSeedFallback ? getProductCards() : []
     return (data as DbProductRow[]).map(rowToProductCard)
   } catch {
-    return allowSeedFallback() ? getProductCards() : []
+    return useSeedFallback ? getProductCards() : []
   }
 }
 

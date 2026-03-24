@@ -8,7 +8,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { category } = await params
-  const categories = await getCategories()
+  const categories = await getCategories({ dbOnly: true })
   const cat = categories.find(c => c.slug === category)
   return {
     title: cat ? `${cat.name_ua} | Магазин` : 'Категорія',
