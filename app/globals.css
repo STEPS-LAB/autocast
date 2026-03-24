@@ -239,3 +239,17 @@ select:focus-visible {
 .micro-pop:hover {
   transform: translateY(-1px) scale(1.01);
 }
+
+/* ─── Smooth hover/focus transitions ───────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  a,
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform, text-decoration-color;
+    transition-duration: 220ms;
+    transition-timing-function: ease;
+  }
+}

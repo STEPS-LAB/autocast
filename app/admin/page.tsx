@@ -1,11 +1,9 @@
 import { ShoppingCart, Package, Users, TrendingUp } from 'lucide-react'
 import AnalyticsCard from '@/components/admin/AnalyticsCard'
-import Badge from '@/components/ui/Badge'
 import { formatPrice } from '@/lib/utils'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { getCategories, getProductsFromDb } from '@/lib/data/catalog-db'
-import BootstrapCatalogButton from '@/components/admin/BootstrapCatalogButton'
 
 export const metadata: Metadata = { title: 'Адмін — Дашборд' }
 
@@ -29,28 +27,11 @@ export default async function AdminDashboard() {
   const orders = ordersResult.data ?? []
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0)
   const usersCount = profilesResult.count ?? 0
-  const strictDb = process.env['CATALOG_STRICT_DB'] === 'true'
-  const catalogLikelySeedFallback = products.length === 0 || categories.length === 0
-
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-text-primary">Дашборд</h1>
         <p className="text-sm text-text-muted">Огляд діяльності магазину</p>
-        <div className="mt-2">
-          {strictDb ? (
-            <Badge variant={catalogLikelySeedFallback ? 'error' : 'success'}>
-              {catalogLikelySeedFallback ? 'Strict DB: каталог порожній' : 'Strict DB: активний'}
-            </Badge>
-          ) : (
-            <Badge variant={catalogLikelySeedFallback ? 'warning' : 'success'}>
-              {catalogLikelySeedFallback ? 'Fallback mode: seed може бути активний' : 'DB mode: дані завантажені'}
-            </Badge>
-          )}
-        </div>
-        <div className="mt-3">
-          <BootstrapCatalogButton />
-        </div>
       </div>
 
       {/* Analytics cards */}
