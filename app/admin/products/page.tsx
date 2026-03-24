@@ -1,14 +1,14 @@
 'use client'
 
 import { type ChangeEvent, useEffect, useMemo, useState } from 'react'
-import { Pencil, Percent, Plus } from 'lucide-react'
+import { FilePenLine, Pencil, Percent, Plus } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
 import { formatPrice, slugify } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import type { Column } from '@/components/admin/AdminTable'
-import type { Product } from '@/types'
+import type { Brand, Product } from '@/types'
 import Image from 'next/image'
 import { applyDiscountToProduct, clampDiscountPercent, salePriceFromPercent } from '@/lib/discounts'
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
@@ -21,6 +21,7 @@ type ProductRow = Product & { id: string }
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
   const [discountProductId, setDiscountProductId] = useState<string | null>(null)
   const [discountInput, setDiscountInput] = useState('')
@@ -32,6 +33,17 @@ export default function AdminProductsPage() {
   const [newStock, setNewStock] = useState('0')
   const [newCategoryId, setNewCategoryId] = useState('')
   const [createError, setCreateError] = useState('')
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editSlug, setEditSlug] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editPrice, setEditPrice] = useState('0')
+  const [editStock, setEditStock] = useState('0')
+  const [editCategoryId, setEditCategoryId] = useState('')
+  const [editBrandId, setEditBrandId] = useState('')
+  const [editFeatured, setEditFeatured] = useState(false)
+  const [editSpecsText, setEditSpecsText] = useState('')
+  const [editError, setEditError] = useState('')
   const [editingImageProductId, setEditingImageProductId] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<string[]>([])
   const [selectedFileName, setSelectedFileName] = useState('')
@@ -47,17 +59,19 @@ export default function AdminProductsPage() {
   useEffect(() => {
     let isMounted = true
     async function loadData() {
-      const [{ data: productsData }, { data: categoriesData }] = await Promise.all([
+      const [{ data: productsData }, { data: categoriesData }, { data: brandsData }] = await Promise.all([
         supabase
           .from('products')
           .select('id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at')
           .order('created_at', { ascending: false }),
         supabase.from('categories').select('id,slug,name_ua,parent_id,image_url,sort_order'),
+        supabase.from('brands').select('id,name,logo_url').order('name', { ascending: true }),
       ])
 
       if (!isMounted) return
       setProducts((productsData as ProductRow[]) ?? [])
       setCategories((categoriesData as Category[]) ?? [])
+      setBrands((brandsData as Brand[]) ?? [])
       setLoading(false)
     }
     void loadData()
@@ -346,6 +360,73 @@ export default function AdminProductsPage() {
     setShowAddInfo(false)
   }
 
+  function specsToText(specs: Record<string, string>): string {
+    return Object.entries(specs).map(([key, value]) => `${key}: ${value}`).join('\n')
+  }
+
+  function textToSpecs(text: string): Record<string, string> {
+    const lines = text.split('\n').map(line => line.trim()).filter(Boolean)
+    const specs: Record<string, string> = {}
+    for (const line of lines) {
+      const idx = line.indexOf(':')
+      if (idx <= 0) continue
+      const key = line.slice(0, idx).trim()
+      const value = line.slice(idx + 1).trim()
+      if (key && value) specs[key] = value
+    }
+    return specs
+  }
+
+  function openEditProductModal(row: ProductRow) {
+    setEditingProductId(row.id)
+    setEditName(row.name_ua)
+    setEditSlug(row.slug)
+    setEditDescription(row.description_ua)
+    setEditPrice(String(row.price))
+    setEditStock(String(row.stock))
+    setEditCategoryId(row.category_id)
+    setEditBrandId(row.brand_id ?? '')
+    setEditFeatured(row.is_featured)
+    setEditSpecsText(specsToText(row.specs ?? {}))
+    setEditError('')
+  }
+
+  async function saveProductDetails() {
+    if (!editingProductId) return
+    const name = editName.trim()
+    if (!name) {
+      setEditError('Назва є обовʼязковою.')
+      return
+    }
+
+    const payload = {
+      name_ua: name,
+      slug: editSlug.trim() || slugify(name),
+      description_ua: editDescription.trim(),
+      price: Math.max(0, Number(editPrice || '0')),
+      stock: Math.max(0, Number(editStock || '0')),
+      category_id: editCategoryId,
+      brand_id: editBrandId || null,
+      is_featured: editFeatured,
+      specs: textToSpecs(editSpecsText),
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(payload)
+      .eq('id', editingProductId)
+      .select('id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at')
+      .single()
+
+    if (error || !data) {
+      setEditError('Не вдалося зберегти зміни.')
+      return
+    }
+
+    setProducts(prev => prev.map(p => p.id === editingProductId ? data as ProductRow : p))
+    setEditingProductId(null)
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -366,14 +447,24 @@ export default function AdminProductsPage() {
         onDelete={handleDelete}
         actionsAlwaysVisible
         renderActions={(row) => (
-          <button
-            onClick={() => handleDiscount(row)}
-            className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
-            aria-label="Додати знижку"
-            title="Додати знижку"
-          >
-            <Percent size={14} />
-          </button>
+          <>
+            <button
+              onClick={() => openEditProductModal(row)}
+              className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+              aria-label="Редагувати товар"
+              title="Редагувати товар"
+            >
+              <FilePenLine size={14} />
+            </button>
+            <button
+              onClick={() => handleDiscount(row)}
+              className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+              aria-label="Додати знижку"
+              title="Додати знижку"
+            >
+              <Percent size={14} />
+            </button>
+          </>
         )}
       />
       {loading && (
@@ -434,6 +525,127 @@ export default function AdminProductsPage() {
             </Button>
             <Button onClick={applyDiscountFromModal}>
               Застосувати
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!editingProductId}
+        onClose={() => setEditingProductId(null)}
+        title="Редагувати товар"
+        description="Змінюйте розширені параметри товару."
+        size="md"
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block col-span-2">
+              <span className="text-xs text-text-muted">Назва</span>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setEditName(value)
+                  setEditSlug(slugify(value))
+                }}
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+              />
+            </label>
+            <label className="block col-span-2">
+              <span className="text-xs text-text-muted">Slug</span>
+              <input
+                type="text"
+                value={editSlug}
+                onChange={(e) => setEditSlug(e.target.value)}
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+              />
+            </label>
+            <label className="block col-span-2">
+              <span className="text-xs text-text-muted">Опис</span>
+              <textarea
+                rows={3}
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="mt-1 w-full rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary resize-none"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-text-muted">Ціна</span>
+              <input
+                type="number"
+                min={0}
+                value={editPrice}
+                onChange={(e) => setEditPrice(e.target.value)}
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-text-muted">Залишок</span>
+              <input
+                type="number"
+                min={0}
+                value={editStock}
+                onChange={(e) => setEditStock(e.target.value)}
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-text-muted">Категорія</span>
+              <select
+                value={editCategoryId}
+                onChange={(e) => setEditCategoryId(e.target.value)}
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name_ua}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-text-muted">Бренд</span>
+              <select
+                value={editBrandId}
+                onChange={(e) => setEditBrandId(e.target.value)}
+                className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+              >
+                <option value="">Без бренду</option>
+                {brands.map((brand) => (
+                  <option key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block col-span-2">
+              <span className="text-xs text-text-muted">Характеристики (формат: Ключ: Значення)</span>
+              <textarea
+                rows={4}
+                value={editSpecsText}
+                onChange={(e) => setEditSpecsText(e.target.value)}
+                className="mt-1 w-full rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary font-mono resize-y"
+                placeholder={'Потужність: 4x50 Вт\nBluetooth: Так'}
+              />
+            </label>
+            <label className="col-span-2 flex items-center gap-2 rounded border border-border bg-bg-elevated px-3 py-2">
+              <input
+                type="checkbox"
+                checked={editFeatured}
+                onChange={(e) => setEditFeatured(e.target.checked)}
+                className="size-4 accent-accent"
+              />
+              <span className="text-sm text-text-primary">Показувати як топовий товар</span>
+            </label>
+          </div>
+          {editError && <p className="text-xs text-error">{editError}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setEditingProductId(null)}>
+              Скасувати
+            </Button>
+            <Button onClick={saveProductDetails}>
+              Зберегти зміни
             </Button>
           </div>
         </div>
