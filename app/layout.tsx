@@ -1,11 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
-import Header from '@/components/layout/Header'
-import Footer from '@/components/layout/Footer'
-import MobileNav from '@/components/layout/MobileNav'
-import CartDrawer from '@/components/cart/CartDrawer'
-import AIAssistant from '@/components/ai/AIAssistant'
+import AppLayoutClient from '@/components/layout/AppLayoutClient'
 
 const inter = Inter({
   subsets: ['latin', 'cyrillic'],
@@ -57,18 +53,7 @@ export default function RootLayout({
   return (
     <html lang="uk" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-dvh flex flex-col">
-        <Header />
-        <main className="flex-1 pt-16">
-          {children}
-        </main>
-        <Footer />
-        <div
-          className="md:hidden h-[calc(72px+env(safe-area-inset-bottom))] bg-zinc-900"
-          aria-hidden="true"
-        />
-        <MobileNav />
-        <CartDrawer />
-        <AIAssistant />
+        <AppLayoutClient>{children}</AppLayoutClient>
       </body>
     </html>
   )

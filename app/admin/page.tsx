@@ -4,7 +4,6 @@ import Badge from '@/components/ui/Badge'
 import { formatPrice } from '@/lib/utils'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
-import { getCategories, getProductsFromDb } from '@/lib/data/catalog-db'
 
 export const metadata: Metadata = { title: 'Адмін — Дашборд' }
 
@@ -18,13 +17,18 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
-  const [products, categories, ordersResult, profilesResult] = await Promise.all([
-    getProductsFromDb(),
-    getCategories(),
+  const [productsResult, categoriesResult, ordersResult, profilesResult] = await Promise.all([
+    supabase
+      .from('products')
+      .select('id,name_ua,price,sale_price,stock,is_featured,created_at')
+      .order('created_at', { ascending: false }),
+    supabase.from('categories').select('id', { count: 'exact', head: true }),
     supabase.from('orders').select('id,status,total,shipping_info,created_at').order('created_at', { ascending: false }).limit(5),
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
   ])
 
+  const products = productsResult.data ?? []
+  const categoriesCount = categoriesResult.count ?? 0
   const orders = ordersResult.data ?? []
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0)
   const usersCount = profilesResult.count ?? 0
@@ -57,7 +61,7 @@ export default async function AdminDashboard() {
           title="Товарів"
           value={String(products.length)}
           icon={Package}
-          description={`${categories.length} категорій`}
+          description={`${categoriesCount} категорій`}
         />
         <AnalyticsCard
           title="Клієнти"

@@ -1,0 +1,31 @@
+'use client'
+
+import { usePathname } from 'next/navigation'
+import Header from '@/components/layout/Header'
+import Footer from '@/components/layout/Footer'
+import MobileNav from '@/components/layout/MobileNav'
+import CartDrawer from '@/components/cart/CartDrawer'
+import AIAssistant from '@/components/ai/AIAssistant'
+import { cn } from '@/lib/utils'
+
+export default function AppLayoutClient({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const isAdminPath = pathname.startsWith('/admin')
+
+  return (
+    <>
+      {!isAdminPath && <Header />}
+      <main className={cn('flex-1', !isAdminPath && 'pt-16')}>
+        {children}
+      </main>
+      <Footer />
+      <div
+        className="md:hidden h-[calc(72px+env(safe-area-inset-bottom))] bg-zinc-900"
+        aria-hidden="true"
+      />
+      <MobileNav />
+      <CartDrawer />
+      {!isAdminPath && <AIAssistant />}
+    </>
+  )
+}
