@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { User, Package, LogOut, Settings, ShoppingBag, Shield } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
@@ -17,9 +17,11 @@ interface AuthUser {
 
 export default function AccountPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const accessDenied = searchParams.get('error') === 'admin_access_denied'
 
   useEffect(() => {
     async function loadUser() {
@@ -71,6 +73,11 @@ export default function AccountPage() {
     <PageTransition>
       <div className="container-xl py-10 max-w-3xl">
         <h1 className="text-headline text-text-primary mb-8">Мій акаунт</h1>
+        {accessDenied && (
+          <div className="mb-6 rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-text-secondary">
+            Недостатньо прав для доступу до адмін-панелі.
+          </div>
+        )}
 
         <div className="grid sm:grid-cols-3 gap-6">
           {/* Sidebar nav */}
@@ -82,7 +89,8 @@ export default function AccountPage() {
               ...(profile?.role === 'admin'
                 ? [{ icon: Shield, label: 'Адмін-панель', active: false, href: '/admin' }]
                 : []),
-            ].map(({ icon: Icon, label, active, href }) => (
+              { icon: LogOut, label: 'Вийти з акаунту', active: false, action: 'signout' as const },
+            ].map(({ icon: Icon, label, active, href, action }) => (
               href ? (
                 <Link
                   key={label}
@@ -92,6 +100,15 @@ export default function AccountPage() {
                   <Icon size={16} />
                   {label}
                 </Link>
+              ) : action === 'signout' ? (
+                <button
+                  key={label}
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded text-sm transition-colors text-text-secondary hover:text-error hover:bg-bg-elevated"
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
               ) : (
                 <button
                   key={label}
@@ -158,14 +175,6 @@ export default function AccountPage() {
               </div>
             </div>
 
-            {/* Sign out */}
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 text-sm text-text-muted hover:text-error transition-colors"
-            >
-              <LogOut size={15} />
-              Вийти з акаунту
-            </button>
           </div>
         </div>
       </div>

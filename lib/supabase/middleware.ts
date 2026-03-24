@@ -64,6 +64,7 @@ export async function updateSession(request: NextRequest) {
     if (profile?.role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/account'
+      url.searchParams.set('error', 'admin_access_denied')
       return NextResponse.redirect(url)
     }
   }
