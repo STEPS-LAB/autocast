@@ -28,7 +28,6 @@ export default function AdminProductsPage() {
   const [showAddInfo, setShowAddInfo] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [newName, setNewName] = useState('')
-  const [newSlug, setNewSlug] = useState('')
   const [newPrice, setNewPrice] = useState('0')
   const [newStock, setNewStock] = useState('0')
   const [newCategoryId, setNewCategoryId] = useState('')
@@ -142,20 +141,24 @@ export default function AdminProductsPage() {
         continue
       }
 
-      const blob = await (await fetch(image)).blob()
-      const extension = blob.type.includes('png') ? 'png' : 'jpg'
-      const path = `${editingImageProductId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(path, blob, { upsert: true, contentType: blob.type || 'image/jpeg' })
+      const uploadResponse = await fetch('/api/admin/upload-product-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId: editingImageProductId,
+          dataUrl: image,
+        }),
+      })
 
-      if (uploadError) {
-        setImageError('Не вдалося завантажити зображення у storage.')
+      const uploadResult = (await uploadResponse.json()) as { publicUrl?: string; error?: string }
+      if (!uploadResponse.ok || !uploadResult.publicUrl) {
+        setImageError(uploadResult.error ?? 'Не вдалося завантажити зображення у storage.')
         return
       }
 
-      const { data: publicData } = supabase.storage.from('product-images').getPublicUrl(path)
-      nextImages.push(publicData.publicUrl)
+      nextImages.push(uploadResult.publicUrl)
     }
 
     await supabase.from('products').update({ images: nextImages }).eq('id', editingImageProductId)
@@ -348,7 +351,6 @@ export default function AdminProductsPage() {
 
   function openCreateProductModal() {
     setNewName('')
-    setNewSlug('')
     setNewPrice('0')
     setNewStock('0')
     setNewCategoryId(categories[0]?.id ?? '')
@@ -369,7 +371,7 @@ export default function AdminProductsPage() {
     }
 
     const payload = {
-      slug: (newSlug.trim() || slugify(name)),
+      slug: slugify(name),
       name_ua: name,
       description_ua: '',
       price: Math.max(0, Number(newPrice || '0')),
@@ -702,20 +704,7 @@ export default function AdminProductsPage() {
             <input
               type="text"
               value={newName}
-              onChange={(e) => {
-                const value = e.target.value
-                setNewName(value)
-                setNewSlug(slugify(value))
-              }}
-              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
-            />
-          </label>
-          <label className="block">
-            <span className="text-xs text-text-muted">Slug</span>
-            <input
-              type="text"
-              value={newSlug}
-              onChange={(e) => setNewSlug(e.target.value)}
+              onChange={(e) => setNewName(e.target.value)}
               className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
             />
           </label>

@@ -7,6 +7,28 @@ import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Адмін — Дашборд' }
 
+function getMonthBounds(referenceDate = new Date()) {
+  const startOfCurrentMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1)
+  const startOfNextMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1)
+  const startOfPreviousMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 1, 1)
+
+  return {
+    startOfPreviousMonth: startOfPreviousMonth.toISOString(),
+    startOfCurrentMonth: startOfCurrentMonth.toISOString(),
+    startOfNextMonth: startOfNextMonth.toISOString(),
+  }
+}
+
+function calculateChange(current: number, previous: number) {
+  if (current === 0 && previous === 0) return null
+  if (previous === 0) return { change: '100%', positive: true }
+  const percent = Math.round((Math.abs(current - previous) / previous) * 100)
+  return {
+    change: `${percent}%`,
+    positive: current >= previous,
+  }
+}
+
 const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accent' | 'success' | 'error' | 'muted' }> = {
   pending:    { label: 'Очікує відправки', variant: 'warning' },
   processing: { label: 'Обробляється', variant: 'accent' },
@@ -17,7 +39,8 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
-  const [productsResult, categoriesResult, ordersResult, profilesResult] = await Promise.all([
+  const { startOfPreviousMonth, startOfCurrentMonth, startOfNextMonth } = getMonthBounds()
+  const [productsResult, categoriesResult, ordersResult, profilesResult, currentMonthOrdersResult, previousMonthOrdersResult] = await Promise.all([
     supabase
       .from('products')
       .select('id,name_ua,price,sale_price,stock,is_featured,created_at')
@@ -25,13 +48,29 @@ export default async function AdminDashboard() {
     supabase.from('categories').select('id', { count: 'exact', head: true }),
     supabase.from('orders').select('id,status,total,shipping_info,created_at').order('created_at', { ascending: false }).limit(5),
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('orders')
+      .select('total,created_at')
+      .gte('created_at', startOfCurrentMonth)
+      .lt('created_at', startOfNextMonth),
+    supabase
+      .from('orders')
+      .select('total,created_at')
+      .gte('created_at', startOfPreviousMonth)
+      .lt('created_at', startOfCurrentMonth),
   ])
 
   const products = productsResult.data ?? []
   const categoriesCount = categoriesResult.count ?? 0
   const orders = ordersResult.data ?? []
-  const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0)
+  const currentMonthOrders = currentMonthOrdersResult.data ?? []
+  const previousMonthOrders = previousMonthOrdersResult.data ?? []
+  const totalRevenue = currentMonthOrders.reduce((sum, order) => sum + Number(order.total), 0)
+  const previousRevenue = previousMonthOrders.reduce((sum, order) => sum + Number(order.total), 0)
+  const revenueChange = calculateChange(totalRevenue, previousRevenue)
+  const ordersChange = calculateChange(currentMonthOrders.length, previousMonthOrders.length)
   const usersCount = profilesResult.count ?? 0
+
   return (
     <div className="fade-up-in">
       <div className="mb-6 fade-up-in">
@@ -44,16 +83,16 @@ export default async function AdminDashboard() {
         <AnalyticsCard
           title="Дохід"
           value={formatPrice(totalRevenue)}
-          change="12%"
-          positive
+          change={revenueChange?.change}
+          positive={revenueChange?.positive}
           icon={TrendingUp}
           description="Поточний місяць"
         />
         <AnalyticsCard
           title="Замовлення"
-          value={String(orders.length)}
-          change="8%"
-          positive
+          value={String(currentMonthOrders.length)}
+          change={ordersChange?.change}
+          positive={ordersChange?.positive}
           icon={ShoppingCart}
           description="Поточний місяць"
         />
