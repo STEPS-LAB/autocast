@@ -117,9 +117,14 @@ export default function AdminCategoriesPage() {
 
   return (
     <div className="fade-up-in">
-      <div className="mb-6 fade-up-in">
-        <h1 className="text-xl font-bold text-text-primary">Категорії</h1>
-        <p className="text-sm text-text-muted">{categories.length} категорій</p>
+      <div className="mb-6 fade-up-in flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-text-primary">Категорії</h1>
+          <p className="text-sm text-text-muted">{categories.length} категорій</p>
+        </div>
+        <Button size="sm" onClick={openCreateCategoryModal} className="shrink-0">
+          + Додати категорію
+        </Button>
       </div>
       <AdminTable
         data={categories}
@@ -127,8 +132,6 @@ export default function AdminCategoriesPage() {
         onUpdate={handleUpdate}
         onDelete={handleDelete}
         actionsAlwaysVisible
-        onAdd={openCreateCategoryModal}
-        addLabel="Додати категорію"
       />
       {loading && (
         <p className="text-sm text-text-muted mt-3 fade-up-in">Завантаження...</p>

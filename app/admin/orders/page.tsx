@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Eye, Pencil } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
 import Badge from '@/components/ui/Badge'
@@ -34,6 +34,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
   const [statusOrderId, setStatusOrderId] = useState<string | null>(null)
   const [statusValue, setStatusValue] = useState('pending')
 
@@ -95,6 +96,21 @@ export default function AdminOrdersPage() {
     setStatusOrderId(null)
   }
 
+  const filteredOrders = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return orders
+
+    return orders.filter((order) => {
+      const statusLabel = STATUS_LABELS[order.status]?.label ?? order.status
+      return (
+        order.id.toLowerCase().includes(query)
+        || order.customer.toLowerCase().includes(query)
+        || order.email.toLowerCase().includes(query)
+        || statusLabel.toLowerCase().includes(query)
+      )
+    })
+  }, [orders, searchQuery])
+
   const columns: Column<AdminOrder>[] = [
     {
       key: 'id',
@@ -144,12 +160,25 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-text-primary">Замовлення</h1>
-        <p className="text-sm text-text-muted">{orders.length} замовлень</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-text-primary">Замовлення</h1>
+          <p className="text-sm text-text-muted">{filteredOrders.length} замовлень</p>
+        </div>
+        <div className="w-full max-w-md">
+          <label className="sr-only" htmlFor="orders-search">Пошук замовлень</label>
+          <input
+            id="orders-search"
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Пошук замовлень..."
+            className="w-full h-9 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
+          />
+        </div>
       </div>
       <AdminTable
-        data={orders}
+        data={filteredOrders}
         columns={columns}
         onUpdate={handleUpdate}
         actionsAlwaysVisible
