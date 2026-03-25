@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { getSiteUrl, getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
+import { rateLimit } from '@/lib/security/rateLimit'
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -10,6 +11,9 @@ const registerSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const rl = rateLimit(request, { bucket: 'auth:register', limit: 5, windowMs: 60_000 })
+    if (!rl.ok) return rl.response
+
     const parsed = registerSchema.safeParse(await request.json())
     if (!parsed.success) {
       return NextResponse.json(

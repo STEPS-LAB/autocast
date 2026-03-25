@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/security/rateLimit'
 
 interface CreateOrderBody {
   shipping_info: Record<string, unknown>
@@ -25,6 +26,9 @@ function formatMoney(value: number): string {
 }
 
 export async function POST(request: Request) {
+  const rl = rateLimit(request, { bucket: 'orders:create', limit: 10, windowMs: 60_000 })
+  if (!rl.ok) return rl.response
+
   const supabase = await createClient()
   const body = await request.json() as CreateOrderBody
   const items = body.items ?? []

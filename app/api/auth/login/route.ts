@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
+import { rateLimit } from '@/lib/security/rateLimit'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -10,6 +11,9 @@ const loginSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const rl = rateLimit(request, { bucket: 'auth:login', limit: 10, windowMs: 60_000 })
+  if (!rl.ok) return rl.response
+
   const supabaseUrl = getSupabaseUrl()
   const supabaseKey = getSupabaseAnonKey()
 

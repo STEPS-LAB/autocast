@@ -15,17 +15,17 @@ type State = {
 }
 
 export default class ClientErrorBoundary extends React.Component<Props, State> {
-  state: State = { hasError: false }
+  override state: State = { hasError: false }
 
   static getDerivedStateFromError() {
     return { hasError: true }
   }
 
-  componentDidCatch(error: unknown) {
+  override componentDidCatch(error: unknown) {
     Sentry.captureException(error)
   }
 
-  render() {
+  override render() {
     if (!this.state.hasError) return this.props.children
     if (this.props.fallback) return this.props.fallback
 
