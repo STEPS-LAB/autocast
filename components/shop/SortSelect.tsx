@@ -4,22 +4,22 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 
 const SORT_OPTIONS = [
-  { value: 'default', label: 'За замовчуванням' },
+  { value: 'sale', label: 'Акційні товари' },
   { value: 'price_asc', label: 'Ціна: від низької' },
   { value: 'price_desc', label: 'Ціна: від високої' },
   { value: 'newest', label: 'Нові надходження' },
-  { value: 'sale', label: 'Акційні товари' },
 ]
 
 export default function SortSelect() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const current = searchParams.get('sort') ?? 'default'
+  const raw = searchParams.get('sort')
+  const current = raw === null || raw === 'default' ? 'sale' : raw
 
   function handleChange(value: string) {
     const params = new URLSearchParams(searchParams.toString())
-    if (value === 'default') {
+    if (value === 'sale') {
       params.delete('sort')
     } else {
       params.set('sort', value)

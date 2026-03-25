@@ -179,6 +179,9 @@ export default function AdminCategoriesPage() {
   }
 
   type Row = (Category & { depth: number }) | { id: string; kind: 'add'; parentId: string; depth: number }
+  function isAddRow(row: Row): row is Extract<Row, { kind: 'add' }> {
+    return 'kind' in row && row.kind === 'add'
+  }
 
   const { rows, childrenCountById, nameById, descendantIdsById, byParent } = useMemo(() => {
     const byParent = new Map<string | null, Category[]>()
@@ -328,8 +331,8 @@ export default function AdminCategoriesPage() {
                   transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                 >
                 {rows.map((row) => {
-                if ((row as any).kind === 'add') {
-                  const r = row as { id: string; kind: 'add'; parentId: string; depth: number }
+                if (isAddRow(row)) {
+                  const r = row
                   const isNested = r.depth > 0
                   return (
                     <motion.div
@@ -391,7 +394,7 @@ export default function AdminCategoriesPage() {
                 const childCount = childrenCountById.get(row.id) ?? 0
                 const hasChildren = childCount > 0
                 const isOpen = !!expanded[row.id]
-                const canAddSubcategory = !row.parent_id
+                const canAddSubcategory = 'parent_id' in row ? !row.parent_id : false
                 const isNested = row.depth > 0
                 return (
                   <motion.div

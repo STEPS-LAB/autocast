@@ -4,8 +4,9 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ShoppingCart, Eye, Heart } from 'lucide-react'
+import { ShoppingCart, Heart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
+import { useWishlistStore, selectIsWished } from '@/lib/store/wishlist'
 import { formatPrice, getDiscountPercent, cn } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import type { ProductCard as ProductCardType } from '@/types'
@@ -14,15 +15,15 @@ import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts
 
 interface ProductCardProps {
   product: ProductCardType
-  onQuickView?: (product: ProductCardType) => void
 }
 
-export default function ProductCard({ product, onQuickView }: ProductCardProps) {
+export default function ProductCard({ product }: ProductCardProps) {
   const [imgError, setImgError] = useState(false)
-  const [wished, setWished] = useState(false)
   const addItem = useCartStore(s => s.addItem)
   const overrides = useDiscountStore(selectDiscountOverrides)
   const displayProduct = applyDiscountToProduct(product, overrides)
+  const wished = useWishlistStore(selectIsWished(displayProduct.id))
+  const toggleWished = useWishlistStore(s => s.toggle)
 
   const discount =
     displayProduct.sale_price
@@ -54,6 +55,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
       transition={{ duration: 0.2 }}
       className={cn(
         'group relative bg-bg-surface border border-border rounded-md overflow-hidden flex flex-col',
+        'shadow-[0_10px_22px_rgba(0,0,0,0.10)] hover:shadow-[0_14px_32px_rgba(0,0,0,0.16)] transition-shadow',
         displayProduct.stock === 0 && 'opacity-60 saturate-0'
       )}
     >
@@ -99,7 +101,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
 
         {/* Wishlist */}
         <button
-          onClick={e => { e.preventDefault(); setWished(v => !v) }}
+          onClick={e => { e.preventDefault(); toggleWished(displayProduct) }}
           className={cn(
             'absolute top-2 right-2 size-7 rounded-full flex items-center justify-center',
             'border border-border bg-bg-primary/60 backdrop-blur-sm',
@@ -113,22 +115,6 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
             className={wished ? 'fill-accent text-accent' : 'text-text-muted'}
           />
         </button>
-
-        {/* Quick view */}
-        {onQuickView && (
-          <button
-            onClick={e => { e.preventDefault(); onQuickView(displayProduct) }}
-            className={cn(
-              'absolute inset-x-0 bottom-0 py-2 flex items-center justify-center gap-1.5',
-              'bg-bg-primary/80 backdrop-blur-sm text-text-primary text-xs font-medium',
-              'opacity-0 group-hover:opacity-100 transition-all translate-y-full group-hover:translate-y-0',
-              'border-t border-border'
-            )}
-          >
-            <Eye size={13} />
-            Швидкий перегляд
-          </button>
-        )}
       </Link>
 
       {/* Info */}

@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, X, SlidersHorizontal } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import type { Brand, Category } from '@/types'
@@ -34,6 +35,7 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [brandsExpanded, setBrandsExpanded] = useState(false)
 
   const createURL = useCallback(
     (updates: Record<string, string | null>) => {
@@ -272,7 +274,7 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
               Всі бренди
             </button>
           </li>
-          {brands.map(brand => (
+          {brands.slice(0, 4).map(brand => (
             <li key={brand.id}>
               <button
                 onClick={() => setFilter('brand', brand.name)}
@@ -287,6 +289,59 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
               </button>
             </li>
           ))}
+
+          {brands.length > 4 && (
+            <li className="mt-1">
+              <button
+                type="button"
+                onClick={() => setBrandsExpanded(v => !v)}
+                className={cn(
+                  'w-full flex items-center justify-between text-left text-sm px-2 py-1.5 rounded transition-colors',
+                  'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                )}
+                aria-expanded={brandsExpanded}
+              >
+                <span className="text-xs font-medium">
+                  {brandsExpanded ? 'Згорнути' : `Показати ще (${brands.length - 4})`}
+                </span>
+                <motion.span
+                  animate={{ rotate: brandsExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="text-text-muted"
+                >
+                  <ChevronDown size={14} />
+                </motion.span>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {brandsExpanded && (
+                  <motion.ul
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22 }}
+                    className="overflow-hidden mt-1 flex flex-col gap-1"
+                  >
+                    {brands.slice(4).map(brand => (
+                      <li key={brand.id}>
+                        <button
+                          onClick={() => setFilter('brand', brand.name)}
+                          className={cn(
+                            'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
+                            filters.brand === brand.name
+                              ? 'text-black bg-accent/20'
+                              : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                          )}
+                        >
+                          {brand.name}
+                        </button>
+                      </li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </li>
+          )}
         </ul>
       </div>
 

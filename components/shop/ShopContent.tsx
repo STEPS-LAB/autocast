@@ -31,7 +31,8 @@ export default function ShopContent({ products, categories, brands }: ShopConten
   const minPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined
   const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined
   const inStock = searchParams.get('inStock') === '1'
-  const sort = searchParams.get('sort') ?? 'default'
+  const sortRaw = searchParams.get('sort')
+  const sort = !sortRaw || sortRaw === 'default' ? 'sale' : sortRaw
   const make = searchParams.get('make') ?? ''
 
   const filters = { category, brand, minPrice, maxPrice, inStock }
@@ -106,6 +107,9 @@ export default function ShopContent({ products, categories, brands }: ShopConten
           const bDisc = b.sale_price ? 1 : 0
           return bDisc - aDisc
         })
+        break
+      case 'newest':
+        // Default DB order is created_at desc; keep current order after filtering.
         break
     }
 

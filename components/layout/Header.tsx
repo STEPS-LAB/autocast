@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, User, Menu, X, Search } from 'lucide-react'
+import { ShoppingCart, User, Menu, X, Search, Heart } from 'lucide-react'
 import { useCartStore, selectCartCount } from '@/lib/store/cart'
+import { useWishlistStore, selectWishlistCount } from '@/lib/store/wishlist'
 import { cn } from '@/lib/utils'
 import SmartSearchBar from '@/components/search/SmartSearchBar'
 
@@ -24,6 +25,8 @@ export default function Header() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const count = useCartStore(selectCartCount)
   const openCart = useCartStore(s => s.openCart)
+  const wishlistCount = useWishlistStore(selectWishlistCount)
+  const openWishlist = useWishlistStore(s => s.open)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 1)
@@ -119,6 +122,27 @@ export default function Header() {
                 aria-controls="mobile-header-search"
               >
                 {mobileSearchOpen ? <X size={20} /> : <Search size={20} />}
+              </button>
+
+              <button
+                onClick={openWishlist}
+                className="relative p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                aria-label={`Вішліст (${wishlistCount})`}
+              >
+                <Heart size={20} />
+                <AnimatePresence>
+                  {wishlistCount > 0 && (
+                    <motion.span
+                      key={wishlistCount}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-accent text-text-primary text-xs font-bold rounded-full flex items-center justify-center"
+                    >
+                      {wishlistCount > 99 ? '99+' : wishlistCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
 
               <button

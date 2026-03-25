@@ -1,6 +1,6 @@
 'use client'
 
-import { type ChangeEvent, useEffect, useRef, useState } from 'react'
+import { Suspense, type ChangeEvent, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -40,6 +40,14 @@ async function getSupabase() {
 }
 
 export default function AdminNewProductPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-text-muted">Завантаження...</p>}>
+      <AdminNewProductPageInner />
+    </Suspense>
+  )
+}
+
+function AdminNewProductPageInner() {
   const MAX_IMAGES = 10
   const router = useRouter()
   const searchParams = useSearchParams()

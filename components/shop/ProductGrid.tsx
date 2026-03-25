@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
 import ProductCard from './ProductCard'
-import QuickViewModal from './QuickViewModal'
 import { ProductGridSkeleton } from '@/components/ui/Skeleton'
 import type { ProductCard as ProductCardType } from '@/types'
 
@@ -12,8 +10,6 @@ interface ProductGridProps {
 }
 
 export default function ProductGrid({ products, loading }: ProductGridProps) {
-  const [quickViewProduct, setQuickViewProduct] = useState<ProductCardType | null>(null)
-
   if (loading) return <ProductGridSkeleton count={8} />
 
   if (products.length === 0) {
@@ -39,15 +35,9 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
           <ProductCard
             key={product.id}
             product={product}
-            onQuickView={setQuickViewProduct}
           />
         ))}
       </div>
-
-      <QuickViewModal
-        product={quickViewProduct}
-        onClose={() => setQuickViewProduct(null)}
-      />
     </>
   )
 }

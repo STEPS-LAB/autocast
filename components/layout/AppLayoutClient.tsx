@@ -5,6 +5,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import MobileNav from '@/components/layout/MobileNav'
 import CartDrawer from '@/components/cart/CartDrawer'
+import WishlistDrawer from '@/components/wishlist/WishlistDrawer'
 import AIAssistant from '@/components/ai/AIAssistant'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +26,7 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
       />
       <MobileNav />
       <CartDrawer />
+      <WishlistDrawer />
       {!isAdminPath && <AIAssistant />}
     </>
   )
