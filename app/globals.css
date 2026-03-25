@@ -285,3 +285,31 @@ select:focus-visible {
     transition-timing-function: ease;
   }
 }
+
+/* ─── Disable hover effects on touch devices ───────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Prevent "stuck" hover states on mobile */
+  *:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  /* Remove hover-driven transitions for tap devices */
+  a,
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    transition: none !important;
+  }
+
+  /* Custom hover utilities */
+  .micro-lift:hover,
+  .micro-pop:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    border-color: var(--color-border) !important;
+  }
+}
