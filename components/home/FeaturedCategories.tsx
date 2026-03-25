@@ -33,6 +33,8 @@ interface FeaturedCategoriesProps {
 
 export default function FeaturedCategories({ categories }: FeaturedCategoriesProps) {
   const strictDb = process.env['NEXT_PUBLIC_CATALOG_STRICT_DB'] === 'true'
+  const displayNameUa = (cat: Category) =>
+    cat.slug === 'zakhyst-vid-uhonu' ? 'Охоронні системи' : cat.name_ua
 
   return (
     <section className="py-20">
@@ -81,7 +83,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
                     <div className="absolute inset-0 bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
                   <h3 className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors px-0.5">
-                    {cat.name_ua}
+                    {displayNameUa(cat)}
                   </h3>
                 </Link>
               </motion.div>

@@ -4,7 +4,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ImageCropModal from '@/components/admin/ImageCropModal'
@@ -26,6 +26,13 @@ function textToSpecs(text: string): Record<string, string> {
   return specs
 }
 
+function specsToText(specs: Record<string, string> | null | undefined): string {
+  if (!specs) return ''
+  return Object.entries(specs)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join('\n')
+}
+
 async function getSupabase() {
   const mod = await import('@/lib/supabase/client')
   return mod.createClient()
@@ -34,6 +41,8 @@ async function getSupabase() {
 export default function AdminNewProductPage() {
   const MAX_IMAGES = 10
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editProductId = searchParams.get('edit')
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
   const [loading, setLoading] = useState(true)
@@ -70,15 +79,43 @@ export default function AdminNewProductPage() {
       if (!mounted) return
       const c = (cat as Category[]) ?? []
       setCategories(c)
-      setBrands((br as Brand[]) ?? [])
-      setCategoryId('')
+      const nextBrands = (br as Brand[]) ?? []
+      setBrands(nextBrands)
+
+      if (editProductId) {
+        const { data: existing, error } = await supabase
+          .from('products')
+          .select('id,name_ua,description_ua,price,stock,category_id,brand_id,specs,images,is_featured')
+          .eq('id', editProductId)
+          .single()
+
+        if (!mounted) return
+        if (error || !existing) {
+          setFormError('Не вдалося завантажити товар для редагування.')
+          setLoading(false)
+          return
+        }
+
+        setName(existing.name_ua ?? '')
+        setDescription(existing.description_ua ?? '')
+        setPrice(String(existing.price ?? ''))
+        setStock(String(existing.stock ?? ''))
+        setCategoryId(existing.category_id ?? '')
+        setFeatured(!!existing.is_featured)
+        setSpecsText(specsToText((existing as any).specs))
+        setPendingImages(((existing as any).images as string[] | null) ?? [])
+        const brandName = nextBrands.find(b => b.id === (existing as any).brand_id)?.name ?? ''
+        setBrandInput(brandName)
+      } else {
+        setCategoryId('')
+      }
       setLoading(false)
     }
     void load()
     return () => {
       mounted = false
     }
-  }, [])
+  }, [editProductId])
 
   async function syncCatalogAfterChange() {
     try {
@@ -236,36 +273,39 @@ export default function AdminNewProductPage() {
         return
       }
 
-      const payload = {
+      const basePayload = {
         slug: slugify(trimmedName),
         name_ua: trimmedName,
         description_ua: description.trim(),
         price: Math.max(0, Number(price || '0')),
-        sale_price: null as number | null,
         stock: Math.max(0, Number(stock || '0')),
         category_id: cat,
         brand_id: finalBrandId,
         specs: textToSpecs(specsText),
-        images: [] as string[],
         is_featured: featured,
       }
 
-      const { data: created, error: insertError } = await supabase
-        .from('products')
-        .insert(payload)
-        .select('id')
-        .single()
+      let productId = editProductId
+      if (!productId) {
+        const payload = { ...basePayload, sale_price: null as number | null, images: [] as string[] }
+        const { data: created, error: insertError } = await supabase
+          .from('products')
+          .insert(payload)
+          .select('id')
+          .single()
 
-      if (insertError || !created) {
-        setFormError(
-          insertError?.message?.includes('duplicate') || insertError?.message?.includes('unique')
-            ? 'Товар із таким slug уже існує. Змініть назву.'
-            : 'Не вдалося створити товар.'
-        )
-        return
+        if (insertError || !created) {
+          setFormError(
+            insertError?.message?.includes('duplicate') || insertError?.message?.includes('unique')
+              ? 'Товар із таким slug уже існує. Змініть назву.'
+              : 'Не вдалося створити товар.'
+          )
+          return
+        }
+
+        productId = created.id as string
       }
 
-      const productId = created.id as string
       const nextImages: string[] = []
 
       for (const image of pendingImages.slice(0, MAX_IMAGES)) {
@@ -282,15 +322,26 @@ export default function AdminNewProductPage() {
         const uploadResult = (await uploadResponse.json()) as { publicUrl?: string; error?: string }
         if (!uploadResponse.ok || !uploadResult.publicUrl) {
           setImageError(uploadResult.error ?? 'Не вдалося завантажити зображення.')
-          await supabase.from('products').delete().eq('id', productId)
-          setFormError('Товар не збережено через помилку завантаження фото. Спробуйте ще раз.')
+          if (!editProductId) {
+            await supabase.from('products').delete().eq('id', productId)
+            setFormError('Товар не збережено через помилку завантаження фото. Спробуйте ще раз.')
+          } else {
+            setFormError('Не вдалося завантажити фото. Зміни не збережено.')
+          }
           return
         }
         nextImages.push(uploadResult.publicUrl)
       }
 
-      if (nextImages.length > 0) {
-        await supabase.from('products').update({ images: nextImages }).eq('id', productId)
+      const updatePayload = { ...basePayload, images: nextImages }
+      const { error: updateError } = await supabase
+        .from('products')
+        .update(updatePayload)
+        .eq('id', productId)
+
+      if (updateError) {
+        setFormError('Не вдалося зберегти товар.')
+        return
       }
 
       await syncCatalogAfterChange()
@@ -315,8 +366,12 @@ export default function AdminNewProductPage() {
         До списку товарів
       </Link>
 
-      <h1 className="text-xl font-bold text-text-primary mb-1">Новий товар</h1>
-      <p className="text-sm text-text-muted mb-8">Заповніть усі поля та збережіть товар.</p>
+      <h1 className="text-xl font-bold text-text-primary mb-1">
+        {editProductId ? 'Редагувати товар' : 'Новий товар'}
+      </h1>
+      <p className="text-sm text-text-muted mb-8">
+        {editProductId ? 'Оновіть поля та збережіть зміни.' : 'Заповніть усі поля та збережіть товар.'}
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="rounded-md border border-border bg-bg-surface p-5 space-y-4">

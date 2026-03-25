@@ -3,9 +3,10 @@
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { FilePenLine, Pencil, Percent, Plus } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
-import { cn, formatPrice, slugify } from '@/lib/utils'
+import { cn, formatPrice } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -16,13 +17,12 @@ import { applyDiscountToProduct, clampDiscountPercent, salePriceFromPercent } fr
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
 import type { Category } from '@/types'
 import ImageCropModal from '@/components/admin/ImageCropModal'
-import BrandCombobox from '@/components/admin/BrandCombobox'
-import { mergeBrandIntoList, resolveBrandId } from '@/lib/admin/resolve-brand'
 
 type ProductRow = Product & { id: string }
 
 export default function AdminProductsPage() {
   const MAX_IMAGES = 10
+  const router = useRouter()
   const [products, setProducts] = useState<ProductRow[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
@@ -31,16 +31,6 @@ export default function AdminProductsPage() {
   const [discountInput, setDiscountInput] = useState('')
   const [discountError, setDiscountError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [editingProductId, setEditingProductId] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editPrice, setEditPrice] = useState('0')
-  const [editStock, setEditStock] = useState('0')
-  const [editCategoryId, setEditCategoryId] = useState('')
-  const [editBrandInput, setEditBrandInput] = useState('')
-  const [editFeatured, setEditFeatured] = useState(false)
-  const [editSpecsText, setEditSpecsText] = useState('')
-  const [editError, setEditError] = useState('')
   const [editingImageProductId, setEditingImageProductId] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<string[]>([])
   const [selectedFileName, setSelectedFileName] = useState('')
@@ -421,81 +411,8 @@ export default function AdminProductsPage() {
     await syncCatalogAfterChange()
   }
 
-  function specsToText(specs: Record<string, string>): string {
-    return Object.entries(specs).map(([key, value]) => `${key}: ${value}`).join('\n')
-  }
-
-  function textToSpecs(text: string): Record<string, string> {
-    const lines = text.split('\n').map(line => line.trim()).filter(Boolean)
-    const specs: Record<string, string> = {}
-    for (const line of lines) {
-      const idx = line.indexOf(':')
-      if (idx <= 0) continue
-      const key = line.slice(0, idx).trim()
-      const value = line.slice(idx + 1).trim()
-      if (key && value) specs[key] = value
-    }
-    return specs
-  }
-
   function openEditProductModal(row: ProductRow) {
-    setEditingProductId(row.id)
-    setEditName(row.name_ua)
-    setEditDescription(row.description_ua)
-    setEditPrice(String(row.price))
-    setEditStock(String(row.stock))
-    setEditCategoryId(row.category_id)
-    setEditBrandInput(brands.find(b => b.id === row.brand_id)?.name ?? '')
-    setEditFeatured(row.is_featured)
-    setEditSpecsText(specsToText(row.specs ?? {}))
-    setEditError('')
-  }
-
-  async function saveProductDetails() {
-    if (!editingProductId) return
-    const name = editName.trim()
-    if (!name) {
-      setEditError('Назва є обовʼязковою.')
-      return
-    }
-
-    const supabase = await getSupabase()
-    let brand_id: string | null = null
-    try {
-      const { brandId: rid, newBrand } = await resolveBrandId(supabase, brands, editBrandInput)
-      brand_id = rid
-      if (newBrand) setBrands(prev => mergeBrandIntoList(prev, newBrand))
-    } catch (e) {
-      setEditError(e instanceof Error ? e.message : 'Не вдалося зберегти бренд.')
-      return
-    }
-
-    const payload = {
-      name_ua: name,
-      slug: slugify(name),
-      description_ua: editDescription.trim(),
-      price: Math.max(0, Number(editPrice || '0')),
-      stock: Math.max(0, Number(editStock || '0')),
-      category_id: editCategoryId,
-      brand_id,
-      is_featured: editFeatured,
-      specs: textToSpecs(editSpecsText),
-    }
-    const { data, error } = await supabase
-      .from('products')
-      .update(payload)
-      .eq('id', editingProductId)
-      .select('id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at')
-      .single()
-
-    if (error || !data) {
-      setEditError('Не вдалося зберегти зміни.')
-      return
-    }
-
-    setProducts(prev => prev.map(p => p.id === editingProductId ? data as ProductRow : p))
-    setEditingProductId(null)
-    await syncCatalogAfterChange()
+    router.push(`/admin/products/new?edit=${encodeURIComponent(row.id)}`)
   }
 
   return (
@@ -621,118 +538,6 @@ export default function AdminProductsPage() {
             </Button>
             <Button onClick={applyDiscountFromModal}>
               Застосувати
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={!!editingProductId}
-        onClose={() => setEditingProductId(null)}
-        title="Редагувати товар"
-        description="Змінюйте розширені параметри товару."
-        size="md"
-      >
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block col-span-2">
-              <span className="text-xs text-text-muted">Назва</span>
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Повна назва товару"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted"
-              />
-            </label>
-            <label className="block col-span-2">
-              <span className="text-xs text-text-muted">Опис</span>
-              <textarea
-                rows={3}
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Опис, комплектація, особливості"
-                className="mt-1 w-full rounded border border-border bg-bg-input px-3 py-2 text-sm text-text-primary resize-none placeholder:text-text-muted"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-text-muted">Ціна</span>
-              <input
-                type="number"
-                min={0}
-                value={editPrice}
-                onChange={(e) => setEditPrice(e.target.value)}
-                placeholder="Ціна, ₴"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-text-muted">Залишок</span>
-              <input
-                type="number"
-                min={0}
-                value={editStock}
-                onChange={(e) => setEditStock(e.target.value)}
-                placeholder="Кількість на складі"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-text-muted">Категорія</span>
-              <select
-                value={editCategoryId}
-                onChange={(e) => setEditCategoryId(e.target.value)}
-                title="Категорія в каталозі"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary"
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name_ua}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="block">
-              <span className="text-xs text-text-muted">Бренд</span>
-              <BrandCombobox
-                brands={brands}
-                value={editBrandInput}
-                onChange={setEditBrandInput}
-                placeholder="Без бренду (необов’язково) — введіть або оберіть"
-                className="mt-1"
-                inputClassName="h-10"
-              />
-            </div>
-            <label className="block col-span-2">
-              <span className="text-xs text-text-muted">Характеристики (формат: Ключ: Значення)</span>
-              <textarea
-                rows={4}
-                value={editSpecsText}
-                onChange={(e) => setEditSpecsText(e.target.value)}
-                className="mt-1 w-full rounded border border-border bg-bg-input px-3 py-2 text-sm text-text-primary font-mono resize-y placeholder:text-text-muted"
-                placeholder={'Кожен рядок: «Назва: значення».\nПотужність: 4×50 Вт\nBluetooth: Так'}
-              />
-            </label>
-            <label
-              className="col-span-2 flex items-center gap-2 rounded border border-border bg-bg-input px-3 py-2 cursor-pointer"
-              title="Товар може з’являтися у блоці топ-товарів на головній та в адмін-дашборді"
-            >
-              <input
-                type="checkbox"
-                checked={editFeatured}
-                onChange={(e) => setEditFeatured(e.target.checked)}
-                className="size-4 accent-accent"
-              />
-              <span className="text-sm text-text-primary">Показувати як топовий товар</span>
-            </label>
-          </div>
-          {editError && <p className="text-xs text-error">{editError}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditingProductId(null)}>
-              Скасувати
-            </Button>
-            <Button onClick={saveProductDetails}>
-              Зберегти зміни
             </Button>
           </div>
         </div>

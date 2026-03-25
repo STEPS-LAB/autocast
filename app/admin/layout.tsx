@@ -57,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="mt-auto px-5 pt-4 border-t border-border">
           <Link
             href="/"
-            className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+            className="text-[0.79rem] md:text-[0.9rem] font-semibold text-text-primary hover:text-accent transition-colors"
           >
             ← Повернутися на сайт
           </Link>
