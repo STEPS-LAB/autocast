@@ -24,14 +24,25 @@ export async function POST() {
   const supabase = await createClient()
 
   // Categories
-  for (const category of CATEGORIES) {
-    await supabase.from('categories').upsert({
-      slug: category.slug,
-      name_ua: category.name_ua,
-      parent_id: null,
-      image_url: category.image_url,
-      sort_order: category.sort_order,
-    }, { onConflict: 'slug' })
+  // IMPORTANT:
+  // Admin CRUD calls this route after each change. We must NOT overwrite
+  // real catalog data (e.g. renamed categories) with seed defaults.
+  // Therefore we only seed missing categories by slug.
+  const { data: existingCategories } = await supabase
+    .from('categories')
+    .select('slug')
+  const existingSlugs = new Set((existingCategories ?? []).map(c => c.slug))
+  const missingCategories = CATEGORIES.filter(c => !existingSlugs.has(c.slug))
+  if (missingCategories.length > 0) {
+    await supabase
+      .from('categories')
+      .insert(missingCategories.map(category => ({
+        slug: category.slug,
+        name_ua: category.name_ua,
+        parent_id: null,
+        image_url: category.image_url,
+        sort_order: category.sort_order,
+      })))
   }
 
   // Brands

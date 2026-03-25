@@ -57,7 +57,10 @@ export default function AdminProductsPage() {
           .from('products')
           .select('id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at')
           .order('created_at', { ascending: false }),
-        supabase.from('categories').select('id,slug,name_ua,parent_id,image_url,sort_order'),
+        supabase
+          .from('categories')
+          .select('id,slug,name_ua,parent_id,image_url,sort_order')
+          .order('sort_order', { ascending: true }),
         supabase.from('brands').select('id,name,logo_url').order('name', { ascending: true }),
       ])
 

@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ImageCropModal from '@/components/admin/ImageCropModal'
 import BrandCombobox from '@/components/admin/BrandCombobox'
+import CategoryCombobox from '@/components/admin/CategoryCombobox'
 import { mergeBrandIntoList, resolveBrandId } from '@/lib/admin/resolve-brand'
 import type { Brand, Category } from '@/types'
 import { slugify } from '@/lib/utils'
@@ -112,8 +113,27 @@ export default function AdminNewProductPage() {
       setLoading(false)
     }
     void load()
+
+    async function refreshOnFocus() {
+      const supabase = await getSupabase()
+      const { data: cat } = await supabase
+        .from('categories')
+        .select('id,slug,name_ua,parent_id,image_url,sort_order')
+        .order('sort_order', { ascending: true })
+      if (!mounted) return
+      setCategories((cat as Category[]) ?? [])
+    }
+
+    function onFocus() {
+      // Ensure the category dropdown reflects recent changes from the Categories screen.
+      void refreshOnFocus()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
     return () => {
       mounted = false
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
     }
   }, [editProductId])
 
@@ -504,22 +524,14 @@ export default function AdminNewProductPage() {
             </label>
             <label className="block">
               <span className="text-xs text-text-muted">Категорія</span>
-              <select
+              <CategoryCombobox
+                categories={categories}
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                required
-                title="Оберіть розділ каталогу"
-                className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary"
-              >
-                <option value="" disabled>
-                  Оберіть категорію
-                </option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name_ua}
-                  </option>
-                ))}
-              </select>
+                onChange={setCategoryId}
+                placeholder="Оберіть категорію…"
+                className="mt-1"
+                inputClassName="h-10"
+              />
             </label>
             <div className="block">
               <span className="text-xs text-text-muted">Бренд</span>
