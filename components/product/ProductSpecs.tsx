@@ -11,11 +11,24 @@ export default function ProductSpecs({ specs }: ProductSpecsProps) {
       <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
         Характеристики
       </h3>
-      <dl className="divide-y divide-border border border-border rounded-md overflow-hidden">
-        {entries.map(([key, value]) => (
-          <div key={key} className="flex px-4 py-2.5 hover:bg-bg-elevated transition-colors">
-            <dt className="w-1/2 text-sm text-text-muted shrink-0">{key}</dt>
-            <dd className="text-sm font-medium text-text-primary font-mono">{value}</dd>
+      <dl className="inline-block w-full max-w-[720px] rounded-lg border border-border/80 bg-bg-surface overflow-hidden shadow-[0_10px_24px_rgba(0,0,0,0.10)]">
+        {entries.map(([key, value], idx) => (
+          <div
+            key={key}
+            className={[
+              'grid grid-cols-1 sm:grid-cols-[minmax(180px,1fr)_2fr] gap-1 sm:gap-3',
+              'px-4 py-3',
+              'border-b border-border/70 last:border-b-0',
+              idx % 2 === 0 ? 'bg-bg-surface' : 'bg-bg-elevated/40',
+              'hover:bg-bg-elevated/70 transition-colors',
+            ].join(' ')}
+          >
+            <dt className="text-xs uppercase tracking-wider text-text-muted">
+              {key}
+            </dt>
+            <dd className="text-sm font-semibold text-text-primary leading-snug">
+              {value}
+            </dd>
           </div>
         ))}
       </dl>

@@ -13,6 +13,10 @@ import { getDiscountPercent } from '@/lib/utils'
 import RecentlyViewedTracker from '@/components/product/RecentlyViewedTracker'
 import { applyDiscountToProduct, DISCOUNTS_COOKIE_KEY, parseDiscountOverrides } from '@/lib/discounts'
 import { getProductBySlugFromDb, getProductCardsFromDb } from '@/lib/data/catalog-db'
+import { createClient } from '@/lib/supabase/server'
+import ProductTabs from '@/components/product/ProductTabs'
+import ProductReviews, { type ProductReview } from '@/components/product/ProductReviews'
+import ProductVideos from '@/components/product/ProductVideos'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -43,6 +47,7 @@ export default async function ProductPage({ params }: Props) {
   const sourceProduct = await getProductBySlugFromDb(slug)
   if (!sourceProduct) notFound()
   const product = applyDiscountToProduct(sourceProduct, discountOverrides)
+  const videoUrls = product.video_urls ?? []
 
   const category = product.category
   const brand = product.brand
@@ -69,6 +74,15 @@ export default async function ProductPage({ params }: Props) {
     category: category ? { name_ua: category.name_ua, slug: category.slug } : undefined,
     brand: brand ? { name: brand.name } : undefined,
   }
+
+  const supabase = await createClient()
+  const { data: reviewsData } = await supabase
+    .from('product_reviews')
+    .select('id,user_id,body,created_at')
+    .eq('product_id', product.id)
+    .order('created_at', { ascending: false })
+
+  const reviews = (reviewsData as ProductReview[] | null) ?? []
 
   return (
     <PageTransition>
@@ -113,20 +127,21 @@ export default async function ProductPage({ params }: Props) {
           />
         </div>
 
-        {/* Specs + Description tabs */}
-        <div className="grid lg:grid-cols-3 gap-10 mb-16">
-          <div className="lg:col-span-2 space-y-8">
-            <div>
-              <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-4">
-                Про товар
-              </h2>
-              <p className="text-sm text-text-secondary leading-relaxed">
+        <ProductTabs
+          description={
+            <div className="rounded-lg border border-border bg-bg-surface p-6 shadow-[0_10px_22px_rgba(0,0,0,0.08)]">
+              <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
                 {product.description_ua}
               </p>
             </div>
-            <ProductSpecs specs={product.specs} />
-          </div>
-        </div>
+          }
+          specs={<ProductSpecs specs={product.specs} />}
+          reviews={<ProductReviews productId={product.id} initialReviews={reviews} />}
+          videos={<ProductVideos urls={videoUrls} />}
+          reviewsCount={reviews.length}
+          videosCount={videoUrls.length}
+          defaultTab="specs"
+        />
 
         {/* Related */}
         {related.length > 0 && (

@@ -66,6 +66,7 @@ function AdminNewProductPageInner() {
   const [brandInput, setBrandInput] = useState('')
   const [featured, setFeatured] = useState(false)
   const [specsText, setSpecsText] = useState('')
+  const [videoUrlsText, setVideoUrlsText] = useState('')
 
   const [pendingImages, setPendingImages] = useState<string[]>([])
   const [cropSource, setCropSource] = useState('')
@@ -96,23 +97,38 @@ function AdminNewProductPageInner() {
       if (editProductId) {
         const { data: existing, error } = await supabase
           .from('products')
-          .select('id,name_ua,description_ua,price,stock,category_id,brand_id,specs,images,is_featured')
+          .select('id,name_ua,description_ua,price,stock,category_id,brand_id,specs,images,video_urls,is_featured')
           .eq('id', editProductId)
           .single()
 
         if (!mounted) return
-        if (error || !existing) {
+        let resolvedExisting: any = existing
+        let resolvedError: any = error
+        if (resolvedError) {
+          const msg = String(resolvedError?.message ?? resolvedError)
+          if (msg.includes('video_urls')) {
+            const retry = await supabase
+              .from('products')
+              .select('id,name_ua,description_ua,price,stock,category_id,brand_id,specs,images,is_featured')
+              .eq('id', editProductId)
+              .single()
+            resolvedExisting = retry.data
+            resolvedError = retry.error
+          }
+        }
+
+        if (resolvedError || !resolvedExisting) {
           setFormError('Не вдалося завантажити товар для редагування.')
           setLoading(false)
           return
         }
 
-        setName(existing.name_ua ?? '')
-        setDescription(existing.description_ua ?? '')
-        setPrice(String(existing.price ?? ''))
-        setStock(String(existing.stock ?? ''))
+        setName(resolvedExisting.name_ua ?? '')
+        setDescription(resolvedExisting.description_ua ?? '')
+        setPrice(String(resolvedExisting.price ?? ''))
+        setStock(String(resolvedExisting.stock ?? ''))
         {
-          const existingCategoryId = (existing.category_id ?? '') as string
+          const existingCategoryId = (resolvedExisting.category_id ?? '') as string
           setCategoryId(existingCategoryId)
           const selected = c.find(cc => cc.id === existingCategoryId) ?? null
           const parentId = selected?.parent_id ?? null
@@ -124,15 +140,17 @@ function AdminNewProductPageInner() {
             setSubcategoryId('')
           }
         }
-        setFeatured(!!existing.is_featured)
-        setSpecsText(specsToText((existing as any).specs))
-        setPendingImages(((existing as any).images as string[] | null) ?? [])
-        const brandName = nextBrands.find(b => b.id === (existing as any).brand_id)?.name ?? ''
+        setFeatured(!!resolvedExisting.is_featured)
+        setSpecsText(specsToText((resolvedExisting as any).specs))
+        setPendingImages(((resolvedExisting as any).images as string[] | null) ?? [])
+        setVideoUrlsText((((resolvedExisting as any).video_urls as string[] | null) ?? []).join('\n'))
+        const brandName = nextBrands.find(b => b.id === (resolvedExisting as any).brand_id)?.name ?? ''
         setBrandInput(brandName)
       } else {
         setCategoryId('')
         setParentCategoryId('')
         setSubcategoryId('')
+        setVideoUrlsText('')
       }
       setLoading(false)
     }
@@ -330,6 +348,10 @@ function AdminNewProductPageInner() {
         category_id: cat,
         brand_id: finalBrandId,
         specs: textToSpecs(specsText),
+        video_urls: videoUrlsText
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean),
         is_featured: featured,
       }
 
@@ -607,6 +629,16 @@ function AdminNewProductPageInner() {
                 onChange={(e) => setSpecsText(e.target.value)}
                 className="mt-1 w-full rounded border border-border bg-bg-input px-3 py-2 text-sm text-text-primary font-mono resize-y placeholder:text-text-muted"
                 placeholder={'Кожен рядок: «Назва: значення».\nПотужність: 4×50 Вт\nBluetooth: Так\nДіагональ екрану: 10″'}
+              />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="text-xs text-text-muted">Відеоогляди (URL, по одному на рядок)</span>
+              <textarea
+                rows={3}
+                value={videoUrlsText}
+                onChange={(e) => setVideoUrlsText(e.target.value)}
+                className="mt-1 w-full rounded border border-border bg-bg-input px-3 py-2 text-sm text-text-primary resize-y placeholder:text-text-muted"
+                placeholder={'Напр.\nhttps://youtu.be/XXXXXXXXXXX\nhttps://www.youtube.com/watch?v=YYYYYYYYYYY'}
               />
             </label>
             <label

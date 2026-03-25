@@ -1,3 +1,6 @@
+'use client'
+
+import { useMemo, useState } from 'react'
 import { Package, Truck, ShieldCheck } from 'lucide-react'
 import Badge from '@/components/ui/Badge'
 import AddToCart from '@/components/product/AddToCart'
@@ -34,6 +37,10 @@ export default function ProductDetailPanel({
   discountPercent,
   productCard,
 }: ProductDetailPanelProps) {
+  const [qty, setQty] = useState(1)
+  const totalDisplayPrice = useMemo(() => displayPrice * qty, [displayPrice, qty])
+  const totalBasePrice = useMemo(() => basePrice * qty, [basePrice, qty])
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap gap-2">
@@ -54,11 +61,11 @@ export default function ProductDetailPanel({
 
       <div className="flex items-center gap-4">
         <span className="text-3xl font-bold text-text-primary price">
-          {formatPrice(displayPrice)}
+          {formatPrice(totalDisplayPrice)}
         </span>
         {hasSale && (
           <span className="text-lg text-text-muted line-through price">
-            {formatPrice(basePrice)}
+            {formatPrice(totalBasePrice)}
           </span>
         )}
       </div>
@@ -74,7 +81,7 @@ export default function ProductDetailPanel({
         </span>
       </div>
 
-      <AddToCart product={productCard} />
+      <AddToCart product={productCard} qty={qty} onQtyChange={setQty} />
 
       <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border">
         {GUARANTEES.map(({ icon: Icon, label, desc }) => (

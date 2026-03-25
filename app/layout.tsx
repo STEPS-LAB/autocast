@@ -51,7 +51,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="uk" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="uk"
+      data-scroll-behavior="smooth"
+      className={`${inter.variable} ${jetbrainsMono.variable}`}
+    >
       <body className="min-h-dvh flex flex-col">
         <AppLayoutClient>{children}</AppLayoutClient>
       </body>

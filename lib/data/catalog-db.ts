@@ -32,6 +32,7 @@ interface DbProductRow {
   brand_id: string | null
   specs: Record<string, string>
   images: string[]
+  video_urls?: string[]
   is_featured: boolean
   created_at: string
   category?: DbCategoryRow | DbCategoryRow[]
@@ -96,6 +97,7 @@ function rowToProduct(row: DbProductRow): Product {
     brand_id: row.brand_id,
     specs: row.specs ?? {},
     images: row.images ?? [],
+    video_urls: row.video_urls ?? [],
     is_featured: row.is_featured,
     created_at: row.created_at,
     category: category ? rowToCategory(category) : undefined,
@@ -179,16 +181,30 @@ export async function getProductCardsFromDb(options?: CatalogReadOptions): Promi
 export async function getProductsFromDb(): Promise<Product[]> {
   try {
     const supabase = await createClient()
+    const baseSelect = `
+      id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at,
+      category:categories(id,slug,name_ua,parent_id,image_url,sort_order),
+      brand:brands(id,name,logo_url)
+    `
     const { data, error } = await supabase
       .from('products')
-      .select(`
-        id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at,
-        category:categories(id,slug,name_ua,parent_id,image_url,sort_order),
-        brand:brands(id,name,logo_url)
-      `)
+      .select(`video_urls,${baseSelect}`)
       .order('created_at', { ascending: false })
 
-    if (error || !data) return allowSeedFallback() ? PRODUCTS : []
+    if (error) {
+      const msg = String((error as any).message ?? error)
+      if (msg.includes('video_urls')) {
+        const retry = await supabase
+          .from('products')
+          .select(baseSelect)
+          .order('created_at', { ascending: false })
+        if (retry.error || !retry.data) return allowSeedFallback() ? PRODUCTS : []
+        if (retry.data.length === 0) return allowSeedFallback() ? PRODUCTS : []
+        return (retry.data as DbProductRow[]).map(rowToProduct)
+      }
+      return allowSeedFallback() ? PRODUCTS : []
+    }
+    if (!data) return allowSeedFallback() ? PRODUCTS : []
     if (data.length === 0) return allowSeedFallback() ? PRODUCTS : []
     return (data as DbProductRow[]).map(rowToProduct)
   } catch {
@@ -199,17 +215,31 @@ export async function getProductsFromDb(): Promise<Product[]> {
 export async function getProductBySlugFromDb(slug: string): Promise<Product | undefined> {
   try {
     const supabase = await createClient()
+    const baseSelect = `
+      id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at,
+      category:categories(id,slug,name_ua,parent_id,image_url,sort_order),
+      brand:brands(id,name,logo_url)
+    `
     const { data, error } = await supabase
       .from('products')
-      .select(`
-        id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at,
-        category:categories(id,slug,name_ua,parent_id,image_url,sort_order),
-        brand:brands(id,name,logo_url)
-      `)
+      .select(`video_urls,${baseSelect}`)
       .eq('slug', slug)
       .maybeSingle()
 
-    if (error || !data) return allowSeedFallback() ? getProductBySlug(slug) : undefined
+    if (error) {
+      const msg = String((error as any).message ?? error)
+      if (msg.includes('video_urls')) {
+        const retry = await supabase
+          .from('products')
+          .select(baseSelect)
+          .eq('slug', slug)
+          .maybeSingle()
+        if (retry.error || !retry.data) return allowSeedFallback() ? getProductBySlug(slug) : undefined
+        return rowToProduct(retry.data as DbProductRow)
+      }
+      return allowSeedFallback() ? getProductBySlug(slug) : undefined
+    }
+    if (!data) return allowSeedFallback() ? getProductBySlug(slug) : undefined
     return rowToProduct(data as DbProductRow)
   } catch {
     return allowSeedFallback() ? getProductBySlug(slug) : undefined

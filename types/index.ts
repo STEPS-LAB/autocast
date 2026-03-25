@@ -29,6 +29,7 @@ export interface Product {
   brand_id: string | null
   specs: Record<string, string>
   images: string[]
+  video_urls?: string[]
   is_featured: boolean
   created_at: string
   category?: Category

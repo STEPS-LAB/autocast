@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, X, SlidersHorizontal } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -98,12 +98,17 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
     return parent ?? selected
   }, [filters.category, parentSlugBySlug])
 
+  useEffect(() => {
+    if (!activeTopSlug) return
+    setExpanded(prev => (prev[activeTopSlug] ? prev : { ...prev, [activeTopSlug]: true }))
+  }, [activeTopSlug])
+
   function toggleExpand(slug: string) {
     setExpanded(prev => ({ ...prev, [slug]: !prev[slug] }))
   }
 
   function isExpanded(slug: string) {
-    return expanded[slug] || activeTopSlug === slug
+    return !!expanded[slug]
   }
 
   return (
@@ -160,55 +165,61 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
             const isActiveParent = activeTopSlug === cat.slug
             return (
               <li key={cat.id}>
-                <div className="flex items-center gap-1">
-                  {hasKids ? (
-                    <button
-                      type="button"
-                      onClick={() => toggleExpand(cat.slug)}
-                      className="size-7 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors flex items-center justify-center"
-                      aria-label={expandedNow ? 'Згорнути підкатегорії' : 'Розгорнути підкатегорії'}
-                      title={expandedNow ? 'Згорнути' : 'Розгорнути'}
-                    >
-                      {expandedNow ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </button>
-                  ) : (
-                    <span className="size-7 shrink-0" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilter('category', cat.slug)
+                    if (hasKids) toggleExpand(cat.slug)
+                  }}
+                  className={cn(
+                    'w-full flex items-center justify-between gap-2 text-left text-sm px-2 py-1.5 rounded transition-colors',
+                    isActiveParent
+                      ? 'text-black bg-accent/20'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                   )}
-                  <button
-                    onClick={() => {
-                      setFilter('category', cat.slug)
-                      if (hasKids) setExpanded(prev => ({ ...prev, [cat.slug]: true }))
-                    }}
-                    className={cn(
-                      'flex-1 text-left text-sm px-2 py-1.5 rounded transition-colors',
-                      isActiveParent
-                        ? 'text-black bg-accent/20'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                    )}
-                  >
-                    {cat.name_ua}
-                  </button>
-                </div>
+                  aria-expanded={hasKids ? expandedNow : undefined}
+                >
+                  <span className="min-w-0 truncate">{cat.name_ua}</span>
+                  {hasKids ? (
+                    <motion.span
+                      animate={{ rotate: expandedNow ? 180 : 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="text-text-muted shrink-0"
+                    >
+                      <ChevronDown size={14} />
+                    </motion.span>
+                  ) : (
+                    <ChevronRight size={14} className="opacity-0 shrink-0" aria-hidden="true" />
+                  )}
+                </button>
 
-                {expandedNow && (
-                  <ul className="mt-1 ml-7 flex flex-col gap-1">
-                    {kids.map(kid => (
-                      <li key={kid.id}>
-                        <button
-                          onClick={() => setFilter('category', kid.slug)}
-                          className={cn(
-                            'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                            filters.category === kid.slug
-                              ? 'text-black bg-accent/20'
-                              : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                          )}
-                        >
-                          {kid.name_ua}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <AnimatePresence initial={false}>
+                  {expandedNow && (
+                    <motion.ul
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22 }}
+                      className="overflow-hidden mt-1 ml-4 flex flex-col gap-1"
+                    >
+                      {kids.map(kid => (
+                        <li key={kid.id}>
+                          <button
+                            onClick={() => setFilter('category', kid.slug)}
+                            className={cn(
+                              'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
+                              filters.category === kid.slug
+                                ? 'text-black bg-accent/20'
+                                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                            )}
+                          >
+                            {kid.name_ua}
+                          </button>
+                        </li>
+                      ))}
+                    </motion.ul>
+                  )}
+                </AnimatePresence>
               </li>
             )
           })}
