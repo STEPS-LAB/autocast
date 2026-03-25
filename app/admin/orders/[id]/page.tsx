@@ -35,6 +35,30 @@ type AdminOrderDetails = {
   order_items: OrderItem[]
 }
 
+function formatPhoneUa(value: string | null | undefined) {
+  const raw = (value ?? '').trim()
+  if (!raw) return '—'
+  const digits = raw.replace(/\D/g, '')
+  // Stored as 9 digits (XXYYYYYYY) where full phone becomes +38 (0XX) YYY-YY-YY
+  if (digits.length === 9) {
+    const xx = digits.slice(0, 2)
+    const rest = digits.slice(2)
+    return `+38 (0${xx}) ${rest.slice(0, 3)}-${rest.slice(3, 5)}-${rest.slice(5, 7)}`
+  }
+  // If value already contains country code, try to normalize.
+  if (digits.startsWith('380') && digits.length >= 12) {
+    const local = digits.slice(3)
+    const trimmed = local.startsWith('0') ? local.slice(1) : local
+    if (trimmed.length >= 9) {
+      const d9 = trimmed.slice(0, 9)
+      const xx = d9.slice(0, 2)
+      const rest = d9.slice(2)
+      return `+38 (0${xx}) ${rest.slice(0, 3)}-${rest.slice(3, 5)}-${rest.slice(5, 7)}`
+    }
+  }
+  return raw
+}
+
 const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accent' | 'success' | 'error' | 'muted' }> = {
   pending: { label: 'Очікує відправки', variant: 'warning' },
   processing: { label: 'Обробляється', variant: 'accent' },
@@ -94,6 +118,7 @@ export default function AdminOrderDetailsPage() {
   }, [orderId])
 
   const shipping = (order?.shipping_info ?? {}) as ShippingInfo
+  const isPickup = shipping.delivery_method === 'pickup'
   const status =
     STATUS_LABELS[order?.status ?? 'pending'] ??
     STATUS_LABELS['pending'] ??
@@ -157,16 +182,27 @@ export default function AdminOrderDetailsPage() {
                 </p>
                 <p className="text-text-secondary">
                   <span className="text-text-muted">Телефон:</span>{' '}
-                  <span className="text-text-primary">{shipping.phone ?? '—'}</span>
+                  <span className="text-text-primary">{formatPhoneUa(shipping.phone)}</span>
                 </p>
-                <p className="text-text-secondary">
-                  <span className="text-text-muted">Місто:</span>{' '}
-                  <span className="text-text-primary">{shipping.city ?? '—'}</span>
-                </p>
-                <p className="text-text-secondary">
-                  <span className="text-text-muted">Адреса:</span>{' '}
-                  <span className="text-text-primary">{shipping.address ?? '—'}</span>
-                </p>
+                {isPickup ? (
+                  <p className="text-text-secondary">
+                    <span className="text-text-muted">Доставка:</span>{' '}
+                    <span className="text-text-primary">
+                      Самовивіз (м. Житомир, вулиця Вітрука, 12в)
+                    </span>
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-text-secondary">
+                      <span className="text-text-muted">Місто:</span>{' '}
+                      <span className="text-text-primary">{shipping.city ?? '—'}</span>
+                    </p>
+                    <p className="text-text-secondary">
+                      <span className="text-text-muted">Адреса:</span>{' '}
+                      <span className="text-text-primary">{shipping.address ?? '—'}</span>
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
