@@ -6,13 +6,21 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { User, Package, LogOut, Settings, ShoppingBag, Shield } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatPrice } from '@/lib/utils'
 import type { Order, Profile } from '@/types'
 
 interface AuthUser {
   id: string
   email?: string
   created_at: string
+}
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  pending: 'Очікує',
+  processing: 'Обробляється',
+  shipped: 'Відправлено',
+  delivered: 'Доставлено',
+  cancelled: 'Скасовано',
 }
 
 function AccountPageContent() {
@@ -207,9 +215,11 @@ function AccountPageContent() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-bold text-text-primary price">
-                            {Number(o.total).toFixed(0)} ₴
+                            {formatPrice(Number(o.total))}
                           </p>
-                          <p className="text-xs text-text-muted capitalize">{o.status}</p>
+                          <p className="text-xs text-text-muted">
+                            {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                          </p>
                         </div>
                       </div>
                     </div>
