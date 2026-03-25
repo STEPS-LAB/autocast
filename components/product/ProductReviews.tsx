@@ -34,6 +34,7 @@ export default function ProductReviews({
   const [body, setBody] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [reviewsAvailable, setReviewsAvailable] = useState(true)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -60,6 +61,10 @@ export default function ProductReviews({
     setError('')
     const trimmed = body.trim()
     if (!trimmed) return
+    if (!reviewsAvailable) {
+      setError('Відгуки тимчасово недоступні (таблиця ще не створена).')
+      return
+    }
     if (!userId) {
       setError('Увійдіть, щоб залишити відгук.')
       return
@@ -73,7 +78,13 @@ export default function ProductReviews({
         .select('id,user_id,body,created_at')
         .single()
       if (error || !data) {
-        setError(error?.message ?? 'Не вдалося додати відгук.')
+        const msg = String((error as any)?.message ?? error ?? 'Не вдалося додати відгук.')
+        if (msg.includes("Could not find the table 'public.product_reviews'")) {
+          setReviewsAvailable(false)
+          setError('Відгуки ще не увімкнені на сервері. Застосуйте міграцію БД для `product_reviews`.')
+          return
+        }
+        setError(msg)
         return
       }
       setReviews(prev => [data as ProductReview, ...prev])
@@ -100,10 +111,16 @@ export default function ProductReviews({
                 'w-full rounded border border-border bg-bg-input px-3 py-2 text-sm text-text-primary',
                 'placeholder:text-text-muted resize-y focus:outline-none focus:border-accent'
               )}
+              disabled={!reviewsAvailable || saving}
             />
             {error && <p className="text-xs text-error mt-2">{error}</p>}
             <div className="mt-3 flex justify-end">
-              <Button size="sm" onClick={() => void submit()} disabled={!body.trim()} loading={saving}>
+              <Button
+                size="sm"
+                onClick={() => void submit()}
+                disabled={!reviewsAvailable || !body.trim()}
+                loading={saving}
+              >
                 Опублікувати
               </Button>
             </div>

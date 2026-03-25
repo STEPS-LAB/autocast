@@ -76,13 +76,18 @@ export default async function ProductPage({ params }: Props) {
   }
 
   const supabase = await createClient()
-  const { data: reviewsData } = await supabase
-    .from('product_reviews')
-    .select('id,user_id,body,created_at')
-    .eq('product_id', product.id)
-    .order('created_at', { ascending: false })
-
-  const reviews = (reviewsData as ProductReview[] | null) ?? []
+  let reviews: ProductReview[] = []
+  try {
+    const { data, error } = await supabase
+      .from('product_reviews')
+      .select('id,user_id,body,created_at')
+      .eq('product_id', product.id)
+      .order('created_at', { ascending: false })
+    if (!error && data) reviews = data as ProductReview[]
+  } catch {
+    // If the table isn't migrated yet, keep reviews empty.
+    reviews = []
+  }
 
   return (
     <PageTransition>

@@ -17,20 +17,24 @@ CREATE INDEX IF NOT EXISTS idx_product_reviews_product_created
 ALTER TABLE product_reviews ENABLE ROW LEVEL SECURITY;
 
 -- Public read
-CREATE POLICY IF NOT EXISTS "Public read product reviews"
+DROP POLICY IF EXISTS "Public read product reviews" ON product_reviews;
+CREATE POLICY "Public read product reviews"
   ON product_reviews FOR SELECT TO anon, authenticated
   USING (TRUE);
 
 -- Authenticated write (own)
-CREATE POLICY IF NOT EXISTS "Users insert own product reviews"
+DROP POLICY IF EXISTS "Users insert own product reviews" ON product_reviews;
+CREATE POLICY "Users insert own product reviews"
   ON product_reviews FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "Users update own product reviews"
+DROP POLICY IF EXISTS "Users update own product reviews" ON product_reviews;
+CREATE POLICY "Users update own product reviews"
   ON product_reviews FOR UPDATE TO authenticated
   USING (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "Users delete own product reviews"
+DROP POLICY IF EXISTS "Users delete own product reviews" ON product_reviews;
+CREATE POLICY "Users delete own product reviews"
   ON product_reviews FOR DELETE TO authenticated
   USING (auth.uid() = user_id);
 
