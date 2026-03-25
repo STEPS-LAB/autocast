@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { BRANDS, CAR_MAKES, CAR_MODELS, CATEGORIES } from '@/lib/data/seed'
+import { rateLimit } from '@/lib/security/rateLimit'
 
 async function isCurrentUserAdmin() {
   const supabase = await createClient()
@@ -17,7 +18,10 @@ async function isCurrentUserAdmin() {
   return profile?.role === 'admin'
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  const rl = rateLimit(request, { bucket: 'admin:bootstrap', limit: 10, windowMs: 60_000 })
+  if (!rl.ok) return rl.response
+
   const allowed = await isCurrentUserAdmin()
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

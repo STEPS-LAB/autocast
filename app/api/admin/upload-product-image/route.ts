@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { getSupabaseUrl } from '@/lib/supabase/env'
+import { rateLimit } from '@/lib/security/rateLimit'
+import { z } from 'zod'
 
 interface UploadBody {
   productId?: string
@@ -25,13 +27,28 @@ function extensionFromMime(mimeType: string) {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as UploadBody
-    const productId = body.productId?.trim()
-    const dataUrl = body.dataUrl?.trim()
+    const rl = rateLimit(request, { bucket: 'admin:upload-product-image', limit: 20, windowMs: 60_000 })
+    if (!rl.ok) return rl.response
 
-    if (!productId || !dataUrl) {
+    const bodySchema = z.object({
+      productId: z.string().min(1).max(200),
+      dataUrl: z.string().min(1).max(8_000_000),
+    })
+
+    let json: unknown
+    try {
+      json = await request.json()
+    } catch {
       return NextResponse.json({ error: 'Некоректні дані завантаження.' }, { status: 400 })
     }
+
+    const parsedBody = bodySchema.safeParse(json)
+    if (!parsedBody.success) {
+      return NextResponse.json({ error: 'Некоректні дані завантаження.' }, { status: 400 })
+    }
+
+    const productId = parsedBody.data.productId.trim()
+    const dataUrl = parsedBody.data.dataUrl.trim()
 
     const parsed = parseDataUrl(dataUrl)
     if (!parsed) {

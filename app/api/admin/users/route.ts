@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/security/rateLimit'
+import { z } from 'zod'
 
 async function isCurrentUserAdmin() {
   const supabase = await createClient()
@@ -16,7 +18,10 @@ async function isCurrentUserAdmin() {
   return profile?.role === 'admin'
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rl = rateLimit(request, { bucket: 'admin:users:get', limit: 60, windowMs: 60_000 })
+  if (!rl.ok) return rl.response
+
   const allowed = await isCurrentUserAdmin()
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -52,19 +57,31 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  const rl = rateLimit(request, { bucket: 'admin:users:patch', limit: 30, windowMs: 60_000 })
+  if (!rl.ok) return rl.response
+
   const allowed = await isCurrentUserAdmin()
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const body = await request.json() as { id?: string; role?: 'user' | 'admin' }
-  if (!body.id || !body.role) {
+  const patchSchema = z.object({
+    id: z.string().uuid(),
+    role: z.enum(['user', 'admin']),
+  })
+
+  let json: unknown
+  try {
+    json = await request.json()
+  } catch {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
+  const parsed = patchSchema.safeParse(json)
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
 
   const supabase = await createClient()
   const { error } = await supabase
     .from('profiles')
-    .update({ role: body.role })
-    .eq('id', body.id)
+    .update({ role: parsed.data.role })
+    .eq('id', parsed.data.id)
 
   if (error) {
     return NextResponse.json({ error: 'Cannot update role' }, { status: 500 })

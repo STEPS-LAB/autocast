@@ -1,15 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/security/rateLimit'
-
-interface CreateOrderBody {
-  shipping_info: Record<string, unknown>
-  items: Array<{
-    product_id: string
-    qty: number
-    unit_price?: number
-  }>
-}
+import { shippingInfoSchema } from '@/lib/validators/checkout.schema'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -25,41 +18,44 @@ function formatMoney(value: number): string {
   return new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' }).format(value)
 }
 
+const createOrderSchema = z.object({
+  shipping_info: shippingInfoSchema,
+  items: z.array(z.object({
+    product_id: z.string().refine(isUuid, 'Некоректний товар у кошику'),
+    qty: z.number().int().positive(),
+    unit_price: z.number().optional(),
+  })).min(1).max(50),
+})
+
 export async function POST(request: Request) {
   const rl = rateLimit(request, { bucket: 'orders:create', limit: 10, windowMs: 60_000 })
   if (!rl.ok) return rl.response
 
-  const supabase = await createClient()
-  const body = await request.json() as CreateOrderBody
-  const items = body.items ?? []
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return NextResponse.json({ error: 'Кошик порожній' }, { status: 400 })
+  let json: unknown
+  try {
+    json = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Некоректне тіло запиту' }, { status: 400 })
   }
+
+  const parsed = createOrderSchema.safeParse(json)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Некоректні дані замовлення' }, { status: 400 })
+  }
+
+  const { shipping_info, items } = parsed.data
+  const supabase = await createClient()
 
   const normalized = new Map<string, { product_id: string, qty: number, unit_price?: number }>()
   for (const item of items) {
-    if (!item || typeof item !== 'object') {
-      return NextResponse.json({ error: 'Некоректні дані кошика' }, { status: 400 })
-    }
-
-    if (typeof item.product_id !== 'string' || !isUuid(item.product_id)) {
-      return NextResponse.json({ error: 'Некоректний товар у кошику' }, { status: 400 })
-    }
-
-    const qty = toNumber(item.qty)
-    if (qty === null || !Number.isInteger(qty) || qty <= 0) {
-      return NextResponse.json({ error: 'Некоректна кількість товару' }, { status: 400 })
-    }
-
     const existing = normalized.get(item.product_id)
     if (existing) {
-      existing.qty += qty
+      existing.qty += item.qty
     } else {
       normalized.set(item.product_id, {
         product_id: item.product_id,
-        qty,
-        unit_price: toNumber(item.unit_price ?? null) ?? undefined,
+        qty: item.qty,
+        unit_price: item.unit_price,
       })
     }
   }
@@ -134,13 +130,15 @@ export async function POST(request: Request) {
   const { data: userData } = await supabase.auth.getUser()
   const userId = userData.user?.id ?? null
 
-  const { data: order, error: orderError } = await supabase
+  const db = userId ? supabase : await createServiceClient()
+
+  const { data: order, error: orderError } = await db
     .from('orders')
     .insert({
       user_id: userId,
       total,
       status: 'pending',
-      shipping_info: body.shipping_info ?? {},
+      shipping_info,
     })
     .select('id')
     .single()
@@ -162,7 +160,7 @@ export async function POST(request: Request) {
     })
   })
 
-  const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
+  const { error: itemsError } = await db.from('order_items').insert(orderItems)
   if (itemsError) {
     return NextResponse.json({ error: 'Не вдалося зберегти товари замовлення' }, { status: 500 })
   }
