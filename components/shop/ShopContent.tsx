@@ -38,6 +38,37 @@ export default function ShopContent({ products, categories, brands }: ShopConten
 
   const allProducts = useDiscountedProductCards(products)
 
+  const categoryDescendants = useMemo(() => {
+    const idBySlug = new Map(categories.map(c => [c.slug, c.id]))
+    const slugById = new Map(categories.map(c => [c.id, c.slug]))
+    const childrenById = new Map<string, string[]>()
+    for (const c of categories) {
+      if (!c.parent_id) continue
+      const list = childrenById.get(c.parent_id) ?? []
+      list.push(c.id)
+      childrenById.set(c.parent_id, list)
+    }
+
+    function collectSlugs(rootSlug: string): Set<string> {
+      const rootId = idBySlug.get(rootSlug)
+      const out = new Set<string>()
+      if (!rootId) return out
+      out.add(rootSlug)
+      const stack = [...(childrenById.get(rootId) ?? [])]
+      while (stack.length > 0) {
+        const id = stack.pop()
+        if (!id) break
+        const slug = slugById.get(id)
+        if (slug) out.add(slug)
+        const kids = childrenById.get(id) ?? []
+        for (const k of kids) stack.push(k)
+      }
+      return out
+    }
+
+    return { collectSlugs }
+  }, [categories])
+
   const filtered = useMemo(() => {
     let products = allProducts
 
@@ -46,7 +77,8 @@ export default function ShopContent({ products, categories, brands }: ShopConten
       products = products.filter(p => p.name_ua.toLowerCase().includes(q))
     }
     if (category) {
-      products = products.filter(p => p.category?.slug === category)
+      const allowed = categoryDescendants.collectSlugs(category)
+      products = products.filter(p => !!p.category?.slug && allowed.has(p.category.slug))
     }
     if (brand) {
       products = products.filter(p => p.brand?.name === brand)
@@ -78,7 +110,7 @@ export default function ShopContent({ products, categories, brands }: ShopConten
     }
 
     return products
-  }, [allProducts, query, category, brand, minPrice, maxPrice, inStock, sort])
+  }, [allProducts, query, category, brand, minPrice, maxPrice, inStock, sort, categoryDescendants])
 
   const hasFilters = Object.values(filters).some(Boolean)
   const showCatalogNotReady = strictDb && allProducts.length === 0 && !query && !hasFilters

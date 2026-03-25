@@ -9,6 +9,8 @@ interface CategoryComboboxProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
+  allowEmpty?: boolean
+  emptyLabel?: string
   disabled?: boolean
   className?: string
   inputClassName?: string
@@ -19,6 +21,8 @@ export default function CategoryCombobox({
   value,
   onChange,
   placeholder = 'Оберіть категорію…',
+  allowEmpty = false,
+  emptyLabel = 'Верхній рівень',
   disabled = false,
   className,
   inputClassName,
@@ -68,6 +72,12 @@ export default function CategoryCombobox({
   function selectCategory(c: Category) {
     onChange(c.id)
     setQuery(c.name_ua)
+    setOpen(false)
+  }
+
+  function selectEmpty() {
+    onChange('')
+    setQuery('')
     setOpen(false)
   }
 
@@ -135,6 +145,25 @@ export default function CategoryCombobox({
           role="listbox"
           className="absolute z-50 mt-1 w-full max-h-52 overflow-y-auto rounded border border-border bg-bg-surface py-1 shadow-lg"
         >
+          {allowEmpty && (
+            <li role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={value === ''}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={selectEmpty}
+                className={cn(
+                  'w-full text-left px-3 py-2 text-sm transition-colors border-b border-border',
+                  value === ''
+                    ? 'bg-accent/20 text-text-primary'
+                    : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                )}
+              >
+                {emptyLabel}
+              </button>
+            </li>
+          )}
           {filtered.map((c, i) => (
             <li key={c.id} role="presentation">
               <button

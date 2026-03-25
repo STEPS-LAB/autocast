@@ -53,6 +53,8 @@ export default function AdminNewProductPage() {
   const [price, setPrice] = useState('')
   const [stock, setStock] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [parentCategoryId, setParentCategoryId] = useState('')
+  const [subcategoryId, setSubcategoryId] = useState('')
   const [brandInput, setBrandInput] = useState('')
   const [featured, setFeatured] = useState(false)
   const [specsText, setSpecsText] = useState('')
@@ -101,7 +103,19 @@ export default function AdminNewProductPage() {
         setDescription(existing.description_ua ?? '')
         setPrice(String(existing.price ?? ''))
         setStock(String(existing.stock ?? ''))
-        setCategoryId(existing.category_id ?? '')
+        {
+          const existingCategoryId = (existing.category_id ?? '') as string
+          setCategoryId(existingCategoryId)
+          const selected = c.find(cc => cc.id === existingCategoryId) ?? null
+          const parentId = selected?.parent_id ?? null
+          if (parentId) {
+            setParentCategoryId(parentId)
+            setSubcategoryId(existingCategoryId)
+          } else {
+            setParentCategoryId(existingCategoryId)
+            setSubcategoryId('')
+          }
+        }
         setFeatured(!!existing.is_featured)
         setSpecsText(specsToText((existing as any).specs))
         setPendingImages(((existing as any).images as string[] | null) ?? [])
@@ -109,6 +123,8 @@ export default function AdminNewProductPage() {
         setBrandInput(brandName)
       } else {
         setCategoryId('')
+        setParentCategoryId('')
+        setSubcategoryId('')
       }
       setLoading(false)
     }
@@ -136,6 +152,10 @@ export default function AdminNewProductPage() {
       document.removeEventListener('visibilitychange', onFocus)
     }
   }, [editProductId])
+
+  const topLevelCategories = categories.filter(c => !c.parent_id)
+  const subcategories = categories.filter(c => !!parentCategoryId && c.parent_id === parentCategoryId)
+  const hasSubcategories = subcategories.length > 0
 
   async function syncCatalogAfterChange() {
     try {
@@ -525,10 +545,37 @@ export default function AdminNewProductPage() {
             <label className="block">
               <span className="text-xs text-text-muted">Категорія</span>
               <CategoryCombobox
-                categories={categories}
-                value={categoryId}
-                onChange={setCategoryId}
-                placeholder="Оберіть категорію…"
+                categories={topLevelCategories}
+                value={parentCategoryId}
+                onChange={(nextParentId) => {
+                  setParentCategoryId(nextParentId)
+                  setSubcategoryId('')
+                  setCategoryId(nextParentId)
+                }}
+                placeholder="Оберіть категорію (верхній рівень)…"
+                className="mt-1"
+                inputClassName="h-10"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-text-muted">Підкатегорія</span>
+              <CategoryCombobox
+                categories={subcategories}
+                value={subcategoryId}
+                onChange={(nextSubId) => {
+                  setSubcategoryId(nextSubId)
+                  setCategoryId(nextSubId || parentCategoryId)
+                }}
+                placeholder={
+                  !parentCategoryId
+                    ? 'Спочатку оберіть категорію…'
+                    : hasSubcategories
+                      ? 'Оберіть підкатегорію…'
+                      : 'Немає підкатегорій'
+                }
+                allowEmpty
+                emptyLabel="Без підкатегорії"
+                disabled={!parentCategoryId || !hasSubcategories}
                 className="mt-1"
                 inputClassName="h-10"
               />

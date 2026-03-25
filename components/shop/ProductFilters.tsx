@@ -1,8 +1,8 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { useCallback } from 'react'
-import { X, SlidersHorizontal } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { ChevronDown, ChevronRight, X, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import type { Brand, Category } from '@/types'
@@ -33,6 +33,7 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const createURL = useCallback(
     (updates: Record<string, string | null>) => {
@@ -59,6 +60,49 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
   }
 
   const hasFilters = Object.values(filters).some(Boolean)
+
+  const { topLevel, childrenByParentSlug, parentSlugBySlug } = useMemo(() => {
+    const byParentId = new Map<string, Category[]>()
+    const byId = new Map(categories.map(c => [c.id, c]))
+    const parentSlugBySlug = new Map<string, string>()
+    for (const c of categories) {
+      if (!c.parent_id) continue
+      const p = byId.get(c.parent_id)
+      if (p) parentSlugBySlug.set(c.slug, p.slug)
+      const list = byParentId.get(c.parent_id) ?? []
+      list.push(c)
+      byParentId.set(c.parent_id, list)
+    }
+    for (const list of byParentId.values()) {
+      list.sort((a, b) => (a.sort_order - b.sort_order) || a.name_ua.localeCompare(b.name_ua))
+    }
+
+    const childrenByParentSlug = new Map<string, Category[]>()
+    for (const [parentId, kids] of byParentId.entries()) {
+      const parent = byId.get(parentId)
+      if (parent) childrenByParentSlug.set(parent.slug, kids)
+    }
+    const topLevel = categories
+      .filter(c => !c.parent_id)
+      .slice()
+      .sort((a, b) => (a.sort_order - b.sort_order) || a.name_ua.localeCompare(b.name_ua))
+    return { topLevel, childrenByParentSlug, parentSlugBySlug }
+  }, [categories])
+
+  const activeTopSlug = useMemo(() => {
+    const selected = filters.category
+    if (!selected) return null
+    const parent = parentSlugBySlug.get(selected)
+    return parent ?? selected
+  }, [filters.category, parentSlugBySlug])
+
+  function toggleExpand(slug: string) {
+    setExpanded(prev => ({ ...prev, [slug]: !prev[slug] }))
+  }
+
+  function isExpanded(slug: string) {
+    return expanded[slug] || activeTopSlug === slug
+  }
 
   return (
     <aside className="w-full">
@@ -107,21 +151,65 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
               Всі категорії
             </button>
           </li>
-          {categories.map(cat => (
-            <li key={cat.id}>
-              <button
-                onClick={() => setFilter('category', cat.slug)}
-                className={cn(
-                  'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                  filters.category === cat.slug
-                    ? 'text-black bg-accent/20'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+          {topLevel.map(cat => {
+            const kids = childrenByParentSlug.get(cat.slug) ?? []
+            const hasKids = kids.length > 0
+            const expandedNow = hasKids && isExpanded(cat.slug)
+            const isActiveParent = activeTopSlug === cat.slug
+            return (
+              <li key={cat.id}>
+                <div className="flex items-center gap-1">
+                  {hasKids ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(cat.slug)}
+                      className="size-7 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors flex items-center justify-center"
+                      aria-label={expandedNow ? 'Згорнути підкатегорії' : 'Розгорнути підкатегорії'}
+                      title={expandedNow ? 'Згорнути' : 'Розгорнути'}
+                    >
+                      {expandedNow ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
+                  ) : (
+                    <span className="size-7 shrink-0" />
+                  )}
+                  <button
+                    onClick={() => {
+                      setFilter('category', cat.slug)
+                      if (hasKids) setExpanded(prev => ({ ...prev, [cat.slug]: true }))
+                    }}
+                    className={cn(
+                      'flex-1 text-left text-sm px-2 py-1.5 rounded transition-colors',
+                      isActiveParent
+                        ? 'text-black bg-accent/20'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                    )}
+                  >
+                    {cat.name_ua}
+                  </button>
+                </div>
+
+                {expandedNow && (
+                  <ul className="mt-1 ml-7 flex flex-col gap-1">
+                    {kids.map(kid => (
+                      <li key={kid.id}>
+                        <button
+                          onClick={() => setFilter('category', kid.slug)}
+                          className={cn(
+                            'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
+                            filters.category === kid.slug
+                              ? 'text-black bg-accent/20'
+                              : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                          )}
+                        >
+                          {kid.name_ua}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              >
-                {cat.name_ua}
-              </button>
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ul>
       </div>
 
