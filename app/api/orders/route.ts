@@ -63,110 +63,31 @@ export async function POST(request: Request) {
   const normalizedItems = [...normalized.values()]
   const productIds = normalizedItems.map(i => i.product_id)
 
-  const { data: products, error: productsError } = await supabase
-    .from('products')
-    .select('id, name_ua, price, sale_price, stock')
-    .in('id', productIds)
-
-  if (productsError) {
-    return NextResponse.json({ error: 'Не вдалося перевірити товари' }, { status: 500 })
-  }
-
-  type ProductRow = {
-    id: string
-    name_ua: string
-    price: unknown
-    sale_price: unknown
-    stock: number
-  }
-
-  const productsById = new Map<string, ProductRow>(
-    (products ?? []).map((p) => [p.id, p as unknown as ProductRow]),
-  )
-
-  for (const item of normalizedItems) {
-    const product = productsById.get(item.product_id)
-    if (!product) {
-      return NextResponse.json({ error: 'Деякі товари більше недоступні. Оновіть кошик.' }, { status: 409 })
-    }
-
-    const basePrice = toNumber(product.price)
-    const salePrice = toNumber(product.sale_price)
-    const currentUnitPrice = (salePrice ?? basePrice)
-    if (currentUnitPrice === null) {
-      return NextResponse.json({ error: 'Не вдалося визначити ціну товару. Спробуйте ще раз.' }, { status: 500 })
-    }
-
-    if (item.unit_price !== undefined) {
-      const diff = Math.abs(item.unit_price - currentUnitPrice)
-      if (diff > 0.009) {
-        return NextResponse.json(
-          { error: `Ціна товару «${product.name_ua}» змінилась до ${formatMoney(currentUnitPrice)}. Оновіть кошик і повторіть спробу.` },
-          { status: 409 },
-        )
-      }
-    }
-
-    if (typeof product.stock !== 'number' || !Number.isFinite(product.stock)) {
-      return NextResponse.json({ error: 'Не вдалося перевірити наявність товару. Спробуйте ще раз.' }, { status: 500 })
-    }
-
-    if (product.stock < item.qty) {
-      return NextResponse.json(
-        { error: `Недостатня кількість товару «${product.name_ua}». Доступно: ${product.stock} шт.` },
-        { status: 409 },
-      )
-    }
-  }
-
-  const total = normalizedItems.reduce((sum, item) => {
-    const p = productsById.get(item.product_id)!
-    const basePrice = toNumber(p.price)
-    const salePrice = toNumber(p.sale_price)
-    const currentUnitPrice = (salePrice ?? basePrice) as number
-    return sum + (currentUnitPrice * item.qty)
-  }, 0)
-
   const { data: userData } = await supabase.auth.getUser()
   const userId = userData.user?.id ?? null
 
-  const db = userId ? supabase : await createServiceClient()
+  const service = await createServiceClient()
+  const { data: created, error: createError } = await service.rpc('create_order_with_inventory', {
+    p_user_id: userId,
+    p_shipping_info: shipping_info,
+    p_items: normalizedItems.map(i => ({ product_id: i.product_id, qty: i.qty })),
+  })
 
-  const { data: order, error: orderError } = await db
-    .from('orders')
-    .insert({
-      user_id: userId,
-      total,
-      status: 'pending',
-      shipping_info,
-    })
-    .select('id')
-    .single()
-
-  if (orderError || !order) {
+  if (createError || !created) {
+    const msg = String(createError?.message ?? '')
+    if (msg.includes('OUT_OF_STOCK:')) {
+      return NextResponse.json({ error: 'Недостатня кількість деяких товарів. Оновіть кошик.' }, { status: 409 })
+    }
+    if (msg.includes('PRODUCT_NOT_FOUND')) {
+      return NextResponse.json({ error: 'Деякі товари більше недоступні. Оновіть кошик.' }, { status: 409 })
+    }
     return NextResponse.json({ error: 'Не вдалося створити замовлення' }, { status: 500 })
   }
 
-  const orderItems = normalizedItems.map((item) => {
-    const p = productsById.get(item.product_id)!
-    const basePrice = toNumber(p.price)
-    const salePrice = toNumber(p.sale_price)
-    const currentUnitPrice = (salePrice ?? basePrice) as number
-    return ({
-    order_id: order.id,
-    product_id: item.product_id,
-    qty: item.qty,
-    unit_price: currentUnitPrice,
-    })
-  })
-
-  const { error: itemsError } = await db.from('order_items').insert(orderItems)
-  if (itemsError) {
-    return NextResponse.json({ error: 'Не вдалося зберегти товари замовлення' }, { status: 500 })
-  }
+  const orderId = String(created)
 
   return NextResponse.json({
-    id: order.id,
-    number: order.id.slice(0, 8).toUpperCase(),
+    id: orderId,
+    number: orderId.slice(0, 8).toUpperCase(),
   })
 }

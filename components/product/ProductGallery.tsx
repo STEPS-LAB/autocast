@@ -15,16 +15,11 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
   const [active, setActive] = useState(0)
   const [zoomed, setZoomed] = useState(false)
 
-  const prev = () => setActive(i => (i - 1 + images.length) % images.length)
-  const next = () => setActive(i => (i + 1) % images.length)
+  const safeImages = (images?.filter(Boolean).length ? images.filter(Boolean) : ['/images/placeholder-product.svg'])
+  const safeActive = Math.min(active, safeImages.length - 1)
 
-  if (!images.length) {
-    return (
-      <div className="aspect-square rounded-md bg-bg-elevated border border-border flex items-center justify-center text-text-muted">
-        Немає зображення
-      </div>
-    )
-  }
+  const prev = () => setActive(i => (i - 1 + safeImages.length) % safeImages.length)
+  const next = () => setActive(i => (i + 1) % safeImages.length)
 
   return (
     <div className="flex flex-col gap-3">
@@ -38,7 +33,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
       >
         <AnimatePresence mode="wait">
           <motion.div
-            key={active}
+            key={safeActive}
             initial={{ opacity: 0, scale: 1.02 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
@@ -46,12 +41,12 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
             className="absolute inset-0"
           >
             <Image
-              src={images[active]!}
-              alt={`${name} — ${active + 1}`}
+              src={safeImages[safeActive]!}
+              alt={`${name} — ${safeActive + 1}`}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
-              priority={active === 0}
+              priority={safeActive === 0}
             />
           </motion.div>
         </AnimatePresence>
@@ -62,7 +57,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
         </div>
 
         {/* Nav arrows (if multiple) */}
-        {images.length > 1 && (
+        {safeImages.length > 1 && (
           <>
             <button
               onClick={e => { e.stopPropagation(); prev() }}
@@ -91,15 +86,15 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
       </div>
 
       {/* Thumbnails */}
-      {images.length > 1 && (
+      {safeImages.length > 1 && (
         <div className="flex gap-2">
-          {images.map((img, i) => (
+          {safeImages.map((img, i) => (
             <button
               key={i}
               onClick={() => setActive(i)}
               className={cn(
                 'relative size-16 rounded border-2 overflow-hidden shrink-0 transition-colors',
-                i === active
+                i === safeActive
                   ? 'border-accent'
                   : 'border-border hover:border-border-light'
               )}
@@ -118,7 +113,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
 
       {/* Zoom lightbox */}
       <AnimatePresence>
-        {zoomed && images[active] && (
+        {zoomed && safeImages[safeActive] && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -134,7 +129,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
               onClick={e => e.stopPropagation()}
             >
               <Image
-                src={images[active]!}
+                src={safeImages[safeActive]!}
                 alt={name}
                 fill
                 className="object-contain"

@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/server'
 import ProductTabs from '@/components/product/ProductTabs'
 import ProductReviews, { type ProductReview } from '@/components/product/ProductReviews'
 import ProductVideos from '@/components/product/ProductVideos'
+import { getSiteUrl } from '@/lib/supabase/env'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -30,10 +31,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const product = await getProductBySlugFromDb(slug)
   if (!product) return { title: 'Товар не знайдено' }
+  const siteUrl = getSiteUrl()
+  const url = `${siteUrl}/product/${product.slug}`
+  const image = product.images[0] ? product.images[0] : `${siteUrl}/images/placeholder-product.svg`
   return {
     title: product.name_ua,
     description: product.description_ua.slice(0, 160),
+    alternates: {
+      canonical: url,
+    },
     openGraph: {
+      type: 'website',
+      url,
+      title: product.name_ua,
+      description: product.description_ua.slice(0, 160),
       images: product.images[0] ? [product.images[0]] : [],
     },
   }
@@ -41,6 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const dynamic = 'force-dynamic'
 
 export default async function ProductPage({ params }: Props) {
+  const siteUrl = getSiteUrl()
   const cookieStore = await cookies()
   const discountOverrides = parseDiscountOverrides(cookieStore.get(DISCOUNTS_COOKIE_KEY)?.value)
   const { slug } = await params
@@ -62,6 +74,25 @@ export default async function ProductPage({ params }: Props) {
     : null
 
   const displayPrice = product.sale_price ?? product.price
+  const productUrl = `${siteUrl}/product/${product.slug}`
+  const productImage = product.images[0] ? product.images[0] : `${siteUrl}/images/placeholder-product.svg`
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name_ua,
+    description: product.description_ua,
+    image: product.images?.length ? product.images : [productImage],
+    sku: product.id,
+    brand: brand?.name ? { '@type': 'Brand', name: brand.name } : undefined,
+    offers: {
+      '@type': 'Offer',
+      url: productUrl,
+      priceCurrency: 'UAH',
+      price: String(displayPrice),
+      availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+    },
+  }
 
   const productCard = {
     id: product.id,
@@ -91,6 +122,11 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <PageTransition>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="container-xl py-8">
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-1.5 text-xs text-text-muted mb-8">

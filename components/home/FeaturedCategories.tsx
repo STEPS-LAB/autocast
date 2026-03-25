@@ -33,6 +33,7 @@ interface FeaturedCategoriesProps {
 
 export default function FeaturedCategories({ categories }: FeaturedCategoriesProps) {
   const strictDb = process.env['NEXT_PUBLIC_CATALOG_STRICT_DB'] === 'true'
+  const topLevel = categories.filter((c) => !c.parent_id)
   const displayNameUa = (cat: Category) =>
     cat.slug === 'zakhyst-vid-uhonu' ? 'Охоронні системи' : cat.name_ua
 
@@ -58,7 +59,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
           </Link>
         </motion.div>
 
-        {categories.length > 0 ? (
+        {topLevel.length > 0 ? (
           <motion.div
             variants={container}
             initial="hidden"
@@ -66,13 +67,13 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
             viewport={{ once: true }}
             className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
           >
-            {categories.map(cat => {
+            {topLevel.map(cat => {
               return (
               <motion.div key={cat.id} variants={item}>
                 <Link href={`/shop/${cat.slug}`} className="group block">
                   <div className="relative aspect-[4/3] rounded-md overflow-hidden bg-bg-surface border border-border mb-3">
                     <Image
-                      src={CATEGORY_IMAGES[cat.slug] ?? cat.image_url ?? '/images/placeholder-category.png'}
+                      src={CATEGORY_IMAGES[cat.slug] ?? cat.image_url ?? '/images/placeholder-category.svg'}
                       alt={cat.name_ua}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
