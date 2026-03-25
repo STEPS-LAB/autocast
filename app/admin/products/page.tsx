@@ -22,6 +22,7 @@ import { mergeBrandIntoList, resolveBrandId } from '@/lib/admin/resolve-brand'
 type ProductRow = Product & { id: string }
 
 export default function AdminProductsPage() {
+  const MAX_IMAGES = 10
   const [products, setProducts] = useState<ProductRow[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
@@ -135,7 +136,7 @@ export default function AdminProductsPage() {
     const supabase = await getSupabase()
 
     const nextImages: string[] = []
-    for (const image of pendingImages.slice(0, 6)) {
+    for (const image of pendingImages.slice(0, MAX_IMAGES)) {
       if (!image.startsWith('data:')) {
         nextImages.push(image)
         continue
@@ -202,16 +203,16 @@ export default function AdminProductsPage() {
       return
     }
 
-    const room = Math.max(0, 6 - pendingImages.length)
+    const room = Math.max(0, MAX_IMAGES - pendingImages.length)
     if (room === 0) {
-      setImageError('У галереї вже максимум 6 фото.')
+      setImageError(`У галереї вже максимум ${MAX_IMAGES} фото.`)
       return
     }
 
     const toRead = imageFiles.slice(0, room)
     setImageError(
       imageFiles.length > room
-        ? `Обрано ${imageFiles.length} зображень; додано до кадрування перші ${room} (макс. 6 у галереї).`
+        ? `Обрано ${imageFiles.length} зображень; додано до кадрування перші ${room} (макс. ${MAX_IMAGES} у галереї).`
         : ''
     )
 
@@ -248,8 +249,8 @@ export default function AdminProductsPage() {
 
   function applyCroppedImage(croppedImage: string) {
     setPendingImages(prev => {
-      const next = [croppedImage, ...prev].slice(0, 6)
-      if (next.length >= 6) {
+      const next = [croppedImage, ...prev].slice(0, MAX_IMAGES)
+      if (next.length >= MAX_IMAGES) {
         imageCropQueueRef.current = []
         queueMicrotask(() => {
           setCropSource('')
@@ -363,6 +364,20 @@ export default function AdminProductsPage() {
       )
     })
   }, [brands, categories, products, searchQuery])
+
+  const productForDiscount = useMemo(
+    () => products.find(p => p.id === discountProductId) ?? null,
+    [products, discountProductId],
+  )
+
+  const parsedDiscountPercent = Number(discountInput.trim())
+  const discountPercentForUi = Number.isFinite(parsedDiscountPercent)
+    ? clampDiscountPercent(parsedDiscountPercent)
+    : null
+  const discountedPriceForUi =
+    productForDiscount && discountPercentForUi !== null
+      ? salePriceFromPercent(productForDiscount.price, discountPercentForUi)
+      : null
 
   function handleDiscount(row: ProductRow) {
     const currentPercent = row.sale_price
@@ -576,21 +591,26 @@ export default function AdminProductsPage() {
         <div className="space-y-3">
           <label className="block">
             <span className="text-xs text-text-muted">Знижка, %</span>
-            <input
-              type="number"
-              min={0}
-              max={95}
-              value={discountInput}
-              onChange={(e) => {
-                setDiscountInput(e.target.value)
-                setDiscountError('')
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') applyDiscountFromModal()
-              }}
-              placeholder="Напр. 15 (0 — без знижки)"
-              className="mt-1 w-full h-10 rounded border border-border bg-bg-input px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
-            />
+            <div className="mt-1 w-full h-10 flex items-stretch rounded border border-border bg-bg-input overflow-hidden">
+              <input
+                type="number"
+                min={0}
+                max={95}
+                value={discountInput}
+                onChange={(e) => {
+                  setDiscountInput(e.target.value)
+                  setDiscountError('')
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') applyDiscountFromModal()
+                }}
+                placeholder="Напр. 15 (0 — без знижки)"
+                className="flex-1 h-full px-3 text-sm text-text-primary placeholder:text-text-muted bg-transparent border-0 focus:outline-none focus:border-accent"
+              />
+              <div className="px-3 border-l border-border flex items-center text-sm text-text-muted whitespace-nowrap">
+                Після: {discountedPriceForUi !== null ? formatPrice(discountedPriceForUi) : '—'}
+              </div>
+            </div>
           </label>
           {discountError && (
             <p className="text-xs text-error">{discountError}</p>
@@ -779,7 +799,7 @@ export default function AdminProductsPage() {
 
           <label className="block">
             <span className="text-xs text-text-muted">Файл зображення</span>
-            <p className="text-xs text-text-muted mt-0.5 mb-1">JPEG, PNG або WebP, до 6 файлів за раз.</p>
+            <p className="text-xs text-text-muted mt-0.5 mb-1">JPEG, PNG або WebP, до {MAX_IMAGES} файлів за раз.</p>
             <div className="mt-1 h-10 w-full rounded border border-border bg-bg-input px-2 flex items-center gap-2">
               <label
                 htmlFor="product-image-upload"
@@ -788,7 +808,7 @@ export default function AdminProductsPage() {
                 Вибрати файли
               </label>
               <span className="text-sm text-text-secondary truncate">
-                {selectedFileName || 'Файли не вибрано (до 6 фото, можна кілька)'}
+                {selectedFileName || `Файли не вибрано (до ${MAX_IMAGES} фото, можна кілька)`}
               </span>
               <input
                 id="product-image-upload"

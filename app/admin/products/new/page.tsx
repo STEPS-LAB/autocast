@@ -32,6 +32,7 @@ async function getSupabase() {
 }
 
 export default function AdminNewProductPage() {
+  const MAX_IMAGES = 10
   const router = useRouter()
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
@@ -125,16 +126,16 @@ export default function AdminNewProductPage() {
       return
     }
 
-    const room = Math.max(0, 6 - pendingImages.length)
+    const room = Math.max(0, MAX_IMAGES - pendingImages.length)
     if (room === 0) {
-      setImageError('У галереї вже максимум 6 фото.')
+      setImageError(`У галереї вже максимум ${MAX_IMAGES} фото.`)
       return
     }
 
     const toRead = imageFiles.slice(0, room)
     setImageError(
       imageFiles.length > room
-        ? `Обрано ${imageFiles.length} зображень; додано до кадрування перші ${room} (макс. 6 у галереї).`
+        ? `Обрано ${imageFiles.length} зображень; додано до кадрування перші ${room} (макс. ${MAX_IMAGES} у галереї).`
         : ''
     )
 
@@ -185,7 +186,7 @@ export default function AdminNewProductPage() {
     // Keep order: first selected image should be "головне" (index 0).
     // Therefore we append new cropped images to the end, so later uploads
     // become the last items in the gallery.
-    setPendingImages(prev => [...prev, croppedImage].slice(0, 6))
+    setPendingImages(prev => [...prev, croppedImage].slice(0, MAX_IMAGES))
     openNextInCropQueue()
   }
 
@@ -267,7 +268,7 @@ export default function AdminNewProductPage() {
       const productId = created.id as string
       const nextImages: string[] = []
 
-      for (const image of pendingImages.slice(0, 6)) {
+      for (const image of pendingImages.slice(0, MAX_IMAGES)) {
         if (!image.startsWith('data:')) {
           nextImages.push(image)
           continue
@@ -373,7 +374,7 @@ export default function AdminNewProductPage() {
 
           <label className="block">
             <span className="text-xs text-text-muted">Файл зображення</span>
-            <p className="text-xs text-text-muted mt-0.5 mb-1">JPEG, PNG або WebP, до 6 файлів за раз.</p>
+            <p className="text-xs text-text-muted mt-0.5 mb-1">JPEG, PNG або WebP, до {MAX_IMAGES} файлів за раз.</p>
             <div className="mt-1 h-10 w-full rounded border border-border bg-bg-input px-2 flex items-center gap-2 max-w-md">
               <label
                 htmlFor="new-product-image-upload"
@@ -384,7 +385,7 @@ export default function AdminNewProductPage() {
               <span className="text-sm text-text-secondary truncate">
                 {totalImagesSelected > 0
                   ? `${totalImagesSelected} зображень`
-                  : 'Файли не вибрано (до 6 фото, можна кілька)'}
+                  : `Файли не вибрано (до ${MAX_IMAGES} фото, можна кілька)`}
               </span>
               <input
                 id="new-product-image-upload"
