@@ -7,7 +7,7 @@ import { User, Package, LogOut, Settings, ShoppingBag, Shield } from 'lucide-rea
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
 import { formatDate } from '@/lib/utils'
-import type { Profile } from '@/types'
+import type { Order, Profile } from '@/types'
 
 interface AuthUser {
   id: string
@@ -20,6 +20,8 @@ function AccountPageContent() {
   const searchParams = useSearchParams()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const accessDenied = searchParams.get('error') === 'admin_access_denied'
 
@@ -37,6 +39,15 @@ function AccountPageContent() {
           .eq('id', authUser.id)
           .maybeSingle()
         if (profileData) setProfile(profileData as Profile)
+
+        setOrdersLoading(true)
+        const { data: ordersData } = await supabase
+          .from('orders')
+          .select('id,user_id,status,total,shipping_info,created_at')
+          .eq('user_id', authUser.id)
+          .order('created_at', { ascending: false })
+        setOrders((ordersData as Order[] | null) ?? [])
+        setOrdersLoading(false)
       } catch {
         // If auth backend is unavailable, treat user as signed out.
         router.replace('/login')
@@ -166,13 +177,45 @@ function AccountPageContent() {
                 <Package size={16} className="text-accent" />
                 Мої замовлення
               </h3>
-              <div className="flex flex-col items-center py-6 text-center gap-3">
-                <ShoppingBag size={28} className="text-text-muted" />
-                <p className="text-sm text-text-muted">Замовлень поки немає</p>
-                <Link href="/shop">
-                  <Button variant="secondary" size="sm">Перейти в магазин</Button>
-                </Link>
-              </div>
+              {ordersLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="size-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="flex flex-col items-center py-6 text-center gap-3">
+                  <ShoppingBag size={28} className="text-text-muted" />
+                  <p className="text-sm text-text-muted">Замовлень поки немає</p>
+                  <Link href="/shop">
+                    <Button variant="secondary" size="sm">Перейти в магазин</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {orders.map(o => (
+                    <div
+                      key={o.id}
+                      className="border border-border rounded-md p-4 bg-bg-primary/40 hover:bg-bg-elevated transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-text-primary">
+                            Замовлення #{o.id.slice(0, 8).toUpperCase()}
+                          </p>
+                          <p className="text-xs text-text-muted mt-0.5">
+                            {formatDate(o.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-text-primary price">
+                            {Number(o.total).toFixed(0)} ₴
+                          </p>
+                          <p className="text-xs text-text-muted capitalize">{o.status}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>

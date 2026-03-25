@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
+import { Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, ArrowLeft, ArrowRight, ShoppingBag } from 'lucide-react'
@@ -24,7 +25,7 @@ const STEPS = [
 const DELIVERY_OPTIONS = [
   { value: 'nova_poshta', label: 'Нова Пошта', desc: '1-2 робочих дні' },
   { value: 'ukr_poshta', label: 'Укрпошта', desc: '3-5 робочих днів' },
-  { value: 'pickup', label: 'Самовивіз', desc: 'м. Київ, безкоштовно' },
+  { value: 'pickup', label: 'Самовивіз', desc: 'м. Житомир, вулиця Вітрука, 12в' },
 ]
 
 const PAYMENT_OPTIONS = [
@@ -39,6 +40,36 @@ const slideVariants = {
   exit: (dir: number) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
 }
 
+const cardHover = {
+  whileHover: { y: -2, boxShadow: '0 16px 34px rgba(0,0,0,0.12)' },
+  transition: { duration: 0.18 },
+} as const
+
+const optionHover = {
+  whileHover: { y: -1, boxShadow: '0 12px 26px rgba(0,0,0,0.10)' },
+  whileTap: { scale: 0.99 },
+  transition: { duration: 0.16 },
+} as const
+
+function extractPhoneDigits(value: string) {
+  const onlyDigits = value.replace(/\D/g, '')
+  const withoutCountry = onlyDigits.startsWith('380') ? onlyDigits.slice(3) : onlyDigits
+  const withoutLeadingZero = withoutCountry.startsWith('0') ? withoutCountry.slice(1) : withoutCountry
+  return withoutLeadingZero.slice(0, 9)
+}
+
+function formatPhoneMask(digits: string) {
+  if (!digits) return '+38(0'
+
+  let result = '+38(0'
+  if (digits.length > 0) result += digits.slice(0, 2)
+  if (digits.length >= 2) result += ')'
+  if (digits.length > 2) result += `-${digits.slice(2, 5)}`
+  if (digits.length > 5) result += `-${digits.slice(5, 7)}`
+  if (digits.length > 7) result += `-${digits.slice(7, 9)}`
+  return result
+}
+
 export default function CheckoutPage() {
   const { items, clearCart } = useCartStore()
   const total = useCartStore(selectCartTotal)
@@ -49,15 +80,21 @@ export default function CheckoutPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<ShippingInfoInput>({
     resolver: zodResolver(shippingInfoSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       delivery_method: 'nova_poshta',
       payment_method: 'cash_on_delivery',
     },
   })
+
+  const formValues = useWatch({ control })
+  const deliveryMethod = formValues.delivery_method ?? 'nova_poshta'
 
   if (items.length === 0 && step !== 3) {
     return (
@@ -129,7 +166,11 @@ export default function CheckoutPage() {
                 <div className="grid lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 space-y-3">
                     {items.map(item => (
-                      <div key={item.id} className="flex gap-3 p-3 bg-bg-surface border border-border rounded-md">
+                      <motion.div
+                        key={item.id}
+                        {...cardHover}
+                        className="flex gap-3 p-3 bg-bg-surface border border-border rounded-md transition-shadow will-change-transform"
+                      >
                         <div className="relative size-14 rounded bg-bg-elevated overflow-hidden shrink-0 border border-border">
                           {item.product.images[0] && (
                             <Image src={item.product.images[0]} alt={item.product.name_ua} fill className="object-cover" sizes="56px" />
@@ -142,7 +183,7 @@ export default function CheckoutPage() {
                         <span className="text-sm font-semibold text-text-primary price shrink-0">
                           {formatPrice((item.product.sale_price ?? item.product.price) * item.quantity)}
                         </span>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                   <OrderSummary total={total} count={count} />
@@ -177,29 +218,68 @@ export default function CheckoutPage() {
                         <div className="grid sm:grid-cols-2 gap-4">
                           <Input
                             label="Імʼя"
-                            placeholder="Іван"
+                            placeholder="Ваше імʼя.."
                             error={errors.first_name?.message}
-                            {...register('first_name')}
+                            {...register('first_name', {
+                              onChange: (e) => {
+                                e.target.value = e.target.value.replace(/\d/g, '')
+                              },
+                            })}
                           />
                           <Input
                             label="Прізвище"
-                            placeholder="Петренко"
+                            placeholder="Ваше прізвище.."
                             error={errors.last_name?.message}
-                            {...register('last_name')}
+                            {...register('last_name', {
+                              onChange: (e) => {
+                                e.target.value = e.target.value.replace(/\d/g, '')
+                              },
+                            })}
                           />
                           <Input
                             label="Email"
                             type="email"
-                            placeholder="ivan@example.com"
+                            placeholder="Ваша електронна пошта.."
                             error={errors.email?.message}
                             {...register('email')}
                           />
-                          <Input
-                            label="Телефон"
-                            type="tel"
-                            placeholder="+38 050 000 0000"
-                            error={errors.phone?.message}
-                            {...register('phone')}
+                          <Controller
+                            name="phone"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                label="Телефон"
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="+38(0__)-___-__-__"
+                                error={errors.phone?.message}
+                                value={formatPhoneMask(field.value ?? '')}
+                                onChange={e => {
+                                  field.onChange(extractPhoneDigits(e.target.value))
+                                }}
+                                onFocus={e => {
+                                  const input = e.currentTarget
+                                  const cursorPosition = (field.value ?? '').length === 0 ? 5 : e.currentTarget.value.length
+                                  setTimeout(() => {
+                                    input?.setSelectionRange(cursorPosition, cursorPosition)
+                                  }, 0)
+                                }}
+                                onClick={e => {
+                                  const input = e.currentTarget
+                                  const cursorPosition = (field.value ?? '').length === 0 ? 5 : e.currentTarget.value.length
+                                  setTimeout(() => {
+                                    input?.setSelectionRange(cursorPosition, cursorPosition)
+                                  }, 0)
+                                }}
+                                onKeyDown={e => {
+                                  if ((e.key === 'Backspace' || e.key === 'Delete') && !e.ctrlKey && !e.metaKey) {
+                                    e.preventDefault()
+                                    const current = field.value ?? ''
+                                    field.onChange(current.slice(0, -1))
+                                  }
+                                }}
+                              />
+                            )}
                           />
                         </div>
                       </section>
@@ -211,36 +291,57 @@ export default function CheckoutPage() {
                         </h3>
                         <div className="space-y-2 mb-4">
                           {DELIVERY_OPTIONS.map(opt => (
-                            <label
+                            <motion.label
                               key={opt.value}
-                              className="flex items-center gap-3 p-3 bg-bg-surface border border-border rounded cursor-pointer hover:border-border-light transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5"
+                              {...optionHover}
+                              className="flex items-center gap-3 p-3 bg-bg-surface border border-border rounded cursor-pointer transition-colors hover:border-border-light will-change-transform has-[:checked]:border-accent has-[:checked]:bg-accent/20 has-[:checked]:[&_.radio-ring]:border-text-primary has-[:checked]:[&_.radio-dot]:bg-accent"
                             >
                               <input
                                 type="radio"
                                 value={opt.value}
-                                className="accent-accent"
+                                className="sr-only"
                                 {...register('delivery_method')}
                               />
+                              <span
+                                aria-hidden="true"
+                                className={[
+                                  'radio-ring shrink-0 size-4 rounded-full border-2 border-border',
+                                  'flex items-center justify-center',
+                                  'transition-colors',
+                                ].join(' ')}
+                              >
+                                <span className="radio-dot block size-2 rounded-full bg-transparent" />
+                              </span>
                               <div>
                                 <p className="text-sm font-medium text-text-primary">{opt.label}</p>
                                 <p className="text-xs text-text-muted">{opt.desc}</p>
                               </div>
-                            </label>
+                            </motion.label>
                           ))}
                         </div>
-                        <div className="grid sm:grid-cols-2 gap-4">
-                          <Input
-                            label="Місто"
-                            placeholder="Київ"
-                            error={errors.city?.message}
-                            {...register('city')}
-                          />
-                          <Input
-                            label="Відділення / Адреса"
-                            placeholder="Відділення №1"
-                            error={errors.address?.message}
-                            {...register('address')}
-                          />
+                        <div
+                          aria-hidden={deliveryMethod === 'pickup'}
+                          className={[
+                            'grid transition-[grid-template-rows,margin-top] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                            deliveryMethod !== 'pickup' ? 'grid-rows-[1fr] mt-4' : 'grid-rows-[0fr] mt-0',
+                          ].join(' ')}
+                        >
+                          <div className={['overflow-hidden', deliveryMethod === 'pickup' ? 'pointer-events-none' : ''].join(' ')}>
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <Input
+                                label="Місто"
+                                placeholder="Київ"
+                                error={errors.city?.message}
+                                {...register('city')}
+                              />
+                              <Input
+                                label="Відділення / Адреса"
+                                placeholder="Відділення №1"
+                                error={errors.address?.message}
+                                {...register('address')}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </section>
 
@@ -251,18 +352,29 @@ export default function CheckoutPage() {
                         </h3>
                         <div className="space-y-2">
                           {PAYMENT_OPTIONS.map(opt => (
-                            <label
+                            <motion.label
                               key={opt.value}
-                              className="flex items-center gap-3 p-3 bg-bg-surface border border-border rounded cursor-pointer hover:border-border-light transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/5"
+                              {...optionHover}
+                              className="flex items-center gap-3 p-3 bg-bg-surface border border-border rounded cursor-pointer transition-colors hover:border-border-light will-change-transform has-[:checked]:border-accent has-[:checked]:bg-accent/20 has-[:checked]:[&_.radio-ring]:border-text-primary has-[:checked]:[&_.radio-dot]:bg-accent"
                             >
                               <input
                                 type="radio"
                                 value={opt.value}
-                                className="accent-accent"
+                                className="sr-only"
                                 {...register('payment_method')}
                               />
+                              <span
+                                aria-hidden="true"
+                                className={[
+                                  'radio-ring shrink-0 size-4 rounded-full border-2 border-border',
+                                  'flex items-center justify-center',
+                                  'transition-colors',
+                                ].join(' ')}
+                              >
+                                <span className="radio-dot block size-2 rounded-full bg-transparent" />
+                              </span>
                               <p className="text-sm font-medium text-text-primary">{opt.label}</p>
-                            </label>
+                            </motion.label>
                           ))}
                         </div>
                       </section>
@@ -281,7 +393,19 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    <OrderSummary total={total} count={count} />
+                    <div className="lg:mt-[54px]">
+                      <OrderSummary
+                        total={total}
+                        count={count}
+                        info={{
+                          firstName: formValues.first_name ?? '',
+                          lastName: formValues.last_name ?? '',
+                          email: formValues.email ?? '',
+                          phone: formatPhoneMask(formValues.phone ?? ''),
+                          deliveryMethod: deliveryMethod,
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div className="mt-6 flex justify-between">
@@ -352,9 +476,30 @@ export default function CheckoutPage() {
   )
 }
 
-function OrderSummary({ total, count }: { total: number; count: number }) {
+function OrderSummary({
+  total,
+  count,
+  info,
+}: {
+  total: number
+  count: number
+  info?: {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+    deliveryMethod: ShippingInfoInput['delivery_method']
+  }
+}) {
+  const deliveryLabel = DELIVERY_OPTIONS.find(o => o.value === info?.deliveryMethod)?.label
   return (
-    <div className="bg-bg-surface border border-border rounded-md p-5 h-fit sticky top-24">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18 }}
+      whileHover={cardHover.whileHover}
+      className="bg-bg-surface border border-border rounded-md p-5 h-fit sticky top-24 transition-shadow will-change-transform"
+    >
       <h3 className="text-sm font-semibold text-text-primary mb-4">Підсумок</h3>
       <div className="space-y-2 mb-4">
         <div className="flex justify-between text-sm">
@@ -366,12 +511,42 @@ function OrderSummary({ total, count }: { total: number; count: number }) {
           <span className="text-success">Безкоштовно</span>
         </div>
       </div>
+
+      {info && (
+        <div className="border-t border-border pt-3 mb-3 space-y-1.5 text-sm">
+          <div className="flex justify-between gap-3">
+            <span className="text-text-secondary">Імʼя</span>
+            <span className="text-text-primary font-medium text-right">
+              {(info.firstName || info.lastName) ? `${info.firstName} ${info.lastName}`.trim() : '—'}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-text-secondary">Email</span>
+            <span className="text-text-primary font-medium text-right break-all">
+              {info.email || '—'}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-text-secondary">Телефон</span>
+            <span className="text-text-primary font-medium text-right">
+              {info.phone && info.phone !== '+38(0' ? info.phone : '—'}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-text-secondary">Доставка</span>
+            <span className="text-text-primary font-medium text-right">
+              {deliveryLabel ?? '—'}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="border-t border-border pt-3">
         <div className="flex justify-between font-semibold">
           <span className="text-text-primary">Разом</span>
           <span className="text-lg text-text-primary price">{formatPrice(total)}</span>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
