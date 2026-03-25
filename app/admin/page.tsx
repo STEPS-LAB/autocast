@@ -4,6 +4,7 @@ import Badge from '@/components/ui/Badge'
 import { formatPrice } from '@/lib/utils'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 
 export const metadata: Metadata = { title: 'Адмін — Дашборд' }
 
@@ -70,6 +71,10 @@ export default async function AdminDashboard() {
   const revenueChange = calculateChange(totalRevenue, previousRevenue)
   const ordersChange = calculateChange(currentMonthOrders.length, previousMonthOrders.length)
   const usersCount = profilesResult.count ?? 0
+  // On the dashboard we want to show products from the "Товари" section.
+  // If featured products are configured, prefer them; otherwise fall back to any products.
+  const featuredProducts = products.filter(p => p.is_featured)
+  const topProducts = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 5)
 
   return (
     <div className="fade-up-in">
@@ -115,7 +120,7 @@ export default async function AdminDashboard() {
         <div className="bg-bg-surface border border-border rounded-md overflow-hidden fade-up-in transition-shadow duration-300 hover:shadow-sm">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-semibold text-text-primary">Останні замовлення</h2>
-            <a href="/admin/orders" className="text-xs text-accent hover:underline transition-colors duration-300">Всі →</a>
+            <Link href="/admin/orders" className="text-xs text-accent hover:underline transition-colors duration-300">Всі →</Link>
           </div>
           <div className="divide-y divide-border">
             {orders.map(order => {
@@ -142,11 +147,11 @@ export default async function AdminDashboard() {
         <div className="bg-bg-surface border border-border rounded-md overflow-hidden fade-up-in transition-shadow duration-300 hover:shadow-sm">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-semibold text-text-primary">Товари</h2>
-            <a href="/admin/products" className="text-xs text-accent hover:underline transition-colors duration-300">Всі →</a>
+            <Link href="/admin/products" className="text-xs text-accent hover:underline transition-colors duration-300">Всі →</Link>
           </div>
           <div className="divide-y divide-border">
-            {products.filter(p => p.is_featured).slice(0, 5).length > 0 ? (
-              products.filter(p => p.is_featured).slice(0, 5).map((product, i) => (
+            {topProducts.length > 0 ? (
+              topProducts.map((product, i) => (
                 <div key={product.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out">
                   <span className="text-xs text-text-muted w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">

@@ -47,7 +47,6 @@ export default function AdminNewProductPage() {
   const [specsText, setSpecsText] = useState('')
 
   const [pendingImages, setPendingImages] = useState<string[]>([])
-  const [selectedFileName, setSelectedFileName] = useState('')
   const [cropSource, setCropSource] = useState('')
   const [cropFileName, setCropFileName] = useState('')
   const [imageError, setImageError] = useState('')
@@ -55,6 +54,9 @@ export default function AdminNewProductPage() {
 
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
+  const isCropping = !!cropSource
+  const totalImagesSelected =
+    pendingImages.length + (cropSource ? 1 : 0) + imageCropQueueRef.current.length
 
   useEffect(() => {
     let mounted = true
@@ -110,7 +112,14 @@ export default function AdminNewProductPage() {
     event.target.value = ''
     if (files.length === 0) return
 
-    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    // Some devices/browsers may provide an empty or unexpected MIME type for images.
+    // We avoid dropping such files early; instead we validate after FileReader
+    // by checking that we got a `data:image/...` URL.
+    const imageFiles = files.filter(f => {
+      const t = f.type || ''
+      return t === '' || t.startsWith('image/')
+    })
+
     if (imageFiles.length === 0) {
       setImageError('Оберіть файли зображень.')
       return
@@ -145,12 +154,22 @@ export default function AdminNewProductPage() {
         )
       )
 
-      const first = dataUrls[0]
-      if (!first) return
-      imageCropQueueRef.current = dataUrls.slice(1)
+      const validDataUrls = dataUrls.filter((u): u is string => typeof u === 'string' && u.startsWith('data:image/'))
+      const first = validDataUrls[0]
+      if (!first) {
+        setImageError('Не вдалося прочитати вибрані зображення. Спробуйте інші файли.')
+        return
+      }
+
+      if (validDataUrls.length !== toRead.length) {
+        setImageError(
+          `Розпізнано як зображення ${validDataUrls.length} з ${toRead.length}. Для решти файлів не вдалося отримати data:image/...`
+        )
+      }
+
+      imageCropQueueRef.current = validDataUrls.slice(1)
       setCropSource(first)
-      setCropFileName(toRead.length > 1 ? `${toRead.length} зображень обрано` : toRead[0]!.name)
-      setSelectedFileName(toRead.length > 1 ? `${toRead.length} зображень` : toRead[0]!.name)
+      setCropFileName(validDataUrls.length > 1 ? `${validDataUrls.length} зображень обрано` : toRead[0]!.name)
     } catch {
       setImageError('Не вдалося прочитати файли. Спробуйте інші.')
     }
@@ -161,20 +180,13 @@ export default function AdminNewProductPage() {
   }
 
   function applyCroppedImage(croppedImage: string) {
-    setPendingImages(prev => {
-      const next = [croppedImage, ...prev].slice(0, 6)
-      if (next.length >= 6) {
-        imageCropQueueRef.current = []
-        queueMicrotask(() => {
-          setCropSource('')
-          setCropFileName('')
-        })
-      }
-      else {
-        queueMicrotask(() => openNextInCropQueue())
-      }
-      return next
-    })
+    // Add cropped image to gallery and immediately move to the next
+    // one in the queue (avoid queueMicrotask to prevent race conditions).
+    // Keep order: first selected image should be "головне" (index 0).
+    // Therefore we append new cropped images to the end, so later uploads
+    // become the last items in the gallery.
+    setPendingImages(prev => [...prev, croppedImage].slice(0, 6))
+    openNextInCropQueue()
   }
 
   function movePendingImage(index: number, direction: -1 | 1) {
@@ -370,13 +382,16 @@ export default function AdminNewProductPage() {
                 Вибрати файли
               </label>
               <span className="text-sm text-text-secondary truncate">
-                {selectedFileName || 'Файли не вибрано (до 6 фото, можна кілька)'}
+                {totalImagesSelected > 0
+                  ? `${totalImagesSelected} зображень`
+                  : 'Файли не вибрано (до 6 фото, можна кілька)'}
               </span>
               <input
                 id="new-product-image-upload"
                 type="file"
                 accept="image/*"
                 multiple
+                disabled={isCropping}
                 onChange={handleProductImageFileChange}
                 className="sr-only"
               />
@@ -491,7 +506,7 @@ export default function AdminNewProductPage() {
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={isCropping}>
             Зберегти товар
           </Button>
           <Button type="button" variant="secondary" onClick={() => router.push('/admin/products')}>

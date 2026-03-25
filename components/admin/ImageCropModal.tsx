@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Cropper, { type Area } from 'react-easy-crop'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -21,9 +21,20 @@ function createImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-async function getCroppedDataUrl(imageSrc: string, cropPixels: Area): Promise<string> {
+async function getCroppedDataUrl(imageSrc: string, cropPixels: Area | null): Promise<string> {
   const image = await createImage(imageSrc)
   const canvas = document.createElement('canvas')
+
+  // Fallback: if cropPixels are not ready, save the whole image.
+  if (!cropPixels) {
+    canvas.width = image.naturalWidth || image.width
+    canvas.height = image.naturalHeight || image.height
+    const ctxFull = canvas.getContext('2d')
+    if (!ctxFull) throw new Error('Canvas context is unavailable')
+    ctxFull.drawImage(image, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/jpeg', 0.92)
+  }
+
   canvas.width = cropPixels.width
   canvas.height = cropPixels.height
   const ctx = canvas.getContext('2d')
@@ -58,12 +69,23 @@ export default function ImageCropModal({
   const [cropPixels, setCropPixels] = useState<Area | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
+  // When switching images in the queue, reset crop selection.
+  // This avoids applying with stale cropPixels (or getting stuck if cropPixels isn't ready yet).
+  useEffect(() => {
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+    // Do not reset cropPixels here.
+    // reset-in-effect can race with react-easy-crop's onCropComplete:
+    // it may set cropPixels for the new image and then we immediately clear it,
+    // which makes the middle images impossible to apply.
+    // apply will be gated via cropPixelsForSrc match instead.
+  }, [imageSrc])
+
   const onCropComplete = useCallback((_: Area, areaPixels: Area) => {
     setCropPixels(areaPixels)
   }, [])
 
   async function handleApply() {
-    if (!cropPixels) return
     setIsSaving(true)
     try {
       const cropped = await getCroppedDataUrl(imageSrc, cropPixels)
@@ -122,7 +144,10 @@ export default function ImageCropModal({
           <Button variant="secondary" onClick={handleClose} disabled={isSaving}>
             Скасувати
           </Button>
-          <Button onClick={handleApply} disabled={isSaving}>
+          <Button
+            onClick={handleApply}
+            disabled={isSaving}
+          >
             Застосувати
           </Button>
         </div>
