@@ -77,6 +77,7 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1)
   const [direction, setDirection] = useState(1)
   const [orderNumber, setOrderNumber] = useState('')
+  const [submitError, setSubmitError] = useState('')
 
   const {
     register,
@@ -117,6 +118,7 @@ export default function CheckoutPage() {
   }
 
   async function onSubmit(data: ShippingInfoInput) {
+    setSubmitError('')
     const payload = {
       shipping_info: data,
       items: items.map(item => ({
@@ -130,7 +132,16 @@ export default function CheckoutPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!response.ok) return
+    if (!response.ok) {
+      const fallback = 'Не вдалося оформити замовлення. Спробуйте ще раз.'
+      try {
+        const err = await response.json() as { error?: string }
+        setSubmitError(err?.error ?? fallback)
+      } catch {
+        setSubmitError(fallback)
+      }
+      return
+    }
 
     const created = await response.json() as { number?: string }
     setOrderNumber(created.number ?? '')
@@ -408,6 +419,12 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
+                  {submitError && (
+                    <div className="rounded-md border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-text-primary">
+                      {submitError}
+                    </div>
+                  )}
+
                   <div className="mt-6 flex justify-between">
                     <Button variant="ghost" size="lg" type="button" onClick={() => goTo(1)} className="gap-2">
                       <ArrowLeft size={18} /> Назад
@@ -446,7 +463,7 @@ export default function CheckoutPage() {
                     Замовлення оформлено!
                   </h2>
                   <p className="text-text-secondary">
-                    Дякуємо за покупку. Ми зв'яжемося з вами найближчим часом.
+                    Дякуємо за покупку. Ми зв&apos;яжемося з вами найближчим часом.
                   </p>
                 </div>
 
