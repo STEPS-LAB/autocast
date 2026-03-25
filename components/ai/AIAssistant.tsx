@@ -222,7 +222,7 @@ export default function AIAssistant() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className={cn(
-              'fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50',
+              'fixed bottom-20 right-[calc(1rem+var(--removed-body-scroll-bar-size,0px))] md:bottom-6 md:right-[calc(1.5rem+var(--removed-body-scroll-bar-size,0px))] z-50',
               'size-12 rounded-full bg-accent text-text-primary shadow-lg',
               'flex items-center justify-center',
               'transition-colors duration-200',
@@ -276,7 +276,7 @@ export default function AIAssistant() {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               className={cn(
-                'fixed bottom-36 right-4 md:bottom-24 md:right-6 z-50',
+                'fixed bottom-36 right-[calc(1rem+var(--removed-body-scroll-bar-size,0px))] md:bottom-24 md:right-[calc(1.5rem+var(--removed-body-scroll-bar-size,0px))] z-50',
                 'w-[calc(100vw-2rem)] max-w-sm',
                 'rounded-[8px] overflow-hidden border border-border/70 bg-bg-surface/92 backdrop-blur-xl',
                 'shadow-[0_20px_60px_rgba(15,23,42,0.28)]',
