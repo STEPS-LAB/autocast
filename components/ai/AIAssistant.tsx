@@ -268,6 +268,7 @@ export default function AIAssistant() {
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
               aria-hidden="true"
+              onClick={() => setOpen(false)}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20, originX: 1, originY: 1 }}
