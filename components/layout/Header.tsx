@@ -13,6 +13,7 @@ import SmartSearchBar from '@/components/search/SmartSearchBar'
 const NAV_LINKS = [
   { href: '/', label: 'Головна' },
   { href: '/shop', label: 'Магазин' },
+  { href: '/services', label: 'Послуги' },
   { href: '/about', label: 'Про нас' },
   { href: '/contact', label: 'Контакти' },
 ]

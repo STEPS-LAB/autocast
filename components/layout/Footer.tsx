@@ -14,6 +14,7 @@ const SHOP_LINKS = [
 
 const INFO_LINKS = [
   { href: '/about', label: 'Про нас' },
+  { href: '/services', label: 'Послуги' },
   { href: '/contact', label: 'Контакти' },
   { href: '/account', label: 'Мій акаунт' },
 ]

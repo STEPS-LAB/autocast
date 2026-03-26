@@ -177,8 +177,8 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
                     onClick={e => { e.stopPropagation(); prev() }}
                     className={cn(
                       'shrink-0 size-10 rounded-full',
-                      'bg-black/35 hover:bg-black/50 border border-white/15',
-                      'flex items-center justify-center text-white'
+                      'bg-white/70 hover:bg-white/85 border border-black/40',
+                      'flex items-center justify-center text-black'
                     )}
                   >
                     <ChevronLeft size={20} />
@@ -236,8 +236,8 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
                     onClick={e => { e.stopPropagation(); next() }}
                     className={cn(
                       'shrink-0 size-10 rounded-full',
-                      'bg-black/35 hover:bg-black/50 border border-white/15',
-                      'flex items-center justify-center text-white'
+                      'bg-white/70 hover:bg-white/85 border border-black/40',
+                      'flex items-center justify-center text-black'
                     )}
                   >
                     <ChevronRight size={20} />

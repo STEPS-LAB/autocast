@@ -138,17 +138,19 @@ export async function searchCities(query: string, limit = 10): Promise<NovaPosht
 
   const firstEntry = entries.data[0]
   const addresses = firstEntry?.Addresses ?? []
-  return addresses.map((item) => {
+  return addresses.flatMap((item) => {
     const parsed = cityItemSchema.safeParse(item)
-    if (!parsed.success) return null
+    if (!parsed.success) return []
+
+    const name = parsed.data.Present ?? parsed.data.MainDescription ?? ''
+    if (!name) return []
+
     // For warehouses API we need DeliveryCity (city ref), not the settlement Ref.
     const deliveryCity = (item as any)?.DeliveryCity as string | undefined
-    return {
-      ref: (deliveryCity && deliveryCity.trim().length > 0) ? deliveryCity : parsed.data.Ref,
-      name: parsed.data.Present ?? parsed.data.MainDescription ?? '',
-      area: parsed.data.Area,
-    }
-  }).filter((item): item is NovaPoshtaCitySuggestion => Boolean(item && item.name))
+    const ref = deliveryCity && deliveryCity.trim().length > 0 ? deliveryCity : parsed.data.Ref
+
+    return [{ ref, name, area: parsed.data.Area }]
+  })
 }
 
 export async function getWarehousesByCityRef(

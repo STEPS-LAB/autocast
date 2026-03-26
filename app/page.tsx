@@ -4,6 +4,7 @@ import CarSearch from '@/components/home/CarSearch'
 import FeaturedCategories from '@/components/home/FeaturedCategories'
 import TrustHighlights from '@/components/home/TrustHighlights'
 import HomeReviews from '@/components/home/HomeReviews'
+import ServicesSection from '@/components/home/ServicesSection'
 import PageTransition from '@/components/layout/PageTransition'
 import { getCarMakes, getCarModelsByMake, getCategories } from '@/lib/data/catalog-db'
 
@@ -25,6 +26,7 @@ export default async function HomePage() {
       <HeroSection />
       <CarSearch makes={makes} modelsByMake={modelsByMake} />
       <FeaturedCategories categories={categories} />
+      <ServicesSection />
       <TrustHighlights />
       <HomeReviews />
     </PageTransition>
