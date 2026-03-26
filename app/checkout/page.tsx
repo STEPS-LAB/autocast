@@ -468,7 +468,12 @@ export default function CheckoutPage() {
                             <motion.label
                               key={opt.value}
                               {...optionHover}
-                              className="flex items-center gap-3 p-3 bg-bg-surface border border-border rounded cursor-pointer transition-colors hover:border-border-light will-change-transform has-[:checked]:border-accent has-[:checked]:bg-accent/20 has-[:checked]:[&_.radio-ring]:border-text-primary has-[:checked]:[&_.radio-dot]:bg-accent"
+                              className={[
+                                'flex items-center gap-3 p-3 border border-border rounded cursor-pointer transition-colors hover:border-border-light will-change-transform',
+                                deliveryMethod === opt.value
+                                  ? '!bg-accent/20 [&_.radio-ring]:border-text-primary [&_.radio-dot]:bg-accent'
+                                  : 'bg-bg-surface',
+                              ].join(' ')}
                             >
                               <input
                                 type="radio"
@@ -587,7 +592,12 @@ export default function CheckoutPage() {
                             <motion.label
                               key={opt.value}
                               {...optionHover}
-                              className="flex items-center gap-3 p-3 bg-bg-surface border border-border rounded cursor-pointer transition-colors hover:border-border-light will-change-transform has-[:checked]:border-accent has-[:checked]:bg-accent/20 has-[:checked]:[&_.radio-ring]:border-text-primary has-[:checked]:[&_.radio-dot]:bg-accent"
+                              className={[
+                                'flex items-center gap-3 p-3 border border-border rounded cursor-pointer transition-colors hover:border-border-light will-change-transform',
+                                paymentMethod === opt.value
+                                  ? '!bg-accent/20 [&_.radio-ring]:border-text-primary [&_.radio-dot]:bg-accent'
+                                  : 'bg-bg-surface',
+                              ].join(' ')}
                             >
                               <input
                                 type="radio"
@@ -1051,7 +1061,7 @@ function NovaPoshtaAddressFields(props: {
       <div ref={cityInputWrapRef} className="relative">
         <div className="flex items-end justify-between gap-2 mb-1.5">
           <span className="text-sm font-medium text-text-secondary">Місто (НП)</span>
-          <span aria-hidden="true" className="h-8 w-[108px]" />
+          <span aria-hidden="true" className="h-9 w-[108px]" />
         </div>
         <Input
           label={undefined}
@@ -1083,12 +1093,12 @@ function NovaPoshtaAddressFields(props: {
       <div ref={pointInputWrapRef} className="relative">
         <div className="flex items-end justify-between gap-2 mb-1.5">
           <span className="text-sm font-medium text-text-secondary">Відділення / Поштомат</span>
-          <div className="inline-flex h-8 rounded border border-border bg-bg-surface p-0.5">
+          <div className="inline-flex h-9 rounded-md border border-border bg-bg-surface overflow-hidden">
             <button
               type="button"
               onClick={() => props.onPointTypeChange('warehouse')}
               className={[
-                'h-7 px-2.5 rounded text-xs font-medium transition-colors',
+                'h-full px-3 text-sm font-medium transition-colors',
                 props.pointType === 'warehouse'
                   ? 'bg-accent/20 text-text-primary'
                   : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
@@ -1100,7 +1110,7 @@ function NovaPoshtaAddressFields(props: {
               type="button"
               onClick={() => props.onPointTypeChange('postomat')}
               className={[
-                'h-7 px-2.5 rounded text-xs font-medium transition-colors',
+                'h-full px-3 text-sm font-medium transition-colors',
                 props.pointType === 'postomat'
                   ? 'bg-accent/20 text-text-primary'
                   : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
