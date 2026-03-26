@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageCircle, X, Send, Bot, ChevronDown } from 'lucide-react'
 import { usePathname } from 'next/navigation'
@@ -98,12 +98,31 @@ export default function AIAssistant() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [inHeroSection, setInHeroSection] = useState(pathname === '/')
+  const [desktopDocked, setDesktopDocked] = useState(false)
   const [messages, setMessages] = useState<AIMessage[]>([GREETING])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const [keyboardLift, setKeyboardLift] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px) and (pointer: fine)')
+    const update = () => setDesktopDocked(mql.matches)
+    update()
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', update)
+      return () => mql.removeEventListener('change', update)
+    }
+    const legacyMql = mql as MediaQueryList & {
+      addListener?: (listener: () => void) => void
+      removeListener?: (listener: () => void) => void
+    }
+    legacyMql.addListener?.(update)
+    return () => legacyMql.removeListener?.(update)
+  }, [])
+
+  const shouldLockBodyScroll = useMemo(() => open && !desktopDocked, [open, desktopDocked])
 
   useEffect(() => {
     if (open) {
@@ -136,7 +155,7 @@ export default function AIAssistant() {
   }, [inHeroSection, open])
 
   useEffect(() => {
-    if (!open) return
+    if (!shouldLockBodyScroll) return
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -144,7 +163,7 @@ export default function AIAssistant() {
     return () => {
       document.body.style.overflow = previousOverflow
     }
-  }, [open])
+  }, [shouldLockBodyScroll])
 
   useEffect(() => {
     if (!open) {
@@ -261,15 +280,17 @@ export default function AIAssistant() {
       <AnimatePresence>
         {open && !inHeroSection && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
-              aria-hidden="true"
-              onClick={() => setOpen(false)}
-            />
+            {!desktopDocked && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-40 bg-black/20"
+                aria-hidden="true"
+                onClick={() => setOpen(false)}
+              />
+            )}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20, originX: 1, originY: 1 }}
               animate={{ opacity: 1, scale: 1, y: -keyboardLift }}
