@@ -455,6 +455,7 @@ export default function AdminProductsPage() {
         columns={columns}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
+        rowHref={(row) => `/admin/products/new?edit=${encodeURIComponent(row.id)}`}
         actionsAlwaysVisible
         renderActions={(row) => (
           <>

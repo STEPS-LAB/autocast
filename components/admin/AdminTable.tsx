@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Pencil, Trash2, Check, X, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
@@ -24,6 +25,7 @@ interface AdminTableProps<T extends { id: string }> {
   actionsAlwaysVisible?: boolean
   onAdd?: () => void
   addLabel?: string
+  rowHref?: (row: T) => string
 }
 
 export default function AdminTable<T extends { id: string }>({
@@ -35,7 +37,9 @@ export default function AdminTable<T extends { id: string }>({
   actionsAlwaysVisible = false,
   onAdd,
   addLabel = 'Додати',
+  rowHref,
 }: AdminTableProps<T>) {
+  const router = useRouter()
   const [editingCell, setEditingCell] = useState<{ id: string; key: string } | null>(null)
   const [editValue, setEditValue] = useState('')
 
@@ -52,6 +56,17 @@ export default function AdminTable<T extends { id: string }>({
 
   function cancelEdit() {
     setEditingCell(null)
+  }
+
+  function isInteractiveElement(target: EventTarget | null) {
+    if (!(target instanceof HTMLElement)) return false
+    return Boolean(target.closest('a,button,input,select,textarea,label,[role="button"],[role="link"]'))
+  }
+
+  function openRow(row: T) {
+    const href = rowHref?.(row)
+    if (!href) return
+    router.push(href)
   }
 
   return (
@@ -87,7 +102,27 @@ export default function AdminTable<T extends { id: string }>({
             </thead>
             <tbody className="divide-y divide-border">
               {data.map(row => (
-                <tr key={row.id} className="hover:bg-bg-elevated transition-all duration-300 ease-out group">
+                <tr
+                  key={row.id}
+                  className={cn(
+                    'hover:bg-bg-elevated transition-all duration-300 ease-out group',
+                    rowHref && 'cursor-pointer'
+                  )}
+                  tabIndex={rowHref ? 0 : undefined}
+                  role={rowHref ? 'link' : undefined}
+                  onClick={(e) => {
+                    if (!rowHref) return
+                    if (isInteractiveElement(e.target)) return
+                    openRow(row)
+                  }}
+                  onKeyDown={(e) => {
+                    if (!rowHref) return
+                    if (e.key !== 'Enter' && e.key !== ' ') return
+                    if (isInteractiveElement(e.target)) return
+                    e.preventDefault()
+                    openRow(row)
+                  }}
+                >
                   {columns.map(col => {
                     const isEditing =
                       editingCell?.id === row.id && editingCell?.key === String(col.key)

@@ -100,23 +100,12 @@ export default function AdminOrderDetailsPage() {
     let isMounted = true
 
     async function loadOrder() {
-      const mod = await import('@/lib/supabase/client')
-      const supabase = mod.createClient()
-      const { data } = await supabase
-        .from('orders')
-        .select(`
-          id,total,items_total,shipping_total,grand_total,ttn,status,created_at,shipping_info,
-          order_items(
-            id,qty,unit_price,
-            product:products(id,slug,name_ua)
-          )
-        `)
-        .eq('id', orderId)
-        .maybeSingle()
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}`)
+      const json = (await res.json()) as { order: AdminOrderDetails | null }
 
       if (!isMounted) return
-      setOrder((data as AdminOrderDetails | null) ?? null)
-      const row = (data as AdminOrderDetails | null)
+      const row = (json.order as AdminOrderDetails | null) ?? null
+      setOrder(row)
       setTtnValue((row?.ttn ?? '').trim())
       setLoading(false)
     }
@@ -139,14 +128,13 @@ export default function AdminOrderDetailsPage() {
     setTtnError('')
     setTtnSaving(true)
     try {
-      const mod = await import('@/lib/supabase/client')
-      const supabase = mod.createClient()
       const next = ttnValue.trim() || null
-      const { error } = await supabase
-        .from('orders')
-        .update({ ttn: next })
-        .eq('id', order.id)
-      if (error) {
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(order.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ttn: next }),
+      })
+      if (!res.ok) {
         setTtnError('Не вдалося зберегти ТТН')
         return
       }

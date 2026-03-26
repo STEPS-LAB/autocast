@@ -35,43 +35,45 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusOrderId, setStatusOrderId] = useState<string | null>(null)
   const [statusValue, setStatusValue] = useState('pending')
 
-  async function getSupabase() {
-    const mod = await import('@/lib/supabase/client')
-    return mod.createClient()
-  }
-
   useEffect(() => {
     let isMounted = true
     async function loadOrders() {
-      const supabase = await getSupabase()
-      const { data } = await supabase
-        .from('orders')
-        .select('id,total,ttn,status,created_at,shipping_info,order_items(id)')
-        .order('created_at', { ascending: false })
-
-      if (!isMounted) return
-      const mapped: AdminOrder[] = (data ?? []).map((row) => {
-        const shipping = (row.shipping_info ?? {}) as Record<string, string>
-        const firstName = shipping.first_name ?? ''
-        const lastName = shipping.last_name ?? ''
-        return {
-          id: row.id.slice(0, 8).toUpperCase(),
-          db_id: row.id,
-          customer: `${firstName} ${lastName}`.trim() || 'Клієнт',
-          email: shipping.email ?? '—',
-          total: Number(row.total),
-          ttn: (row as any).ttn ?? null,
-          status: row.status,
-          date: row.created_at,
-          items: Array.isArray(row.order_items) ? row.order_items.length : 0,
+      try {
+        setLoadError(null)
+        const res = await fetch('/api/admin/orders')
+        const json = (await res.json()) as { orders?: Array<any>; error?: string }
+        if (!res.ok) {
+          throw new Error(json.error ?? 'Cannot load orders')
         }
-      })
-      setOrders(mapped)
-      setLoading(false)
+
+        const mapped: AdminOrder[] = (json.orders ?? []).map((row) => {
+          return {
+            id: String(row.id).slice(0, 8).toUpperCase(),
+            db_id: String(row.id),
+            customer: row.customer ?? 'Клієнт',
+            email: row.email ?? '—',
+            total: Number(row.total),
+            ttn: row.ttn ?? null,
+            status: row.status,
+            date: row.date,
+            items: Number(row.items ?? 0),
+          }
+        })
+
+        if (!isMounted) return
+        setOrders(mapped)
+        setLoading(false)
+      } catch (e) {
+        if (!isMounted) return
+        setOrders([])
+        setLoadError(e instanceof Error ? e.message : 'Cannot load orders')
+        setLoading(false)
+      }
     }
     void loadOrders()
     return () => {
@@ -82,8 +84,11 @@ export default function AdminOrdersPage() {
   async function handleUpdate(id: string, key: string, value: string | number) {
     const order = orders.find(o => o.id === id)
     if (!order) return
-    const supabase = await getSupabase()
-    await supabase.from('orders').update({ [key]: value }).eq('id', order.db_id)
+    await fetch(`/api/admin/orders/${order.db_id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: value }),
+    })
     setOrders(prev => prev.map(o => o.id === id ? { ...o, [key]: value } : o))
   }
 
@@ -193,6 +198,7 @@ export default function AdminOrdersPage() {
         data={filteredOrders}
         columns={columns}
         onUpdate={handleUpdate}
+        rowHref={(row) => `/admin/orders/${row.db_id}`}
         actionsAlwaysVisible
         renderActions={(row) => (
           <>
@@ -216,6 +222,11 @@ export default function AdminOrdersPage() {
         )}
       />
       {loading && <p className="text-sm text-text-muted mt-3">Завантаження...</p>}
+      {!loading && loadError && (
+        <p className="text-sm text-error mt-3">
+          Не вдалося завантажити замовлення. {loadError}
+        </p>
+      )}
 
       <Modal
         open={!!statusOrderId}

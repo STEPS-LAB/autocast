@@ -128,7 +128,11 @@ export default async function AdminDashboard() {
               const shipping = (order.shipping_info ?? {}) as Record<string, string>
               const customerName = `${shipping.first_name ?? ''} ${shipping.last_name ?? ''}`.trim() || 'Клієнт'
               return (
-                <div key={order.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out">
+                <Link
+                  key={order.id}
+                  href={`/admin/orders/${order.id}`}
+                  className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out"
+                >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-text-primary">{order.id.slice(0, 8).toUpperCase()}</p>
                     <p className="text-xs text-text-muted truncate">{customerName}</p>
@@ -137,7 +141,7 @@ export default async function AdminDashboard() {
                   <span className="text-sm font-semibold text-text-primary price shrink-0">
                     {formatPrice(order.total)}
                   </span>
-                </div>
+                </Link>
               )
             })}
           </div>
@@ -152,7 +156,11 @@ export default async function AdminDashboard() {
           <div className="divide-y divide-border">
             {topProducts.length > 0 ? (
               topProducts.map((product, i) => (
-                <div key={product.id} className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out">
+                <Link
+                  key={product.id}
+                  href={`/admin/products/new?edit=${encodeURIComponent(product.id)}`}
+                  className="flex items-center gap-3 px-5 py-3 hover:bg-bg-elevated transition-all duration-300 ease-out"
+                >
                   <span className="text-xs text-text-muted w-5 shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-text-primary line-clamp-1">{product.name_ua}</p>
@@ -161,7 +169,7 @@ export default async function AdminDashboard() {
                   <span className="text-sm font-semibold text-text-primary price shrink-0">
                     {formatPrice(product.sale_price ?? product.price)}
                   </span>
-                </div>
+                </Link>
               ))
             ) : (
               <div className="px-5 py-6 text-sm text-text-muted">
