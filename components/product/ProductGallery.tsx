@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ZoomIn, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ProductGalleryProps {
@@ -14,12 +14,53 @@ interface ProductGalleryProps {
 export default function ProductGallery({ images, name }: ProductGalleryProps) {
   const [active, setActive] = useState(0)
   const [zoomed, setZoomed] = useState(false)
+  const pointerStartXRef = useRef<number | null>(null)
 
   const safeImages = (images?.filter(Boolean).length ? images.filter(Boolean) : ['/images/placeholder-product.svg'])
   const safeActive = Math.min(active, safeImages.length - 1)
 
-  const prev = () => setActive(i => (i - 1 + safeImages.length) % safeImages.length)
-  const next = () => setActive(i => (i + 1) % safeImages.length)
+  const prev = useCallback(() => {
+    if (safeImages.length <= 1) return
+    setActive(i => (i - 1 + safeImages.length) % safeImages.length)
+  }, [safeImages.length])
+
+  const next = useCallback(() => {
+    if (safeImages.length <= 1) return
+    setActive(i => (i + 1) % safeImages.length)
+  }, [safeImages.length])
+
+  useEffect(() => {
+    if (!zoomed) return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setZoomed(false)
+        return
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        prev()
+        return
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        next()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [zoomed, next, prev])
+
+  useEffect(() => {
+    if (!zoomed) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [zoomed])
 
   return (
     <div className="flex flex-col gap-3">
@@ -125,17 +166,86 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
-              className="relative max-w-3xl max-h-[90vh] w-full aspect-square"
+              className="w-full max-w-6xl cursor-default"
               onClick={e => e.stopPropagation()}
             >
-              <Image
-                src={safeImages[safeActive]!}
-                alt={name}
-                fill
-                className="object-contain"
-                sizes="90vw"
-                priority
-              />
+              <div className="flex items-center justify-center gap-3">
+                {safeImages.length > 1 ? (
+                  <button
+                    type="button"
+                    aria-label="Попереднє фото"
+                    onClick={e => { e.stopPropagation(); prev() }}
+                    className={cn(
+                      'shrink-0 size-10 rounded-full',
+                      'bg-black/35 hover:bg-black/50 border border-white/15',
+                      'flex items-center justify-center text-white'
+                    )}
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                ) : (
+                  <div className="shrink-0 w-10" />
+                )}
+
+                <div
+                  className="relative w-full max-w-2xl aspect-square max-h-[85vh] overflow-hidden rounded-md"
+                  onPointerDown={e => {
+                    pointerStartXRef.current = e.clientX
+                  }}
+                  onPointerUp={e => {
+                    const startX = pointerStartXRef.current
+                    pointerStartXRef.current = null
+                    if (startX == null) return
+                    const deltaX = e.clientX - startX
+                    const threshold = 60
+                    if (deltaX > threshold) prev()
+                    if (deltaX < -threshold) next()
+                  }}
+                >
+                  {safeImages.length > 1 && (
+                    <div className="absolute left-4 top-4 z-10 px-2.5 py-1 rounded-full bg-white/70 border border-black/40 text-black text-xs pointer-events-none">
+                      {safeActive + 1} / {safeImages.length}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    aria-label="Закрити"
+                    onClick={() => setZoomed(false)}
+                    className={cn(
+                      'absolute right-4 top-4 z-10 size-9 rounded-full',
+                      'bg-white/70 hover:bg-white/85 border border-black/40',
+                      'flex items-center justify-center text-black'
+                    )}
+                  >
+                    <X size={18} />
+                  </button>
+                  <Image
+                    src={safeImages[safeActive]!}
+                    alt={name}
+                    fill
+                    className="object-contain"
+                    sizes="90vw"
+                    priority
+                  />
+                </div>
+
+                {safeImages.length > 1 ? (
+                  <button
+                    type="button"
+                    aria-label="Наступне фото"
+                    onClick={e => { e.stopPropagation(); next() }}
+                    className={cn(
+                      'shrink-0 size-10 rounded-full',
+                      'bg-black/35 hover:bg-black/50 border border-white/15',
+                      'flex items-center justify-center text-white'
+                    )}
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                ) : (
+                  <div className="shrink-0 w-10" />
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}

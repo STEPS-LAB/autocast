@@ -68,9 +68,28 @@ html {
 
 body {
   background-color: var(--color-bg-primary);
+  background-image:
+    radial-gradient(1200px 800px at 18% -12%, rgb(255 193 7 / 0.10), transparent 60%),
+    radial-gradient(1000px 720px at 92% 0%, rgb(15 23 42 / 0.06), transparent 55%),
+    radial-gradient(1100px 820px at 52% 112%, rgb(148 163 184 / 0.18), transparent 62%),
+    linear-gradient(180deg, #FBFCFE 0%, var(--color-bg-primary) 38%, #F1F4F9 100%);
+  background-attachment: fixed;
   color: var(--color-text-primary);
   font-family: var(--font-sans, system-ui, sans-serif);
   min-height: 100dvh;
+}
+
+/* Soft vignette for a more premium depth */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background:
+    radial-gradient(1200px 700px at 50% 0%, rgb(255 255 255 / 0.70), transparent 55%),
+    radial-gradient(1200px 900px at 50% 100%, rgb(15 23 42 / 0.12), transparent 60%);
+  opacity: 0.55;
 }
 
 /* ─── Selection ────────────────────────────────────────────────── */
