@@ -54,7 +54,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       whileHover={displayProduct.stock > 0 ? { y: -2 } : undefined}
       transition={{ duration: 0.2 }}
       className={cn(
-        'group relative bg-bg-surface border border-border rounded-md overflow-hidden flex flex-col',
+        'group relative bg-bg-surface border border-border rounded-[10px] overflow-hidden flex flex-col',
         'shadow-[0_10px_22px_rgba(0,0,0,0.10)] hover:shadow-[0_14px_32px_rgba(0,0,0,0.16)] transition-shadow',
         displayProduct.stock === 0 && 'opacity-60 saturate-0'
       )}
@@ -93,7 +93,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {discount && (
           <div className="absolute top-2 left-2 flex flex-col gap-1">
-            <Badge variant="accent" className="text-xs">
+            <Badge variant="error" className="text-xs">
               -{discount}%
             </Badge>
           </div>
@@ -106,13 +106,17 @@ export default function ProductCard({ product }: ProductCardProps) {
             'absolute top-2 right-2 size-7 rounded-full flex items-center justify-center',
             'border border-border bg-bg-primary/60 backdrop-blur-sm',
             'opacity-0 group-hover:opacity-100 transition-all',
+            'hover:bg-bg-primary/80 hover:border-border-light hover:scale-105',
             wished && 'opacity-100'
           )}
           aria-label="В обране"
         >
           <Heart
             size={13}
-            className={wished ? 'fill-accent text-accent' : 'text-text-muted'}
+            className={cn(
+              'transition-colors',
+              wished ? 'fill-accent text-accent' : 'text-text-muted group-hover:text-accent'
+            )}
           />
         </button>
       </Link>
@@ -150,10 +154,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           onClick={handleAddToCart}
           disabled={displayProduct.stock === 0}
           className={cn(
-            'flex items-center justify-center gap-2 h-9 rounded text-sm font-medium',
+            'flex items-center justify-center gap-2 h-9 rounded-[10px] text-sm font-medium',
             'transition-all duration-150 active:scale-[0.98]',
             displayProduct.stock > 0
-              ? 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-text-primary'
+              ? 'bg-accent/10 text-black border border-accent/20 hover:bg-accent hover:text-black'
               : 'bg-bg-elevated text-text-muted cursor-not-allowed border border-border'
           )}
         >

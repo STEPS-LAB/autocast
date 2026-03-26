@@ -9,8 +9,8 @@ import Button from '@/components/ui/Button'
 import type { Brand, Category } from '@/types'
 
 interface FiltersState {
-  category?: string
-  brand?: string
+  categories: string[]
+  brands: string[]
   minPrice?: number
   maxPrice?: number
   inStock?: boolean
@@ -36,32 +36,45 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
   const searchParams = useSearchParams()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [brandsExpanded, setBrandsExpanded] = useState(false)
+  const [minInput, setMinInput] = useState<string>('')
+  const [maxInput, setMaxInput] = useState<string>('')
 
   const createURL = useCallback(
-    (updates: Record<string, string | null>) => {
+    (mutate: (params: URLSearchParams) => void) => {
       const params = new URLSearchParams(searchParams.toString())
-      Object.entries(updates).forEach(([key, val]) => {
-        if (val === null || val === '') {
-          params.delete(key)
-        } else {
-          params.set(key, val)
-        }
-      })
+      mutate(params)
       params.delete('page')
-      return `${pathname}?${params.toString()}`
+      const qs = params.toString()
+      return qs ? `${pathname}?${qs}` : pathname
     },
-    [pathname, searchParams]
+    [pathname, searchParams],
   )
 
-  function setFilter(key: string, value: string | null) {
-    router.push(createURL({ [key]: value }))
+  function pushURL(mutate: (params: URLSearchParams) => void) {
+    router.push(createURL(mutate))
   }
 
-  function clearAll() {
-    router.push(pathname)
+  function clearFiltersOnly() {
+    pushURL((params) => {
+      params.delete('category')
+      params.delete('brand')
+      params.delete('minPrice')
+      params.delete('maxPrice')
+      params.delete('inStock')
+    })
   }
 
-  const hasFilters = Object.values(filters).some(Boolean)
+  const hasFilters =
+    filters.categories.length > 0 ||
+    filters.brands.length > 0 ||
+    filters.minPrice !== undefined ||
+    filters.maxPrice !== undefined ||
+    !!filters.inStock
+
+  useEffect(() => {
+    setMinInput(filters.minPrice === undefined ? '' : String(filters.minPrice))
+    setMaxInput(filters.maxPrice === undefined ? '' : String(filters.maxPrice))
+  }, [filters.minPrice, filters.maxPrice])
 
   const { topLevel, childrenByParentSlug, parentSlugBySlug } = useMemo(() => {
     const byParentId = new Map<string, Category[]>()
@@ -92,11 +105,11 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
   }, [categories])
 
   const activeTopSlug = useMemo(() => {
-    const selected = filters.category
+    const selected = filters.categories[0]
     if (!selected) return null
     const parent = parentSlugBySlug.get(selected)
     return parent ?? selected
-  }, [filters.category, parentSlugBySlug])
+  }, [filters.categories, parentSlugBySlug])
 
   useEffect(() => {
     if (!activeTopSlug) return
@@ -111,6 +124,171 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
     return !!expanded[slug]
   }
 
+  const categoryNameBySlug = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of categories) map.set(c.slug, c.name_ua)
+    return map
+  }, [categories])
+
+  const childrenSlugsBySlug = useMemo(() => {
+    const byId = new Map(categories.map(c => [c.id, c]))
+    const bySlug = new Map(categories.map(c => [c.slug, c]))
+    const out = new Map<string, string[]>()
+    for (const c of categories) {
+      if (!c.parent_id) continue
+      const p = byId.get(c.parent_id)
+      if (!p) continue
+      const list = out.get(p.slug) ?? []
+      list.push(c.slug)
+      out.set(p.slug, list)
+    }
+    for (const [slug, kids] of out.entries()) {
+      kids.sort((a, b) => (bySlug.get(a)?.sort_order ?? 0) - (bySlug.get(b)?.sort_order ?? 0))
+      out.set(slug, kids)
+    }
+    return out
+  }, [categories])
+
+  const ancestorSlugsBySlug = useMemo(() => {
+    const map = new Map<string, string[]>()
+    for (const c of categories) {
+      const chain: string[] = []
+      let cur: string | undefined = c.slug
+      while (cur) {
+        const parent = parentSlugBySlug.get(cur)
+        if (!parent) break
+        chain.push(parent)
+        cur = parent
+      }
+      map.set(c.slug, chain)
+    }
+    return map
+  }, [categories, parentSlugBySlug])
+
+  function setCategories(next: string[]) {
+    const unique = Array.from(new Set(next.map(s => s.trim()).filter(Boolean)))
+    pushURL((params) => {
+      params.delete('category')
+      for (const slug of unique) params.append('category', slug)
+    })
+  }
+
+  function toggleCategory(slug: string, includeDescendants: boolean) {
+    const set = new Set(filters.categories)
+    // URL stores only explicitly selected slugs.
+    // Filtering expands descendants in `ShopContent`, so we must NOT add all descendants here.
+    if (set.has(slug)) {
+      set.delete(slug)
+      setCategories(Array.from(set))
+      return
+    }
+
+    // Selecting a subcategory should not be broadened by an already-selected ancestor.
+    if (!includeDescendants) {
+      const ancestors = ancestorSlugsBySlug.get(slug) ?? []
+      for (const a of ancestors) set.delete(a)
+    } else {
+      // Selecting a parent should replace any explicitly selected descendants to avoid confusion.
+      // (Filtering will include them anyway via descendants expansion.)
+      const directKids = childrenSlugsBySlug.get(slug) ?? []
+      for (const kid of directKids) set.delete(kid)
+    }
+
+    set.add(slug)
+    setCategories(Array.from(set))
+  }
+
+  function setBrands(next: string[]) {
+    const unique = Array.from(new Set(next.map(s => s.trim()).filter(Boolean)))
+    pushURL((params) => {
+      params.delete('brand')
+      for (const b of unique) params.append('brand', b)
+    })
+  }
+
+  function toggleBrand(name: string) {
+    const set = new Set(filters.brands)
+    if (set.has(name)) set.delete(name)
+    else set.add(name)
+    setBrands(Array.from(set))
+  }
+
+  function setPriceRange(min: number | undefined, max: number | undefined) {
+    pushURL((params) => {
+      if (min === undefined) params.delete('minPrice')
+      else params.set('minPrice', String(min))
+      if (max === undefined) params.delete('maxPrice')
+      else params.set('maxPrice', String(max))
+    })
+  }
+
+  function applyPrice() {
+    const min = minInput.trim() === '' ? undefined : Number(minInput)
+    const max = maxInput.trim() === '' ? undefined : Number(maxInput)
+    const minOk = min === undefined || Number.isFinite(min)
+    const maxOk = max === undefined || Number.isFinite(max)
+    if (!minOk || !maxOk) return
+    if (min !== undefined && max !== undefined && min > max) {
+      setPriceRange(max, min)
+      return
+    }
+    setPriceRange(min, max)
+  }
+
+  function toggleInStock(next: boolean) {
+    pushURL((params) => {
+      if (next) params.set('inStock', '1')
+      else params.delete('inStock')
+    })
+  }
+
+  const activeChips = useMemo(() => {
+    const chips: { key: string; label: string; onRemove: () => void }[] = []
+    for (const slug of filters.categories) {
+      const name = categoryNameBySlug.get(slug) ?? slug
+      chips.push({
+        key: `cat:${slug}`,
+        label: name,
+        onRemove: () => setCategories(filters.categories.filter(s => s !== slug)),
+      })
+    }
+    for (const b of filters.brands) {
+      chips.push({
+        key: `brand:${b}`,
+        label: b,
+        onRemove: () => setBrands(filters.brands.filter(x => x !== b)),
+      })
+    }
+    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+      const label =
+        filters.minPrice !== undefined && filters.maxPrice !== undefined
+          ? `${filters.minPrice.toLocaleString('uk-UA')}–${filters.maxPrice.toLocaleString('uk-UA')}₴`
+          : filters.minPrice !== undefined
+          ? `від ${filters.minPrice.toLocaleString('uk-UA')}₴`
+          : `до ${filters.maxPrice?.toLocaleString('uk-UA')}₴`
+      chips.push({
+        key: 'price',
+        label,
+        onRemove: () => setPriceRange(undefined, undefined),
+      })
+    }
+    if (filters.inStock) {
+      chips.push({
+        key: 'stock',
+        label: 'В наявності',
+        onRemove: () => toggleInStock(false),
+      })
+    }
+    return chips
+  }, [
+    filters.categories,
+    filters.brands,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.inStock,
+    categoryNameBySlug,
+  ])
+
   return (
     <aside className="w-full">
       {/* Header */}
@@ -122,7 +300,7 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
         <div className="flex items-center gap-2">
           {hasFilters && (
             <button
-              onClick={clearAll}
+              onClick={clearFiltersOnly}
               className="text-xs text-text-muted hover:text-accent transition-colors"
             >
               Очистити
@@ -131,13 +309,37 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors lg:hidden"
+              className="p-1 rounded-[10px] text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors lg:hidden"
             >
               <X size={16} />
             </button>
           )}
         </div>
       </div>
+
+      {activeChips.length > 0 && (
+        <div className="mb-6">
+          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
+            Активні
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {activeChips.map(chip => (
+              <button
+                key={chip.key}
+                onClick={chip.onRemove}
+                className={cn(
+                  'inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full',
+                  'border border-border bg-bg-surface text-xs text-text-secondary',
+                  'hover:text-text-primary hover:border-border-light hover:bg-bg-elevated transition-colors'
+                )}
+              >
+                <span className="truncate max-w-[12rem]">{chip.label}</span>
+                <X size={12} className="opacity-70" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Categories */}
       <div className="mb-6">
@@ -146,40 +348,49 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
         </h4>
         <ul className="flex flex-col gap-1">
           <li>
-            <button
-              onClick={() => setFilter('category', null)}
-              className={cn(
-                'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                !filters.category
-                  ? 'text-black bg-accent/20'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-              )}
-            >
-              Всі категорії
-            </button>
+            <label className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] hover:bg-bg-elevated transition-colors cursor-pointer">
+              <input
+                type="checkbox"
+                checked={filters.categories.length === 0}
+                onChange={(e) => {
+                  if (e.target.checked) setCategories([])
+                }}
+                className="size-4 accent-accent rounded"
+              />
+              <span className="text-sm text-text-secondary">Всі категорії</span>
+            </label>
           </li>
           {topLevel.map(cat => {
             const kids = childrenByParentSlug.get(cat.slug) ?? []
             const hasKids = kids.length > 0
             const expandedNow = hasKids && isExpanded(cat.slug)
             const isActiveParent = activeTopSlug === cat.slug
+            const parentChecked = filters.categories.includes(cat.slug)
             return (
               <li key={cat.id}>
                 <button
                   type="button"
                   onClick={() => {
-                    setFilter('category', cat.slug)
                     if (hasKids) toggleExpand(cat.slug)
                   }}
                   className={cn(
-                    'w-full flex items-center justify-between gap-2 text-left text-sm px-2 py-1.5 rounded transition-colors',
+                    'w-full flex items-center justify-between gap-2 text-left text-sm px-2 py-1.5 rounded-[10px] transition-colors',
                     isActiveParent
                       ? 'text-black bg-accent/20'
                       : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                   )}
                   aria-expanded={hasKids ? expandedNow : undefined}
                 >
-                  <span className="min-w-0 truncate">{cat.name_ua}</span>
+                  <span className="min-w-0 truncate flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={parentChecked}
+                      onChange={() => toggleCategory(cat.slug, true)}
+                      className="size-4 accent-accent rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="truncate">{cat.name_ua}</span>
+                  </span>
                   {hasKids ? (
                     <motion.span
                       animate={{ rotate: expandedNow ? 180 : 0 }}
@@ -204,17 +415,15 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
                     >
                       {kids.map(kid => (
                         <li key={kid.id}>
-                          <button
-                            onClick={() => setFilter('category', kid.slug)}
-                            className={cn(
-                              'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                              filters.category === kid.slug
-                                ? 'text-black bg-accent/20'
-                                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                            )}
-                          >
-                            {kid.name_ua}
-                          </button>
+                          <label className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] hover:bg-bg-elevated transition-colors cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={filters.categories.includes(kid.slug)}
+                              onChange={() => toggleCategory(kid.slug, false)}
+                              className="size-4 accent-accent rounded"
+                            />
+                            <span className="text-sm text-text-secondary">{kid.name_ua}</span>
+                          </label>
                         </li>
                       ))}
                     </motion.ul>
@@ -231,39 +440,70 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
           Ціна
         </h4>
-        <ul className="flex flex-col gap-1">
-          <li>
-            <button
-              onClick={() => { setFilter('minPrice', null); setFilter('maxPrice', null) }}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            applyPrice()
+          }}
+          className="space-y-3"
+        >
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              inputMode="numeric"
+              value={minInput}
+              onChange={(e) => setMinInput(e.target.value.replace(/[^\d]/g, ''))}
+              placeholder="Мін, ₴"
               className={cn(
-                'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                !filters.minPrice && !filters.maxPrice
-                  ? 'text-black bg-accent/20'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                'no-focus-outline h-9 bg-bg-surface border border-border rounded-[10px] px-3 text-sm text-text-primary placeholder:text-text-muted',
+                'focus:border-accent'
               )}
-            >
-              Будь-яка
-            </button>
-          </li>
-          {PRICE_RANGES.map(range => (
-            <li key={range.label}>
-              <button
-                onClick={() => {
-                  setFilter('minPrice', String(range.min))
-                  setFilter('maxPrice', String(range.max))
-                }}
-                className={cn(
-                  'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                  filters.minPrice === range.min && filters.maxPrice === range.max
-                    ? 'text-black bg-accent/20'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                )}
+            />
+            <input
+              inputMode="numeric"
+              value={maxInput}
+              onChange={(e) => setMaxInput(e.target.value.replace(/[^\d]/g, ''))}
+              placeholder="Макс, ₴"
+              className={cn(
+                'no-focus-outline h-9 bg-bg-surface border border-border rounded-[10px] px-3 text-sm text-text-primary placeholder:text-text-muted',
+                'focus:border-accent'
+              )}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" className="flex-1 rounded-[10px]" onClick={applyPrice} type="button">
+              Застосувати
+            </Button>
+            {(filters.minPrice !== undefined || filters.maxPrice !== undefined) && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="px-3"
+                type="button"
+                onClick={() => setPriceRange(undefined, undefined)}
               >
-                {range.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+                Скинути
+              </Button>
+            )}
+          </div>
+        </form>
+        <div className="mt-4">
+          <p className="text-[11px] text-text-muted mb-2">Швидкі діапазони</p>
+          <ul className="flex flex-col gap-1">
+            {PRICE_RANGES.map(range => (
+              <li key={range.label}>
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] hover:bg-bg-elevated transition-colors cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.minPrice === range.min && filters.maxPrice === range.max}
+                    onChange={() => setPriceRange(range.min, range.max)}
+                    className="size-4 accent-accent rounded"
+                  />
+                  <span className="text-sm text-text-secondary">{range.label}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       {/* Brands */}
@@ -273,31 +513,29 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
         </h4>
         <ul className="flex flex-col gap-1">
           <li>
-            <button
-              onClick={() => setFilter('brand', null)}
-              className={cn(
-                'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                !filters.brand
-                  ? 'text-black bg-accent/20'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-              )}
-            >
-              Всі бренди
-            </button>
+            <label className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] hover:bg-bg-elevated transition-colors cursor-pointer">
+              <input
+                type="checkbox"
+                checked={filters.brands.length === 0}
+                onChange={(e) => {
+                  if (e.target.checked) setBrands([])
+                }}
+                className="size-4 accent-accent rounded"
+              />
+              <span className="text-sm text-text-secondary">Всі бренди</span>
+            </label>
           </li>
           {brands.slice(0, 4).map(brand => (
             <li key={brand.id}>
-              <button
-                onClick={() => setFilter('brand', brand.name)}
-                className={cn(
-                  'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                  filters.brand === brand.name
-                    ? 'text-black bg-accent/20'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                )}
-              >
-                {brand.name}
-              </button>
+              <label className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] hover:bg-bg-elevated transition-colors cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.brands.includes(brand.name)}
+                  onChange={() => toggleBrand(brand.name)}
+                  className="size-4 accent-accent rounded"
+                />
+                <span className="text-sm text-text-secondary">{brand.name}</span>
+              </label>
             </li>
           ))}
 
@@ -307,7 +545,7 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
                 type="button"
                 onClick={() => setBrandsExpanded(v => !v)}
                 className={cn(
-                  'w-full flex items-center justify-between text-left text-sm px-2 py-1.5 rounded transition-colors',
+                  'w-full flex items-center justify-between text-left text-sm px-2 py-1.5 rounded-[10px] transition-colors',
                   'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                 )}
                 aria-expanded={brandsExpanded}
@@ -335,17 +573,15 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
                   >
                     {brands.slice(4).map(brand => (
                       <li key={brand.id}>
-                        <button
-                          onClick={() => setFilter('brand', brand.name)}
-                          className={cn(
-                            'w-full text-left text-sm px-2 py-1.5 rounded transition-colors',
-                            filters.brand === brand.name
-                              ? 'text-black bg-accent/20'
-                              : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                          )}
-                        >
-                          {brand.name}
-                        </button>
+                        <label className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] hover:bg-bg-elevated transition-colors cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={filters.brands.includes(brand.name)}
+                            onChange={() => toggleBrand(brand.name)}
+                            className="size-4 accent-accent rounded"
+                          />
+                          <span className="text-sm text-text-secondary">{brand.name}</span>
+                        </label>
                       </li>
                     ))}
                   </motion.ul>
@@ -362,7 +598,7 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
           <input
             type="checkbox"
             checked={!!filters.inStock}
-            onChange={e => setFilter('inStock', e.target.checked ? '1' : null)}
+            onChange={e => toggleInStock(e.target.checked)}
             className="size-4 accent-accent rounded"
           />
           <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">
@@ -376,7 +612,7 @@ export default function ProductFilters({ filters, onClose, categories, brands }:
           variant="ghost"
           size="sm"
           fullWidth
-          onClick={clearAll}
+          onClick={clearFiltersOnly}
           className="mt-6 border border-border"
         >
           <X size={14} />

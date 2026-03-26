@@ -26,8 +26,14 @@ export default function ShopContent({ products, categories, brands }: ShopConten
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   const query = searchParams.get('q') ?? ''
-  const category = searchParams.get('category') ?? ''
-  const brand = searchParams.get('brand') ?? ''
+  const categoriesSelected = useMemo(() => {
+    const raw = searchParams.getAll('category').map(s => s.trim()).filter(Boolean)
+    return Array.from(new Set(raw))
+  }, [searchParams])
+  const brandsSelected = useMemo(() => {
+    const raw = searchParams.getAll('brand').map(s => s.trim()).filter(Boolean)
+    return Array.from(new Set(raw))
+  }, [searchParams])
   const minPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined
   const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined
   const inStock = searchParams.get('inStock') === '1'
@@ -35,7 +41,7 @@ export default function ShopContent({ products, categories, brands }: ShopConten
   const sort = !sortRaw || sortRaw === 'default' ? 'sale' : sortRaw
   const make = searchParams.get('make') ?? ''
 
-  const filters = { category, brand, minPrice, maxPrice, inStock }
+  const filters = { categories: categoriesSelected, brands: brandsSelected, minPrice, maxPrice, inStock }
 
   const allProducts = useDiscountedProductCards(products)
 
@@ -77,12 +83,20 @@ export default function ShopContent({ products, categories, brands }: ShopConten
       const q = query.toLowerCase()
       products = products.filter(p => p.name_ua.toLowerCase().includes(q))
     }
-    if (category) {
-      const allowed = categoryDescendants.collectSlugs(category)
-      products = products.filter(p => !!p.category?.slug && allowed.has(p.category.slug))
+    if (categoriesSelected.length > 0) {
+      const allowedSets = categoriesSelected.map(slug => categoryDescendants.collectSlugs(slug))
+      products = products.filter(p => {
+        const slug = p.category?.slug
+        if (!slug) return false
+        return allowedSets.some(set => set.has(slug))
+      })
     }
-    if (brand) {
-      products = products.filter(p => p.brand?.name === brand)
+    if (brandsSelected.length > 0) {
+      const allowed = new Set(brandsSelected)
+      products = products.filter(p => {
+        const name = p.brand?.name
+        return !!name && allowed.has(name)
+      })
     }
     if (minPrice !== undefined) {
       products = products.filter(p => (p.sale_price ?? p.price) >= minPrice)
@@ -114,13 +128,23 @@ export default function ShopContent({ products, categories, brands }: ShopConten
     }
 
     return products
-  }, [allProducts, query, category, brand, minPrice, maxPrice, inStock, sort, categoryDescendants])
+  }, [
+    allProducts,
+    query,
+    categoriesSelected,
+    brandsSelected,
+    minPrice,
+    maxPrice,
+    inStock,
+    sort,
+    categoryDescendants,
+  ])
 
   const hasFilters = Object.values(filters).some(Boolean)
   const showCatalogNotReady = strictDb && allProducts.length === 0 && !query && !hasFilters
 
-  const headingText = category
-    ? allProducts.find(p => p.category?.slug === category)?.category?.name_ua ?? 'Каталог'
+  const headingText = categoriesSelected.length === 1
+    ? allProducts.find(p => p.category?.slug === categoriesSelected[0])?.category?.name_ua ?? 'Каталог'
     : make
     ? `Запчастини для ${make}`
     : query
@@ -153,7 +177,9 @@ export default function ShopContent({ products, categories, brands }: ShopConten
                 <SlidersHorizontal size={14} />
                 Фільтри
                 {hasFilters && (
-                  <span className="size-4 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">!</span>
+                  <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">
+                    {filters.categories.length + filters.brands.length + (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) + (filters.inStock ? 1 : 0)}
+                  </span>
                 )}
               </button>
               <div className="flex items-center gap-2 ml-auto">
