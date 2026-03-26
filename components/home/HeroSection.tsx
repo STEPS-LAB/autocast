@@ -23,7 +23,7 @@ const HERO_SLIDE = {
   cta: 'Переглянути каталог',
   href: '/shop',
   image:
-    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1800&auto=format&fit=crop&q=80',
+    '/images/hero.webp',
 }
 
 export default function HeroSection() {
