@@ -11,6 +11,9 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
 
+const ADDRESS = 'вулиця Вітрука, 12в, Житомир'
+const GOOGLE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ADDRESS)}`
+
 const contactSchema = z.object({
   name: z.string().min(2, 'Введіть імʼя'),
   email: z.string().email('Некоректний email'),
@@ -101,7 +104,14 @@ export default function ContactPage() {
                   <MapPin size={26} className="text-text-muted" />
                   <h2 className="text-[1.27rem] font-bold text-text-primary">Наша адреса:</h2>
                 </div>
-                <p className="mt-2 text-[1.27rem] font-bold text-accent">вулиця Вітрука, 12в, Житомир</p>
+                <a
+                  href={GOOGLE_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 text-[1.27rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                >
+                  {ADDRESS}
+                </a>
               </div>
             </div>
 

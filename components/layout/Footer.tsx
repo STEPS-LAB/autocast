@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { Phone, Mail, MapPin, Instagram, Facebook } from 'lucide-react'
 import SiteLogo from '@/components/layout/SiteLogo'
 
+const ADDRESS = 'м. Житомир, вулиця Вітрука, 12в'
+const GOOGLE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ADDRESS)}`
+
 const SHOP_LINKS = [
   { href: '/shop/avtozvuk', label: 'Автозвук' },
   { href: '/shop/avtosvitlo', label: 'Автосвітло' },
@@ -86,7 +89,14 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-2.5 text-sm text-zinc-300">
                 <MapPin size={15} className="text-accent shrink-0 mt-0.5" />
-                <span>м. Житомир, вулиця Вітрука, 12в</span>
+                <a
+                  href={GOOGLE_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  {ADDRESS}
+                </a>
               </li>
             </ul>
             <div className="flex items-center gap-3 mt-5">
