@@ -141,6 +141,12 @@ select:focus-visible {
   z-index: 1;
 }
 
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+  .noise-overlay::after {
+    display: none;
+  }
+}
+
 /* ─── Glassmorphism utility ────────────────────────────────────── */
 .glass {
   background: rgb(255 255 255 / 0.78);

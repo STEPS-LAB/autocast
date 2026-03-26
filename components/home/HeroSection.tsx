@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import SmartSearchBar from '@/components/search/SmartSearchBar'
@@ -28,6 +28,31 @@ const HERO_SLIDE = {
 
 export default function HeroSection() {
   const ref = useRef<HTMLElement>(null)
+  const reduceMotion = useReducedMotion()
+  const [isCoarseOrSmall, setIsCoarseOrSmall] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia('(pointer: coarse), (max-width: 1024px)')
+    const update = () => setIsCoarseOrSmall(mql.matches)
+    update()
+    // Safari < 14 uses addListener/removeListener
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', update)
+      return () => mql.removeEventListener('change', update)
+    }
+    const legacyMql = mql as MediaQueryList & {
+      addListener?: (listener: () => void) => void
+      removeListener?: (listener: () => void) => void
+    }
+    legacyMql.addListener?.(update)
+    return () => legacyMql.removeListener?.(update)
+  }, [])
+
+  const disableScrollEffects = useMemo(
+    () => reduceMotion || isCoarseOrSmall,
+    [reduceMotion, isCoarseOrSmall],
+  )
+
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ['start start', 'end start'],
@@ -38,10 +63,13 @@ export default function HeroSection() {
   return (
     <section
       ref={ref}
-      className="relative -mt-[70px] pt-[70px] min-h-screen flex items-center overflow-hidden noise-overlay"
+      className={[
+        'relative -mt-[70px] pt-[70px] min-h-screen flex items-center overflow-hidden',
+        disableScrollEffects ? '' : 'noise-overlay',
+      ].join(' ')}
     >
       <motion.div
-        style={{ y: bgY }}
+        style={{ y: disableScrollEffects ? 0 : bgY, willChange: 'transform' }}
         className="absolute inset-0 -z-10"
       >
         <div className="absolute inset-0">
@@ -62,7 +90,7 @@ export default function HeroSection() {
 
       <div className="container-xl relative z-10 py-24">
         <motion.div
-          style={{ y: textY }}
+          style={{ y: disableScrollEffects ? 0 : textY, willChange: 'transform' }}
           className="relative w-full"
         >
           <div className="max-w-3xl">
@@ -111,7 +139,10 @@ export default function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="max-w-md w-full rounded-lg border border-accent/35 bg-bg-surface/88 backdrop-blur-md px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.25)]"
+              className={[
+                'max-w-md w-full rounded-lg border border-accent/35 bg-bg-surface/88 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.25)]',
+                disableScrollEffects ? '' : 'backdrop-blur-md',
+              ].join(' ')}
             >
               <p className="text-[11px] text-accent uppercase tracking-[0.2em] mb-2 font-semibold">
                 Швидкий пошук
