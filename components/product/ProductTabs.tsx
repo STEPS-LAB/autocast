@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 export type ProductTabKey = 'specs' | 'description' | 'reviews' | 'videos'
@@ -53,15 +53,6 @@ export default function ProductTabs({
     if (active === 'videos') setActive('specs')
   }, [active, videosCount])
 
-  const content = useMemo(() => {
-    switch (active) {
-      case 'specs': return specs
-      case 'description': return description
-      case 'reviews': return reviews
-      case 'videos': return videos
-    }
-  }, [active, description, reviews, specs, videos])
-
   return (
     <section className="mt-10">
       <div className="border-b border-border/80">
@@ -100,17 +91,40 @@ export default function ProductTabs({
       </div>
 
       <div className="pt-6">
-        <AnimatePresence mode="wait">
+        {/* Keep panels mounted to avoid layout jumps + repeated data loads */}
+        <div className="relative">
           <motion.div
-            key={active}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
+            animate={{ opacity: active === 'specs' ? 1 : 0, y: active === 'specs' ? 0 : 4 }}
             transition={{ duration: 0.16 }}
+            className={cn(active === 'specs' ? 'block' : 'hidden')}
           >
-            {content}
+            {specs}
           </motion.div>
-        </AnimatePresence>
+
+          <motion.div
+            animate={{ opacity: active === 'description' ? 1 : 0, y: active === 'description' ? 0 : 4 }}
+            transition={{ duration: 0.16 }}
+            className={cn(active === 'description' ? 'block' : 'hidden')}
+          >
+            {description}
+          </motion.div>
+
+          <motion.div
+            animate={{ opacity: active === 'reviews' ? 1 : 0, y: active === 'reviews' ? 0 : 4 }}
+            transition={{ duration: 0.16 }}
+            className={cn(active === 'reviews' ? 'block' : 'hidden')}
+          >
+            {reviews}
+          </motion.div>
+
+          <motion.div
+            animate={{ opacity: active === 'videos' ? 1 : 0, y: active === 'videos' ? 0 : 4 }}
+            transition={{ duration: 0.16 }}
+            className={cn(active === 'videos' ? 'block' : 'hidden')}
+          >
+            {videos}
+          </motion.div>
+        </div>
       </div>
     </section>
   )
