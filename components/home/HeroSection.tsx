@@ -49,7 +49,7 @@ export default function HeroSection() {
             src={HERO_SLIDE.image}
             alt={HERO_SLIDE.title}
             fill
-            preload
+            priority
             sizes="100vw"
             quality={75}
             className="object-cover"

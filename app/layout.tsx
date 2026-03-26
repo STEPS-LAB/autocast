@@ -36,7 +36,6 @@ export const metadata: Metadata = {
     description: 'Інтернет-магазин преміальної авто електроніки та запчастин',
   },
   robots: { index: true, follow: true },
-  themeColor: '#09090B',
 }
 
 export const viewport: Viewport = {
