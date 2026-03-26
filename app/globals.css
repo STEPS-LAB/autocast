@@ -33,12 +33,12 @@
   --font-sans:    var(--font-inter);
   --font-mono:    var(--font-jetbrains-mono);
 
-  /* Radius — sharp-premium (6px base) */
-  --radius-sm:  4px;
-  --radius:     6px;
-  --radius-md:  8px;
-  --radius-lg:  12px;
-  --radius-xl:  16px;
+  /* Radius — unified (10px) */
+  --radius-sm:  10px;
+  --radius:     10px;
+  --radius-md:  10px;
+  --radius-lg:  10px;
+  --radius-xl:  10px;
 
   /* Shadows */
   --shadow-sm:  0 1px 2px 0 rgb(15 23 42 / 0.08);
@@ -148,6 +148,20 @@ select:focus,
 select:focus-visible {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* Inputs/textarea: prevent inner scrollbars */
+input,
+textarea {
+  overflow: hidden;
+  -ms-overflow-style: none; /* IE/Edge legacy */
+  scrollbar-width: none; /* Firefox */
+}
+input::-webkit-scrollbar,
+textarea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 /* ─── Noise texture overlay ────────────────────────────────────── */

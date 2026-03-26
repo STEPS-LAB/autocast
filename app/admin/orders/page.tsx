@@ -16,6 +16,7 @@ interface AdminOrder {
   customer: string
   email: string
   total: number
+  ttn?: string | null
   status: string
   date: string
   items: number
@@ -49,7 +50,7 @@ export default function AdminOrdersPage() {
       const supabase = await getSupabase()
       const { data } = await supabase
         .from('orders')
-        .select('id,total,status,created_at,shipping_info,order_items(id)')
+        .select('id,total,ttn,status,created_at,shipping_info,order_items(id)')
         .order('created_at', { ascending: false })
 
       if (!isMounted) return
@@ -63,6 +64,7 @@ export default function AdminOrdersPage() {
           customer: `${firstName} ${lastName}`.trim() || 'Клієнт',
           email: shipping.email ?? '—',
           total: Number(row.total),
+          ttn: (row as any).ttn ?? null,
           status: row.status,
           date: row.created_at,
           items: Array.isArray(row.order_items) ? row.order_items.length : 0,
@@ -106,6 +108,7 @@ export default function AdminOrdersPage() {
         order.id.toLowerCase().includes(query)
         || order.customer.toLowerCase().includes(query)
         || order.email.toLowerCase().includes(query)
+        || String(order.ttn ?? '').toLowerCase().includes(query)
         || statusLabel.toLowerCase().includes(query)
       )
     })
@@ -139,6 +142,15 @@ export default function AdminOrdersPage() {
       label: 'Сума',
       render: (row) => (
         <span className="text-sm font-semibold text-text-primary price">{formatPrice(row.total)}</span>
+      ),
+    },
+    {
+      key: 'ttn',
+      label: 'ТТН',
+      render: (row) => (
+        <span className="text-xs text-text-secondary font-mono">
+          {row.ttn ? String(row.ttn) : '—'}
+        </span>
       ),
     },
     {

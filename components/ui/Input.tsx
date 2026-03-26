@@ -39,6 +39,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               'w-full h-10 bg-bg-surface border border-border rounded',
               'text-text-primary placeholder:text-text-muted text-sm',
               'px-3 transition-colors duration-150',
+              'overflow-hidden',
               'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               error && 'border-error focus:border-error focus:ring-error/20',

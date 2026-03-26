@@ -87,7 +87,7 @@ function AccountPageContent() {
         setOrdersLoading(true)
         const { data: ordersData } = await supabase
           .from('orders')
-          .select('id,user_id,status,total,shipping_info,created_at')
+          .select('id,user_id,status,total,items_total,shipping_total,grand_total,ttn,shipping_info,created_at')
           .eq('user_id', authUser.id)
           .order('created_at', { ascending: false })
         setOrders((ordersData as Order[] | null) ?? [])
@@ -125,7 +125,7 @@ function AccountPageContent() {
       const { data } = await supabase
         .from('orders')
         .select(`
-          id,user_id,status,total,shipping_info,created_at,
+          id,user_id,status,total,items_total,shipping_total,grand_total,ttn,shipping_info,created_at,
           order_items(
             id,qty,unit_price,
             product:products(id,slug,name_ua)
@@ -331,7 +331,7 @@ function AccountPageContent() {
               <div className="rounded-md border border-border bg-bg-primary/30 p-4">
                 <p className="text-xs text-text-muted mb-1">Сума</p>
                 <p className="text-sm font-bold text-text-primary price">
-                  {formatPrice(Number(selectedOrder.total))}
+                  {formatPrice(Number(selectedOrder.grand_total ?? selectedOrder.total))}
                 </p>
               </div>
             </div>
@@ -368,6 +368,26 @@ function AccountPageContent() {
                     : `${String((selectedOrder.shipping_info as any)?.city ?? '—')}, ${String((selectedOrder.shipping_info as any)?.address ?? '—')}`}
                 </span>
               </p>
+              {typeof (selectedOrder as any)?.shipping_total === 'number' && (
+                <p className="text-text-secondary">
+                  <span className="text-text-muted">Вартість доставки:</span>{' '}
+                  <span className="text-text-primary price">{formatPrice(Number((selectedOrder as any).shipping_total))}</span>
+                </p>
+              )}
+              {String((selectedOrder as any)?.ttn ?? '').trim() && (
+                <p className="text-text-secondary">
+                  <span className="text-text-muted">ТТН:</span>{' '}
+                  <span className="text-text-primary font-mono">{String((selectedOrder as any).ttn)}</span>{' '}
+                  <a
+                    href={`https://novaposhta.ua/tracking/?cargo_number=${encodeURIComponent(String((selectedOrder as any).ttn))}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent hover:underline"
+                  >
+                    Відстежити
+                  </a>
+                </p>
+              )}
             </div>
 
             <div className="rounded-md border border-border overflow-hidden">

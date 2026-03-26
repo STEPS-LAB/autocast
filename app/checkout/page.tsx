@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,6 +16,22 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import CheckoutStepper from '@/components/checkout/CheckoutStepper'
 import PageTransition from '@/components/layout/PageTransition'
+
+import npLogo from '@/public/images/np.png'
+import ukrLogo from '@/public/images/ukr.png'
+import visaLogo from '@/public/images/visa.png'
+import mkLogo from '@/public/images/mk.svg'
+
+type NpCitySuggestion = { ref: string; name: string; area?: string }
+type NpPointSuggestion = { ref: string; name: string; number?: string; type: 'warehouse' | 'postomat' | 'other' }
+
+type ShippingQuote = {
+  shipping_total: number
+  currency: 'UAH'
+  eta: string | null
+  rule_code: string
+  label: string
+}
 
 const STEPS = [
   { id: 1, label: 'Кошик' },
@@ -51,6 +68,55 @@ const optionHover = {
   transition: { duration: 0.16 },
 } as const
 
+function DeliveryLogo({ method }: { method: ShippingInfoInput['delivery_method'] }) {
+  if (method === 'nova_poshta') {
+    return (
+      <span className="ml-auto shrink-0 inline-flex items-center justify-center">
+        <Image
+          src={npLogo}
+          alt="Нова Пошта"
+          height={40}
+          className="h-[40px] w-auto object-contain"
+        />
+      </span>
+    )
+  }
+  if (method === 'ukr_poshta') {
+    return (
+      <span className="ml-auto shrink-0 inline-flex items-center justify-center">
+        <Image
+          src={ukrLogo}
+          alt="Укрпошта"
+          height={36}
+          className="h-[36px] w-auto object-contain"
+        />
+      </span>
+    )
+  }
+  return null
+}
+
+function PaymentLogos({ method }: { method: ShippingInfoInput['payment_method'] }) {
+  if (method !== 'card_on_delivery' && method !== 'online') return null
+
+  return (
+    <span className="ml-auto shrink-0 inline-flex items-center gap-2">
+      <Image
+        src={visaLogo}
+        alt="Visa"
+        height={29}
+        className="h-[29px] w-auto object-contain"
+      />
+      <Image
+        src={mkLogo}
+        alt="Mastercard"
+        height={36}
+        className="h-[36px] w-auto object-contain"
+      />
+    </span>
+  )
+}
+
 function extractPhoneDigits(value: string) {
   const onlyDigits = value.replace(/\D/g, '')
   const withoutCountry = onlyDigits.startsWith('380') ? onlyDigits.slice(3) : onlyDigits
@@ -78,11 +144,18 @@ export default function CheckoutPage() {
   const [direction, setDirection] = useState(1)
   const [orderNumber, setOrderNumber] = useState('')
   const [submitError, setSubmitError] = useState('')
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null)
+  const [shippingQuoteError, setShippingQuoteError] = useState('')
+
+  const [npCity, setNpCity] = useState<NpCitySuggestion | null>(null)
+  const [npPoint, setNpPoint] = useState<NpPointSuggestion | null>(null)
+  const [npPointType, setNpPointType] = useState<'warehouse' | 'postomat'>('warehouse')
 
   const {
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<ShippingInfoInput>({
     resolver: zodResolver(shippingInfoSchema),
@@ -96,6 +169,96 @@ export default function CheckoutPage() {
 
   const formValues = useWatch({ control })
   const deliveryMethod = formValues.delivery_method ?? 'nova_poshta'
+  const paymentMethod = formValues.payment_method ?? 'cash_on_delivery'
+
+  useEffect(() => {
+    // Reset NP selections when method changes away from NP.
+    setShippingQuote(null)
+    setShippingQuoteError('')
+    if (deliveryMethod !== 'nova_poshta') {
+      setNpCity(null)
+      setNpPoint(null)
+    }
+  }, [deliveryMethod])
+
+  useEffect(() => {
+    // Reset point when changing point type (warehouse/postomat).
+    setNpPoint(null)
+    setShippingQuote(null)
+    setShippingQuoteError('')
+    setValue('delivery_type', npPointType, { shouldValidate: true })
+    setValue('np_point_ref', undefined)
+    setValue('np_point_name', undefined)
+  }, [npPointType])
+
+  useEffect(() => {
+    // Recalculate quote when selection is complete.
+    if (deliveryMethod === 'pickup') {
+      setShippingQuote({
+        shipping_total: 0,
+        currency: 'UAH',
+        eta: null,
+        rule_code: 'pickup_free',
+        label: 'Самовивіз',
+      })
+      setShippingQuoteError('')
+      return
+    }
+
+    if (deliveryMethod !== 'nova_poshta') {
+      setShippingQuote(null)
+      setShippingQuoteError('')
+      return
+    }
+
+    if (!npCity || !npPoint) {
+      setShippingQuote(null)
+      setShippingQuoteError('')
+      return
+    }
+
+    const ac = new AbortController()
+    ;(async () => {
+      try {
+        setShippingQuoteError('')
+        const res = await fetch('/api/checkout/shipping/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: ac.signal,
+          body: JSON.stringify({
+            items_total: total,
+            selection: {
+              delivery_method: 'nova_poshta',
+              delivery_type: npPointType,
+              np_city_ref: npCity.ref,
+              np_city_name: npCity.name,
+              np_point_ref: npPoint.ref,
+              np_point_name: npPoint.name,
+              payment_method: paymentMethod,
+              city: npCity.name,
+              address: npPoint.name,
+            },
+          }),
+        })
+
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({})) as { error?: string }
+          setShippingQuote(null)
+          setShippingQuoteError(payload.error ?? 'Не вдалося розрахувати доставку')
+          return
+        }
+
+        const payload = await res.json() as { quote: ShippingQuote }
+        setShippingQuote(payload.quote)
+      } catch (e) {
+        if ((e as any)?.name === 'AbortError') return
+        setShippingQuote(null)
+        setShippingQuoteError('Не вдалося розрахувати доставку')
+      }
+    })()
+
+    return () => ac.abort()
+  }, [deliveryMethod, npCity, npPoint, npPointType, total, paymentMethod])
 
   if (items.length === 0 && step !== 3) {
     return (
@@ -197,7 +360,7 @@ export default function CheckoutPage() {
                       </motion.div>
                     ))}
                   </div>
-                  <OrderSummary total={total} count={count} />
+                  <OrderSummary total={total} count={count} shippingQuote={shippingQuote} />
                 </div>
                 <div className="mt-6 flex justify-end">
                   <Button size="lg" onClick={() => goTo(2)} className="gap-2">
@@ -323,10 +486,11 @@ export default function CheckoutPage() {
                               >
                                 <span className="radio-dot block size-2 rounded-full bg-transparent" />
                               </span>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-sm font-medium text-text-primary">{opt.label}</p>
                                 <p className="text-xs text-text-muted">{opt.desc}</p>
                               </div>
+                              <DeliveryLogo method={opt.value as ShippingInfoInput['delivery_method']} />
                             </motion.label>
                           ))}
                         </div>
@@ -337,21 +501,78 @@ export default function CheckoutPage() {
                             deliveryMethod !== 'pickup' ? 'grid-rows-[1fr] mt-4' : 'grid-rows-[0fr] mt-0',
                           ].join(' ')}
                         >
-                          <div className={['overflow-hidden', deliveryMethod === 'pickup' ? 'pointer-events-none' : ''].join(' ')}>
-                            <div className="grid sm:grid-cols-2 gap-4">
-                              <Input
-                                label="Місто"
-                                placeholder="Київ"
-                                error={errors.city?.message}
-                                {...register('city')}
+                          <div
+                            className={[
+                              deliveryMethod === 'nova_poshta' ? 'overflow-visible' : 'overflow-hidden',
+                              deliveryMethod === 'pickup' ? 'pointer-events-none' : '',
+                            ].join(' ')}
+                          >
+                            {deliveryMethod === 'nova_poshta' ? (
+                              <NovaPoshtaAddressFields
+                                cityError={errors.city?.message}
+                                addressError={errors.address?.message}
+                                cityValue={formValues.city ?? ''}
+                                addressValue={formValues.address ?? ''}
+                                setFormValue={setValue}
+                                pointType={npPointType}
+                                onPointTypeChange={(t) => setNpPointType(t)}
+                                onCityPicked={(c) => {
+                                  setNpCity(c)
+                                  setNpPoint(null)
+                                  setValue('np_city_ref', c.ref, { shouldValidate: true })
+                                  setValue('np_city_name', c.name)
+                                  setValue('delivery_type', npPointType, { shouldValidate: true })
+                                  setValue('np_point_ref', undefined)
+                                  setValue('np_point_name', undefined)
+                                }}
+                                onPointPicked={(p) => {
+                                  setNpPoint(p)
+                                  setValue('delivery_type', npPointType, { shouldValidate: true })
+                                  setValue('np_point_ref', p.ref, { shouldValidate: true })
+                                  setValue('np_point_name', p.name)
+                                }}
+                                onCityInputChange={(next) => {
+                                  // Keep compatibility with existing schema (city/address fields).
+                                  // When user edits text manually, drop NP refs.
+                                  if (npCity && next.trim() !== npCity.name.trim()) {
+                                    setNpCity(null)
+                                    setNpPoint(null)
+                                    setValue('np_city_ref', undefined, { shouldValidate: true })
+                                    setValue('np_city_name', undefined)
+                                    setValue('np_point_ref', undefined, { shouldValidate: true })
+                                    setValue('np_point_name', undefined)
+                                  }
+                                }}
+                                onPointInputChange={(next) => {
+                                  if (npPoint && next.trim() !== npPoint.name.trim()) {
+                                    setNpPoint(null)
+                                    setValue('np_point_ref', undefined, { shouldValidate: true })
+                                    setValue('np_point_name', undefined)
+                                  }
+                                }}
+                                registerCity={register('city')}
+                                registerAddress={register('address')}
                               />
-                              <Input
-                                label="Відділення / Адреса"
-                                placeholder="Відділення №1"
-                                error={errors.address?.message}
-                                {...register('address')}
-                              />
-                            </div>
+                            ) : (
+                              <div className="grid sm:grid-cols-2 gap-4">
+                                <Input
+                                  label="Місто"
+                                  placeholder="Київ"
+                                  error={errors.city?.message}
+                                  {...register('city')}
+                                />
+                                <Input
+                                  label="Відділення / Адреса"
+                                  placeholder="Відділення №1"
+                                  error={errors.address?.message}
+                                  {...register('address')}
+                                />
+                              </div>
+                            )}
+
+                            {deliveryMethod === 'nova_poshta' && shippingQuoteError && (
+                              <p className="mt-2 text-xs text-error">{shippingQuoteError}</p>
+                            )}
                           </div>
                         </div>
                       </section>
@@ -385,6 +606,7 @@ export default function CheckoutPage() {
                                 <span className="radio-dot block size-2 rounded-full bg-transparent" />
                               </span>
                               <p className="text-sm font-medium text-text-primary">{opt.label}</p>
+                              <PaymentLogos method={opt.value as ShippingInfoInput['payment_method']} />
                             </motion.label>
                           ))}
                         </div>
@@ -408,6 +630,7 @@ export default function CheckoutPage() {
                       <OrderSummary
                         total={total}
                         count={count}
+                        shippingQuote={shippingQuote}
                         info={{
                           firstName: formValues.first_name ?? '',
                           lastName: formValues.last_name ?? '',
@@ -496,10 +719,12 @@ export default function CheckoutPage() {
 function OrderSummary({
   total,
   count,
+  shippingQuote,
   info,
 }: {
   total: number
   count: number
+  shippingQuote?: ShippingQuote | null
   info?: {
     firstName: string
     lastName: string
@@ -509,6 +734,8 @@ function OrderSummary({
   }
 }) {
   const deliveryLabel = DELIVERY_OPTIONS.find(o => o.value === info?.deliveryMethod)?.label
+  const shippingTotal = shippingQuote?.shipping_total ?? (info?.deliveryMethod === 'pickup' ? 0 : null)
+  const grandTotal = total + (typeof shippingTotal === 'number' ? shippingTotal : 0)
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -525,7 +752,13 @@ function OrderSummary({
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-text-secondary">Доставка</span>
-          <span className="text-success">Безкоштовно</span>
+          {shippingTotal === null ? (
+            <span className="text-text-muted">—</span>
+          ) : shippingTotal === 0 ? (
+            <span className="text-success">Безкоштовно</span>
+          ) : (
+            <span className="text-text-primary price">{formatPrice(shippingTotal)}</span>
+          )}
         </div>
       </div>
 
@@ -561,9 +794,433 @@ function OrderSummary({
       <div className="border-t border-border pt-3">
         <div className="flex justify-between font-semibold">
           <span className="text-text-primary">Разом</span>
-          <span className="text-lg text-text-primary price">{formatPrice(total)}</span>
+          <span className="text-lg text-text-primary price">{formatPrice(grandTotal)}</span>
         </div>
       </div>
     </motion.div>
+  )
+}
+
+function NovaPoshtaAddressFields(props: {
+  cityValue: string
+  addressValue: string
+  cityError?: string
+  addressError?: string
+  setFormValue: ReturnType<typeof useForm<ShippingInfoInput>>['setValue']
+  pointType: 'warehouse' | 'postomat'
+  onPointTypeChange: (t: 'warehouse' | 'postomat') => void
+  onCityPicked: (c: NpCitySuggestion) => void
+  onPointPicked: (p: NpPointSuggestion) => void
+  onCityInputChange: (next: string) => void
+  onPointInputChange: (next: string) => void
+  registerCity: ReturnType<typeof useForm<ShippingInfoInput>>['register'] extends (name: 'city') => infer R ? R : any
+  registerAddress: ReturnType<typeof useForm<ShippingInfoInput>>['register'] extends (name: 'address') => infer R ? R : any
+}) {
+  const listIdCity = useId()
+  const listIdPoint = useId()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const cityInputWrapRef = useRef<HTMLDivElement>(null)
+  const pointInputWrapRef = useRef<HTMLDivElement>(null)
+  const [openCity, setOpenCity] = useState(false)
+  const [openPoint, setOpenPoint] = useState(false)
+  const [citySuggestions, setCitySuggestions] = useState<NpCitySuggestion[]>([])
+  const [pointSuggestions, setPointSuggestions] = useState<NpPointSuggestion[]>([])
+  const [cityLoading, setCityLoading] = useState(false)
+  const [pointLoading, setPointLoading] = useState(false)
+  const [cityFetchError, setCityFetchError] = useState('')
+  const [pointFetchError, setPointFetchError] = useState('')
+  const [cityHighlight, setCityHighlight] = useState(0)
+  const [pointHighlight, setPointHighlight] = useState(0)
+  const [cityDropdownRect, setCityDropdownRect] = useState<{ left: number; top: number; width: number } | null>(null)
+  const [pointDropdownRect, setPointDropdownRect] = useState<{ left: number; top: number; width: number } | null>(null)
+
+  // Local refs for selected city/point (to drive dependent fetching).
+  const selectedCityRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    function onDocPointerDown(e: MouseEvent) {
+      // Dropdown is rendered in a portal (document.body), so treat clicks inside it as "inside".
+      // Note: e.target can be a Text node; normalize to an Element.
+      const el =
+        e.target instanceof Element
+          ? e.target
+          : (e.target as any)?.parentElement instanceof Element
+            ? (e.target as any).parentElement
+            : null
+
+      if (el?.closest('[data-np-dropdown]')) return
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpenCity(false)
+        setOpenPoint(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocPointerDown)
+    return () => document.removeEventListener('mousedown', onDocPointerDown)
+  }, [])
+
+  function updateRects() {
+    const cityEl = cityInputWrapRef.current
+    const pointEl = pointInputWrapRef.current
+    if (cityEl) {
+      const r = cityEl.getBoundingClientRect()
+      setCityDropdownRect({ left: r.left + window.scrollX, top: r.bottom + window.scrollY, width: r.width })
+    }
+    if (pointEl) {
+      const r = pointEl.getBoundingClientRect()
+      setPointDropdownRect({ left: r.left + window.scrollX, top: r.bottom + window.scrollY, width: r.width })
+    }
+  }
+
+  useLayoutEffect(() => {
+    updateRects()
+    // Recompute on resize/layout changes.
+    window.addEventListener('resize', updateRects)
+    return () => {
+      window.removeEventListener('resize', updateRects)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (openCity || openPoint) updateRects()
+  }, [openCity, openPoint])
+
+  useEffect(() => {
+    setCityHighlight(0)
+  }, [props.cityValue, openCity])
+
+  useEffect(() => {
+    setPointHighlight(0)
+  }, [props.addressValue, openPoint])
+
+  useEffect(() => {
+    const q = props.cityValue.trim()
+    if (q.length < 2) {
+      setCitySuggestions([])
+      setCityFetchError('')
+      return
+    }
+    const ac = new AbortController()
+    const t = window.setTimeout(() => {
+      ;(async () => {
+        try {
+          setCityLoading(true)
+          setCityFetchError('')
+          const res = await fetch(`/api/np/cities?query=${encodeURIComponent(q)}&limit=10`, { signal: ac.signal })
+          if (!res.ok) {
+            const payload = await res.json().catch(() => ({})) as { error?: string }
+            setCitySuggestions([])
+            setCityFetchError(payload.error ?? `Помилка API (${res.status})`)
+            return
+          }
+          const payload = await res.json().catch(() => ({})) as { suggestions?: NpCitySuggestion[] }
+          const next = Array.isArray(payload.suggestions) ? payload.suggestions : []
+          setCitySuggestions(next)
+          if (next.length === 0) setCityFetchError('Немає підказок. Уточніть запит.')
+        } catch (e) {
+          if ((e as any)?.name === 'AbortError') return
+          setCitySuggestions([])
+          setCityFetchError('Не вдалося отримати підказки')
+        } finally {
+          setCityLoading(false)
+        }
+      })()
+    }, 350)
+    return () => {
+      ac.abort()
+      window.clearTimeout(t)
+    }
+  }, [props.cityValue])
+
+  useEffect(() => {
+    const q = props.addressValue.trim()
+    const cityRef = selectedCityRef.current
+    if (!cityRef) {
+      setPointSuggestions([])
+      setPointFetchError('Спочатку оберіть місто зі списку')
+      return
+    }
+    const ac = new AbortController()
+    const t = window.setTimeout(() => {
+      ;(async () => {
+        try {
+          setPointLoading(true)
+          setPointFetchError('')
+          const url = `/api/np/warehouses?cityRef=${encodeURIComponent(cityRef)}&query=${encodeURIComponent(q)}&type=${encodeURIComponent(props.pointType)}&limit=25`
+          const res = await fetch(url, { signal: ac.signal })
+          if (!res.ok) {
+            const payload = await res.json().catch(() => ({})) as { error?: string }
+            setPointSuggestions([])
+            setPointFetchError(payload.error ?? `Помилка API (${res.status})`)
+            return
+          }
+          const payload = await res.json().catch(() => ({})) as { suggestions?: NpPointSuggestion[] }
+          const next = Array.isArray(payload.suggestions) ? payload.suggestions : []
+          setPointSuggestions(next)
+          if (next.length === 0) setPointFetchError('Немає підказок. Спробуйте інший запит.')
+        } catch (e) {
+          if ((e as any)?.name === 'AbortError') return
+          setPointSuggestions([])
+          setPointFetchError('Не вдалося отримати підказки')
+        } finally {
+          setPointLoading(false)
+        }
+      })()
+    }, 350)
+    return () => {
+      ac.abort()
+      window.clearTimeout(t)
+    }
+  }, [props.addressValue, props.pointType])
+
+  function selectCity(c: NpCitySuggestion) {
+    selectedCityRef.current = c.ref
+    props.onCityPicked(c)
+    props.setFormValue('city', c.name, { shouldDirty: true, shouldTouch: true, shouldValidate: true })
+    // Clear point field when city changes
+    props.setFormValue('address', '', { shouldDirty: true, shouldTouch: true, shouldValidate: true })
+    setOpenCity(false)
+  }
+
+  function selectPoint(p: NpPointSuggestion) {
+    props.onPointPicked(p)
+    props.setFormValue('address', p.name, { shouldDirty: true, shouldTouch: true, shouldValidate: true })
+    setOpenPoint(false)
+  }
+
+  function onCityKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!openCity && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && citySuggestions.length > 0) {
+      setOpenCity(true)
+      return
+    }
+    if (!openCity) return
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setOpenCity(false)
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setCityHighlight(i => Math.min(i + 1, Math.max(citySuggestions.length - 1, 0)))
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setCityHighlight(i => Math.max(i - 1, 0))
+    }
+    if (e.key === 'Enter' && citySuggestions.length > 0) {
+      const c = citySuggestions[cityHighlight]
+      if (c) {
+        e.preventDefault()
+        selectCity(c)
+      }
+    }
+  }
+
+  function onPointKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!openPoint && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && pointSuggestions.length > 0) {
+      setOpenPoint(true)
+      return
+    }
+    if (!openPoint) return
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setOpenPoint(false)
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setPointHighlight(i => Math.min(i + 1, Math.max(pointSuggestions.length - 1, 0)))
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setPointHighlight(i => Math.max(i - 1, 0))
+    }
+    if (e.key === 'Enter' && pointSuggestions.length > 0) {
+      const p = pointSuggestions[pointHighlight]
+      if (p) {
+        e.preventDefault()
+        selectPoint(p)
+      }
+    }
+  }
+
+  const showCityList = openCity && citySuggestions.length > 0
+  const showPointList = openPoint && pointSuggestions.length > 0
+
+  return (
+    <div ref={containerRef} className="grid sm:grid-cols-2 gap-4">
+      <div ref={cityInputWrapRef} className="relative">
+        <div className="flex items-end justify-between gap-2 mb-1.5">
+          <span className="text-sm font-medium text-text-secondary">Місто (НП)</span>
+          <span aria-hidden="true" className="h-8 w-[108px]" />
+        </div>
+        <Input
+          label={undefined}
+          placeholder="Почніть вводити місто…"
+          error={props.cityError}
+          autoComplete="off"
+          {...props.registerCity}
+          onChange={(e) => {
+            props.registerCity.onChange(e)
+            props.onCityInputChange(e.target.value)
+            setOpenCity(true)
+          }}
+          onFocus={() => setOpenCity(true)}
+          onKeyDown={onCityKeyDown}
+          rightIcon={(
+            <span
+              className={[
+                'size-4 border-2 border-accent border-t-transparent rounded-full animate-spin',
+                cityLoading ? 'opacity-100' : 'opacity-0',
+              ].join(' ')}
+            />
+          )}
+        />
+        {!showCityList && openCity && props.cityValue.trim().length >= 2 && cityFetchError && (
+          <p className="mt-1 text-xs text-text-muted">{cityFetchError}</p>
+        )}
+      </div>
+
+      <div ref={pointInputWrapRef} className="relative">
+        <div className="flex items-end justify-between gap-2 mb-1.5">
+          <span className="text-sm font-medium text-text-secondary">Відділення / Поштомат</span>
+          <div className="inline-flex h-8 rounded border border-border bg-bg-surface p-0.5">
+            <button
+              type="button"
+              onClick={() => props.onPointTypeChange('warehouse')}
+              className={[
+                'h-7 px-2.5 rounded text-xs font-medium transition-colors',
+                props.pointType === 'warehouse'
+                  ? 'bg-accent/20 text-text-primary'
+                  : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
+              ].join(' ')}
+            >
+              Відділення
+            </button>
+            <button
+              type="button"
+              onClick={() => props.onPointTypeChange('postomat')}
+              className={[
+                'h-7 px-2.5 rounded text-xs font-medium transition-colors',
+                props.pointType === 'postomat'
+                  ? 'bg-accent/20 text-text-primary'
+                  : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
+              ].join(' ')}
+            >
+              Поштомат
+            </button>
+          </div>
+        </div>
+
+        <Input
+          label={undefined}
+          placeholder={props.pointType === 'postomat' ? 'Поштомат…' : 'Відділення…'}
+          error={props.addressError}
+          autoComplete="off"
+          {...props.registerAddress}
+          onChange={(e) => {
+            props.registerAddress.onChange(e)
+            props.onPointInputChange(e.target.value)
+            setOpenPoint(true)
+          }}
+          onFocus={() => setOpenPoint(true)}
+          onKeyDown={onPointKeyDown}
+          rightIcon={(
+            <span
+              className={[
+                'size-4 border-2 border-accent border-t-transparent rounded-full animate-spin',
+                pointLoading ? 'opacity-100' : 'opacity-0',
+              ].join(' ')}
+            />
+          )}
+        />
+        {!showPointList && openPoint && pointFetchError && (
+          <p className="mt-1 text-xs text-text-muted">{pointFetchError}</p>
+        )}
+
+      </div>
+
+      {typeof document !== 'undefined' && showCityList && cityDropdownRect && createPortal(
+        <ul
+          id={listIdCity}
+          role="listbox"
+          data-np-dropdown="city"
+          style={{
+            position: 'absolute',
+            left: cityDropdownRect.left,
+            top: cityDropdownRect.top + 4,
+            width: cityDropdownRect.width,
+            zIndex: 10050,
+          }}
+          className="rounded border border-border bg-bg-surface py-1 shadow-lg"
+        >
+          {citySuggestions.slice(0, 8).map((c, i) => (
+            <li key={c.ref} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === cityHighlight}
+                onMouseEnter={() => setCityHighlight(i)}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  // Prevent the document-level "outside click" handler (same element) from running.
+                  ;(e.nativeEvent as any)?.stopImmediatePropagation?.()
+                  selectCity(c)
+                }}
+                className={[
+                  'w-full text-left px-3 py-2 text-sm transition-colors',
+                  i === cityHighlight
+                    ? 'bg-accent/20 text-text-primary'
+                    : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary',
+                ].join(' ')}
+              >
+                {c.name}
+              </button>
+            </li>
+          ))}
+        </ul>,
+        document.body
+      )}
+
+      {typeof document !== 'undefined' && showPointList && pointDropdownRect && createPortal(
+        <ul
+          id={listIdPoint}
+          role="listbox"
+          data-np-dropdown="point"
+          style={{
+            position: 'absolute',
+            left: pointDropdownRect.left,
+            top: pointDropdownRect.top + 4,
+            width: pointDropdownRect.width,
+            zIndex: 10050,
+          }}
+          className="rounded border border-border bg-bg-surface py-1 shadow-lg"
+        >
+          {pointSuggestions.slice(0, 8).map((p, i) => (
+            <li key={p.ref} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === pointHighlight}
+                onMouseEnter={() => setPointHighlight(i)}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  ;(e.nativeEvent as any)?.stopImmediatePropagation?.()
+                  selectPoint(p)
+                }}
+                className={[
+                  'w-full text-left px-3 py-2 text-sm transition-colors',
+                  i === pointHighlight
+                    ? 'bg-accent/20 text-text-primary'
+                    : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary',
+                ].join(' ')}
+              >
+                {p.name}
+              </button>
+            </li>
+          ))}
+        </ul>,
+        document.body
+      )}
+    </div>
   )
 }

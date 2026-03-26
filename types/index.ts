@@ -93,6 +93,10 @@ export interface Order {
   user_id: string | null
   status: OrderStatus
   total: number
+  items_total?: number
+  shipping_total?: number
+  grand_total?: number
+  ttn?: string | null
   shipping_info: ShippingInfo
   created_at: string
   order_items?: OrderItem[]
@@ -116,6 +120,11 @@ export interface ShippingInfo {
   city: string
   address: string
   delivery_method: 'nova_poshta' | 'ukr_poshta' | 'pickup'
+  delivery_type?: 'warehouse' | 'postomat' | 'courier' | 'pickup'
+  np_city_ref?: string
+  np_city_name?: string
+  np_point_ref?: string
+  np_point_name?: string
   payment_method: 'cash_on_delivery' | 'card_on_delivery' | 'online'
   notes?: string
 }

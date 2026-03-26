@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import Badge from '@/components/ui/Badge'
 import { formatPrice } from '@/lib/utils'
+import Button from '@/components/ui/Button'
 
 type ShippingInfo = {
   first_name?: string
@@ -29,6 +30,10 @@ type OrderItem = {
 type AdminOrderDetails = {
   id: string
   total: number
+  items_total?: number
+  shipping_total?: number
+  grand_total?: number
+  ttn?: string | null
   status: string
   created_at: string
   shipping_info: ShippingInfo | null
@@ -82,6 +87,9 @@ export default function AdminOrderDetailsPage() {
   const orderId = params.id
   const [order, setOrder] = useState<AdminOrderDetails | null>(null)
   const [loading, setLoading] = useState(true)
+  const [ttnValue, setTtnValue] = useState('')
+  const [ttnSaving, setTtnSaving] = useState(false)
+  const [ttnError, setTtnError] = useState('')
 
   const orderNumber = useMemo(
     () => (order ? order.id.slice(0, 8).toUpperCase() : orderId.slice(0, 8).toUpperCase()),
@@ -97,7 +105,7 @@ export default function AdminOrderDetailsPage() {
       const { data } = await supabase
         .from('orders')
         .select(`
-          id,total,status,created_at,shipping_info,
+          id,total,items_total,shipping_total,grand_total,ttn,status,created_at,shipping_info,
           order_items(
             id,qty,unit_price,
             product:products(id,slug,name_ua)
@@ -108,6 +116,8 @@ export default function AdminOrderDetailsPage() {
 
       if (!isMounted) return
       setOrder((data as AdminOrderDetails | null) ?? null)
+      const row = (data as AdminOrderDetails | null)
+      setTtnValue((row?.ttn ?? '').trim())
       setLoading(false)
     }
 
@@ -123,6 +133,30 @@ export default function AdminOrderDetailsPage() {
     STATUS_LABELS[order?.status ?? 'pending'] ??
     STATUS_LABELS['pending'] ??
     { label: 'Очікує відправки', variant: 'warning' as const }
+
+  async function saveTtn() {
+    if (!order) return
+    setTtnError('')
+    setTtnSaving(true)
+    try {
+      const mod = await import('@/lib/supabase/client')
+      const supabase = mod.createClient()
+      const next = ttnValue.trim() || null
+      const { error } = await supabase
+        .from('orders')
+        .update({ ttn: next })
+        .eq('id', order.id)
+      if (error) {
+        setTtnError('Не вдалося зберегти ТТН')
+        return
+      }
+      setOrder(prev => (prev ? { ...prev, ttn: next } : prev))
+    } catch {
+      setTtnError('Не вдалося зберегти ТТН')
+    } finally {
+      setTtnSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -164,6 +198,12 @@ export default function AdminOrderDetailsPage() {
                   <span className="text-text-muted">Сума:</span>{' '}
                   <span className="text-text-primary font-semibold price">{formatPrice(order.total)}</span>
                 </p>
+                {typeof order.shipping_total === 'number' && (
+                  <p className="text-text-secondary">
+                    <span className="text-text-muted">Доставка:</span>{' '}
+                    <span className="text-text-primary font-semibold price">{formatPrice(Number(order.shipping_total))}</span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -205,6 +245,34 @@ export default function AdminOrderDetailsPage() {
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="rounded-md border border-border bg-bg-surface p-5">
+            <h2 className="text-sm font-semibold text-text-primary mb-3">Доставка / ТТН</h2>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="md:col-span-2">
+                <label className="block">
+                  <span className="text-xs text-text-muted">Номер ТТН</span>
+                  <input
+                    value={ttnValue}
+                    onChange={(e) => setTtnValue(e.target.value)}
+                    placeholder="Напр. 20400000000000"
+                    className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary"
+                  />
+                </label>
+                {ttnError && <p className="mt-1 text-xs text-error">{ttnError}</p>}
+              </div>
+              <div className="flex items-end">
+                <Button onClick={() => void saveTtn()} disabled={ttnSaving} className="w-full">
+                  {ttnSaving ? 'Збереження…' : 'Зберегти ТТН'}
+                </Button>
+              </div>
+            </div>
+            {order.ttn && (
+              <p className="mt-3 text-xs text-text-muted">
+                Збережено: <span className="font-mono text-text-primary">{order.ttn}</span>
+              </p>
+            )}
           </div>
 
           <div className="rounded-md border border-border bg-bg-surface overflow-hidden">
