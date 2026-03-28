@@ -42,7 +42,7 @@ export default function ProductDetailPanel({
   const totalBasePrice = useMemo(() => basePrice * qty, [basePrice, qty])
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 min-w-0 max-w-full">
       <div className="flex flex-wrap gap-2">
         {brandName && (
           <Badge variant="default">{brandName}</Badge>
@@ -55,11 +55,11 @@ export default function ProductDetailPanel({
         )}
       </div>
 
-      <h1 className="text-xl sm:text-2xl font-bold text-text-primary leading-snug">
+      <h1 className="text-xl sm:text-2xl font-bold text-text-primary leading-snug break-words">
         {nameUa}
       </h1>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="text-3xl font-bold text-text-primary price">
           {formatPrice(totalDisplayPrice)}
         </span>
@@ -83,12 +83,14 @@ export default function ProductDetailPanel({
 
       <AddToCart product={productCard} qty={qty} onQtyChange={setQty} />
 
-      <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-2 border-t border-border min-w-0">
         {GUARANTEES.map(({ icon: Icon, label, desc }) => (
-          <div key={label} className="flex flex-col items-center text-center gap-1.5">
-            <Icon size={18} className="text-accent" />
-            <p className="text-xs font-medium text-text-primary">{label}</p>
-            <p className="text-[11px] text-text-muted">{desc}</p>
+          <div key={label} className="flex min-w-0 flex-col items-center text-center gap-1.5 px-0.5">
+            <Icon size={18} className="text-accent shrink-0" />
+            <p className="text-[10px] sm:text-xs font-medium text-text-primary break-words hyphens-auto">
+              {label}
+            </p>
+            <p className="text-[10px] sm:text-[11px] text-text-muted break-words">{desc}</p>
           </div>
         ))}
       </div>

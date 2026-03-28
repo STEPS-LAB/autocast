@@ -47,7 +47,7 @@ export default function AddToCart({ product, sticky, qty: qtyProp, onQtyChange }
   if (displayProduct.stock === 0) {
     return (
       <div className={cn(
-        'flex items-center justify-center h-12 rounded border border-border text-text-muted text-sm',
+        'flex items-center justify-center h-12 w-full min-w-0 max-w-full rounded border border-border text-text-muted text-sm px-3',
         sticky && 'fixed bottom-0 inset-x-0 md:relative md:bottom-auto md:inset-x-auto rounded-none md:rounded border-t md:border'
       )}>
         Немає в наявності
@@ -57,8 +57,8 @@ export default function AddToCart({ product, sticky, qty: qtyProp, onQtyChange }
 
   return (
     <div className={cn(
-      'flex gap-2 items-stretch',
-      sticky && 'fixed bottom-0 inset-x-0 p-3 bg-bg-surface border-t border-border md:relative md:bottom-auto md:inset-x-auto md:p-0 md:bg-transparent md:border-0'
+      'flex gap-2 items-stretch w-full min-w-0 max-w-full',
+      sticky && 'fixed bottom-0 inset-x-0 p-2.5 sm:p-3 bg-bg-surface border-t border-border md:relative md:bottom-auto md:inset-x-auto md:p-0 md:bg-transparent md:border-0'
     )}>
       {/* Qty selector */}
       <div className="flex items-stretch border border-border rounded overflow-hidden h-12">
@@ -85,7 +85,7 @@ export default function AddToCart({ product, sticky, qty: qtyProp, onQtyChange }
       <button
         onClick={handleAdd}
         className={cn(
-          'flex-1 h-12 flex items-center justify-center gap-2 rounded font-medium text-sm',
+          'flex-1 min-w-0 h-12 flex items-center justify-center gap-1.5 sm:gap-2 rounded font-medium text-xs sm:text-sm px-2',
           'transition-all duration-200 active:scale-[0.98]',
           added
             ? 'bg-success text-white'

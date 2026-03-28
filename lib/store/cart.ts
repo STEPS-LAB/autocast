@@ -5,6 +5,12 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import type { CartItem, ProductCard } from '@/types'
 import { generateId } from '@/lib/utils'
 
+function closeWishlistDrawer() {
+  // Lazy require avoids cart ↔ wishlist circular init while keeping a single drawer open.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- runtime-only cross-store call
+  require('@/lib/store/wishlist').useWishlistStore.getState().close()
+}
+
 interface CartStoreState {
   items: CartItem[]
   isOpen: boolean
@@ -28,6 +34,7 @@ export const useCartStore = create<CartStore>()(
       isOpen: false,
 
       addItem: (product: ProductCard, quantity = 1) => {
+        closeWishlistDrawer()
         set(state => {
           const existing = state.items.find(i => i.product.id === product.id)
           if (existing) {
@@ -65,7 +72,10 @@ export const useCartStore = create<CartStore>()(
 
       clearCart: () => set({ items: [] }),
 
-      openCart: () => set({ isOpen: true }),
+      openCart: () => {
+        closeWishlistDrawer()
+        set({ isOpen: true })
+      },
       closeCart: () => set({ isOpen: false }),
     }),
     {

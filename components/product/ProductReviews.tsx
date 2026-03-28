@@ -147,7 +147,7 @@ export default function ProductReviews({
                 <p className="text-sm font-semibold text-text-primary">Користувач</p>
                 <p className="text-xs text-text-muted">{formatDate(r.created_at)}</p>
               </div>
-              <p className="text-sm text-text-secondary mt-2 whitespace-pre-wrap leading-relaxed">
+              <p className="text-sm text-text-secondary mt-2 whitespace-pre-wrap leading-relaxed break-words">
                 {r.body}
               </p>
             </div>

@@ -54,9 +54,9 @@ export default function ProductTabs({
   }, [active, videosCount])
 
   return (
-    <section className="mt-10">
-      <div className="border-b border-border/80">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 overflow-visible">
+    <section className="mt-10 min-w-0 max-w-full">
+      <div className="border-b border-border/80 min-w-0 overflow-hidden">
+        <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 sm:gap-y-2">
           {tabs.map(t => {
             const isActive = t.key === active
             return (

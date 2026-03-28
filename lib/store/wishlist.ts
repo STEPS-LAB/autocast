@@ -4,6 +4,11 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { ProductCard } from '@/types'
 
+function closeCartDrawer() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- runtime-only cross-store call
+  require('@/lib/store/cart').useCartStore.getState().closeCart()
+}
+
 interface WishlistStoreState {
   items: ProductCard[]
   isOpen: boolean
@@ -45,7 +50,10 @@ export const useWishlistStore = create<WishlistStore>()(
       },
       clear: () => set({ items: [] }),
 
-      open: () => set({ isOpen: true }),
+      open: () => {
+        closeCartDrawer()
+        set({ isOpen: true })
+      },
       close: () => set({ isOpen: false }),
     }),
     {

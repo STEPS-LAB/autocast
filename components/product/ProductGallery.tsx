@@ -63,7 +63,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
   }, [zoomed])
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 w-full min-w-0 max-w-full">
       {/* Main image */}
       <div
         className={cn(
@@ -128,7 +128,7 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
 
       {/* Thumbnails */}
       {safeImages.length > 1 && (
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto max-w-full pb-1 overscroll-x-contain [-webkit-overflow-scrolling:touch]">
           {safeImages.map((img, i) => (
             <button
               key={i}

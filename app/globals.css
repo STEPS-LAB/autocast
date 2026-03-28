@@ -328,8 +328,11 @@ textarea::-webkit-scrollbar {
 
 /* ─── Disable hover effects on touch devices ───────────────────── */
 @media (hover: none) and (pointer: coarse) {
-  /* Prevent "stuck" hover states on mobile */
-  *:hover {
+  /*
+   * Framer Motion drawer slides use inline `transform`; `*:hover { transform: none !important }`
+   * overrides inline styles and kills exit animations on touch. Exclude drawer layers.
+   */
+  *:hover:not(.fm-drawer-panel):not(.fm-drawer-backdrop) {
     transform: none !important;
     box-shadow: none !important;
     filter: none !important;

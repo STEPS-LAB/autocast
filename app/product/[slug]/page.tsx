@@ -127,9 +127,9 @@ export default async function ProductPage({ params }: Props) {
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="container-xl py-8">
+      <div className="container-xl py-8 min-w-0 max-w-full">
         {/* Breadcrumbs */}
-        <nav className="flex items-center gap-1.5 text-xs text-text-muted mb-8">
+        <nav className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-muted mb-8">
           <Link href="/" className="hover:text-text-primary transition-colors">Головна</Link>
           <ChevronRight size={12} />
           <Link href="/shop" className="hover:text-text-primary transition-colors">Магазин</Link>
@@ -145,33 +145,37 @@ export default async function ProductPage({ params }: Props) {
             </>
           )}
           <ChevronRight size={12} />
-          <span className="text-text-secondary truncate max-w-[200px]">{product.name_ua}</span>
+          <span className="text-text-secondary min-w-0 max-w-full sm:max-w-[min(100%,280px)] truncate">
+            {product.name_ua}
+          </span>
         </nav>
 
         {/* Product layout */}
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 mb-16">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 mb-16 min-w-0">
           {/* Gallery */}
-          <div>
+          <div className="min-w-0">
             <ProductGallery images={product.images} name={product.name_ua} />
           </div>
 
-          <ProductDetailPanel
-            nameUa={product.name_ua}
-            displayPrice={displayPrice}
-            basePrice={product.price}
-            hasSale={!!product.sale_price}
-            stock={product.stock}
-            brandName={brand?.name}
-            categoryName={category?.name_ua}
-            discountPercent={discount}
-            productCard={productCard}
-          />
+          <div className="min-w-0">
+            <ProductDetailPanel
+              nameUa={product.name_ua}
+              displayPrice={displayPrice}
+              basePrice={product.price}
+              hasSale={!!product.sale_price}
+              stock={product.stock}
+              brandName={brand?.name}
+              categoryName={category?.name_ua}
+              discountPercent={discount}
+              productCard={productCard}
+            />
+          </div>
         </div>
 
         <ProductTabs
           description={
-            <div className="rounded-lg border border-border bg-bg-surface p-6 shadow-[0_10px_22px_rgba(0,0,0,0.08)]">
-              <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+            <div className="rounded-lg border border-border bg-bg-surface p-4 sm:p-6 shadow-[0_10px_22px_rgba(0,0,0,0.08)] min-w-0 overflow-hidden">
+              <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap break-words">
                 {product.description_ua}
               </p>
             </div>

@@ -25,10 +25,11 @@ export default function RelatedProducts({
       >
         {title}
       </motion.h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 min-w-0">
         {products.slice(0, 4).map((product, i) => (
           <motion.div
             key={product.id}
+            className="min-w-0"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}

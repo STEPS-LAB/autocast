@@ -3,6 +3,9 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   images: {
     qualities: [75, 80],
+    // DNS (e.g. NAT64 / 64:ff9b::…) can make public CDNs resolve to addresses Next
+    // treats as “private”, which breaks `/_next/image` for Supabase storage.
+    dangerouslyAllowLocalIP: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -22,7 +25,8 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   experimental: {
-    optimizePackageImports: ['lucide-react', 'framer-motion'],
+    // framer-motion не додаємо: optimizePackageImports може зламати AnimatePresence / exit.
+    optimizePackageImports: ['lucide-react'],
   },
 }
 

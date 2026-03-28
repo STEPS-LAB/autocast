@@ -9,6 +9,7 @@ import { useCartStore, selectCartCount } from '@/lib/store/cart'
 import { useWishlistStore, selectWishlistCount } from '@/lib/store/wishlist'
 import { cn } from '@/lib/utils'
 import SmartSearchBar from '@/components/search/SmartSearchBar'
+import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/components/layout/DocumentBodyPortal'
 
 const NAV_LINKS = [
   { href: '/', label: 'Головна' },
@@ -26,8 +27,22 @@ export default function Header() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const count = useCartStore(selectCartCount)
   const openCart = useCartStore(s => s.openCart)
+  const closeCart = useCartStore(s => s.closeCart)
   const wishlistCount = useWishlistStore(selectWishlistCount)
   const openWishlist = useWishlistStore(s => s.open)
+  const closeWishlist = useWishlistStore(s => s.close)
+
+  const slideDuration = 0.32
+  const slideEaseOpen: [number, number, number, number] = [0.32, 0.72, 0, 1]
+  const slideEaseClose: [number, number, number, number] = [1, 0, 0.68, 0.28]
+
+  function unlockBodyScrollAfterMobileMenu() {
+    const cartOpen = useCartStore.getState().isOpen
+    const wishOpen = useWishlistStore.getState().isOpen
+    if (!cartOpen && !wishOpen) {
+      document.body.style.overflow = ''
+    }
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 1)
@@ -42,15 +57,21 @@ export default function Header() {
   }, [pathname])
 
   useEffect(() => {
-    if (!mobileOpen) return
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.body.style.overflow = previousOverflow
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
     }
   }, [mobileOpen])
+
+  /** Не викликати closeCart/closeWishlist у setMobileOpen(updater) — React може виконати updater під час рендеру. */
+  useEffect(() => {
+    if (!mobileOpen) return
+    closeCart()
+    closeWishlist()
+  }, [mobileOpen, closeCart, closeWishlist])
+
+  useEffect(() => () => {
+    unlockBodyScrollAfterMobileMenu()
+  }, [])
 
   return (
     <>
@@ -126,7 +147,11 @@ export default function Header() {
               </button>
 
               <button
-                onClick={openWishlist}
+                onClick={() => {
+                  setMobileOpen(false)
+                  setMobileSearchOpen(false)
+                  openWishlist()
+                }}
                 className="relative p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
                 aria-label={`Вішліст (${wishlistCount})`}
               >
@@ -147,7 +172,11 @@ export default function Header() {
               </button>
 
               <button
-                onClick={openCart}
+                onClick={() => {
+                  setMobileOpen(false)
+                  setMobileSearchOpen(false)
+                  openCart()
+                }}
                 className="relative p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
                 aria-label={`Кошик (${count})`}
               >
@@ -207,16 +236,58 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile slide menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, x: '100%' }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '100%' }}
-            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            className="fixed inset-y-0 right-0 z-[70] w-full max-w-xs border-l border-border bg-bg-surface/95 backdrop-blur-xl shadow-2xl flex flex-col pt-20 pb-8 px-6"
-          >
+      {/* Мобільне меню: портал + z вище body::after; окремі AnimatePresence для exit на WebKit */}
+      <DocumentBodyPortal>
+        <AnimatePresence>
+          {mobileOpen ? (
+            <motion.div
+              key="mobile-menu-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{
+                opacity: 0,
+                transition: {
+                  duration: slideDuration,
+                  ease: slideEaseClose,
+                },
+              }}
+              transition={{
+                duration: slideDuration * 0.85,
+                ease: slideEaseOpen,
+              }}
+              className={cn(
+                'fm-drawer-backdrop fixed inset-0 bg-black/35 backdrop-blur-sm md:hidden',
+                DRAWER_BACKDROP_Z
+              )}
+              onClick={() => setMobileOpen(false)}
+            />
+          ) : null}
+        </AnimatePresence>
+        <AnimatePresence onExitComplete={unlockBodyScrollAfterMobileMenu}>
+          {mobileOpen ? (
+            <motion.div
+              key="mobile-menu-panel"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{
+                x: '100%',
+                transition: {
+                  type: 'tween',
+                  duration: slideDuration,
+                  ease: slideEaseClose,
+                },
+              }}
+              transition={{
+                type: 'tween',
+                duration: slideDuration,
+                ease: slideEaseOpen,
+              }}
+              style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
+              className={cn(
+                'fm-drawer-panel fixed right-0 top-0 bottom-0 w-full max-w-xs min-w-0 border-l border-border bg-bg-surface/95 backdrop-blur-xl shadow-2xl flex flex-col pt-20 pb-8 px-6 overflow-hidden touch-pan-y md:hidden',
+                DRAWER_PANEL_Z
+              )}
+            >
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute top-5 right-5 p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
@@ -228,6 +299,7 @@ export default function Header() {
             <nav className="flex flex-col gap-1">
               <Link
                 href="/account"
+                onClick={() => setMobileOpen(false)}
                 className={cn(
                   'px-3 py-3 rounded text-base font-medium transition-colors',
                   pathname.startsWith('/account')
@@ -247,6 +319,7 @@ export default function Header() {
                   <Link
                     key={link.href}
                     href={link.href}
+                    onClick={() => setMobileOpen(false)}
                     className={cn(
                       'px-3 py-3 rounded text-base font-medium transition-colors',
                       isActive
@@ -260,21 +333,9 @@ export default function Header() {
               })}
             </nav>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Overlay for mobile menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[65] bg-black/35 backdrop-blur-sm md:hidden"
-            onClick={() => setMobileOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+        ) : null}
+        </AnimatePresence>
+      </DocumentBodyPortal>
     </>
   )
 }
