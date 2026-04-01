@@ -1091,14 +1091,14 @@ function NovaPoshtaAddressFields(props: {
       </div>
 
       <div ref={pointInputWrapRef} className="relative">
-        <div className="flex items-end justify-between gap-2 mb-1.5">
+        <div className="mb-1.5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <span className="text-sm font-medium text-text-secondary">Відділення / Поштомат</span>
-          <div className="inline-flex h-9 rounded-md border border-border bg-bg-surface overflow-hidden">
+          <div className="inline-flex h-9 w-full sm:w-auto rounded-md border border-border bg-bg-surface overflow-hidden">
             <button
               type="button"
               onClick={() => props.onPointTypeChange('warehouse')}
               className={[
-                'h-full px-3 text-sm font-medium transition-colors',
+                'h-full flex-1 px-2 sm:px-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
                 props.pointType === 'warehouse'
                   ? 'bg-accent/20 text-text-primary'
                   : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
@@ -1110,7 +1110,7 @@ function NovaPoshtaAddressFields(props: {
               type="button"
               onClick={() => props.onPointTypeChange('postomat')}
               className={[
-                'h-full px-3 text-sm font-medium transition-colors',
+                'h-full flex-1 px-2 sm:px-3 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
                 props.pointType === 'postomat'
                   ? 'bg-accent/20 text-text-primary'
                   : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',

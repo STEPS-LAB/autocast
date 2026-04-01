@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ShoppingCart, Heart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
@@ -19,6 +20,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const [imgError, setImgError] = useState(false)
+  const router = useRouter()
   const addItem = useCartStore(s => s.addItem)
   const overrides = useDiscountStore(selectDiscountOverrides)
   const displayProduct = applyDiscountToProduct(product, overrides)
@@ -46,6 +48,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
+    e.stopPropagation()
     addItem(displayProduct)
   }
 
@@ -53,8 +56,17 @@ export default function ProductCard({ product }: ProductCardProps) {
     <motion.article
       whileHover={displayProduct.stock > 0 ? { y: -2 } : undefined}
       transition={{ duration: 0.2 }}
+      onClick={() => router.push(`/product/${displayProduct.slug}`)}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          router.push(`/product/${displayProduct.slug}`)
+        }
+      }}
       className={cn(
-        'group relative bg-bg-surface border border-border rounded-[10px] overflow-hidden flex flex-col',
+        'group relative bg-bg-surface border border-border rounded-[10px] overflow-hidden flex flex-col cursor-pointer',
         'shadow-[0_10px_22px_rgba(0,0,0,0.10)] hover:shadow-[0_14px_32px_rgba(0,0,0,0.16)] transition-shadow',
         displayProduct.stock === 0 && 'opacity-60 saturate-0'
       )}
@@ -101,11 +113,15 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Wishlist */}
         <button
-          onClick={e => { e.preventDefault(); toggleWished(displayProduct) }}
+          onClick={e => {
+            e.preventDefault()
+            e.stopPropagation()
+            toggleWished(displayProduct)
+          }}
           className={cn(
             'absolute top-2 right-2 size-7 rounded-full flex items-center justify-center',
             'border border-border bg-bg-primary/60 backdrop-blur-sm',
-            'opacity-0 group-hover:opacity-100 transition-all',
+            'opacity-100 transition-all',
             'hover:bg-bg-primary/80 hover:border-border-light hover:scale-105',
             wished && 'opacity-100'
           )}
