@@ -30,7 +30,14 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getUser() hits the Auth API on every request and often exceeds Vercel Edge
+  // middleware limits (504 MIDDLEWARE_INVOCATION_TIMEOUT). getSession() reads
+  // the session from cookies so the middleware stays fast; admin role is
+  // enforced again in app/admin/layout.tsx via getUser().
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   // Protect auth pages (redirect logged-in users away)
   const authPaths = ['/login', '/register']
@@ -48,26 +55,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Protect admin pages: only authenticated admins allowed
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!user) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/login'
-      return NextResponse.redirect(url)
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (profile?.role !== 'admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/account'
-      url.searchParams.set('error', 'admin_access_denied')
-      return NextResponse.redirect(url)
-    }
+  // Admin UI: require login in middleware (fast). Role check runs on the server
+  // in app/admin/layout.tsx to avoid an extra PostgREST round trip on Edge.
+  if (request.nextUrl.pathname.startsWith('/admin') && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
   return supabaseResponse
