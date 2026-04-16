@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
+import { createStaticClient } from '@/lib/supabase/static'
 import { unstable_cache } from 'next/cache'
 import type { Brand, CarMake, CarModel, Category, Product, ProductCard } from '@/types'
 
@@ -120,7 +121,7 @@ function rowToProductCard(row: DbProductRow): ProductCard {
 
 async function fetchCategories(_dbOnly: boolean): Promise<Category[]> {
   try {
-    const supabase = await createClient()
+    const supabase = createStaticClient()
     const { data, error } = await supabase
       .from('categories')
       .select('id,slug,name_ua,parent_id,image_url,sort_order')
@@ -151,7 +152,7 @@ export async function getCategories(options?: CatalogReadOptions): Promise<Categ
 
 async function fetchBrands(_dbOnly: boolean): Promise<Brand[]> {
   try {
-    const supabase = await createClient()
+    const supabase = createStaticClient()
     const { data, error } = await supabase
       .from('brands')
       .select('id,name,logo_url')
@@ -176,7 +177,7 @@ export async function getBrands(options?: CatalogReadOptions): Promise<Brand[]> 
 
 async function fetchProductCards(_dbOnly: boolean): Promise<ProductCard[]> {
   try {
-    const supabase = await createClient()
+    const supabase = createStaticClient()
     const { data, error } = await supabase
       .from('products')
       .select(`
@@ -272,7 +273,7 @@ export async function getProductBySlugFromDb(slug: string): Promise<Product | un
 export const getCarMakes = unstable_cache(
   async (): Promise<CarMake[]> => {
     try {
-      const supabase = await createClient()
+      const supabase = createStaticClient()
       const { data, error } = await supabase
         .from('car_makes')
         .select('id,name')
@@ -291,7 +292,7 @@ export const getCarMakes = unstable_cache(
 export const getCarModelsByMake = unstable_cache(
   async (): Promise<Record<string, string[]>> => {
     try {
-      const supabase = await createClient()
+      const supabase = createStaticClient()
       const { data, error } = await supabase
         .from('car_models')
         .select('id,make_id,name')

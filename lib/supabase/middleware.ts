@@ -16,7 +16,7 @@ export async function updateSession(request: NextRequest) {
   const user = await getSessionUserFromCookies(request, supabaseUrl)
 
   // Protect auth pages (redirect logged-in users away)
-  const authPaths = ['/login', '/register']
+  const authPaths = ['/login', '/register', '/forgot-password']
   const isAuthPath = authPaths.some(p => request.nextUrl.pathname.startsWith(p))
   if (user && isAuthPath) {
     const url = request.nextUrl.clone()
