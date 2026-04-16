@@ -14,6 +14,8 @@ export const metadata: Metadata = {
     'Інтернет-магазин преміальної автоелектроніки: автозвук, навігація, відеореєстратори, LED освітлення, системи безпеки. Доставка по всій Україні.',
 }
 
+export const revalidate = 120
+
 export default async function HomePage() {
   const [categories, makes, modelsByMake] = await Promise.all([
     getCategories(),

@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
 import { BRANDS, CATEGORIES, getProductCards, getProductBySlug, PRODUCTS } from '@/lib/data/seed'
 import type { Brand, CarMake, CarModel, Category, Product, ProductCard } from '@/types'
 import { CAR_MAKES, CAR_MODELS } from '@/lib/data/seed'
@@ -123,8 +124,8 @@ function rowToProductCard(row: DbProductRow): ProductCard {
   }
 }
 
-export async function getCategories(options?: CatalogReadOptions): Promise<Category[]> {
-  const useSeedFallback = !options?.dbOnly && allowSeedFallback()
+async function fetchCategories(dbOnly: boolean): Promise<Category[]> {
+  const useSeedFallback = !dbOnly && allowSeedFallback()
   try {
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -140,8 +141,24 @@ export async function getCategories(options?: CatalogReadOptions): Promise<Categ
   }
 }
 
-export async function getBrands(options?: CatalogReadOptions): Promise<Brand[]> {
-  const useSeedFallback = !options?.dbOnly && allowSeedFallback()
+const getCategoriesCached = unstable_cache(
+  () => fetchCategories(false),
+  ['catalog-categories'],
+  { revalidate: 120 }
+)
+
+const getCategoriesDbOnlyCached = unstable_cache(
+  () => fetchCategories(true),
+  ['catalog-categories-dbonly'],
+  { revalidate: 120 }
+)
+
+export async function getCategories(options?: CatalogReadOptions): Promise<Category[]> {
+  return options?.dbOnly ? getCategoriesDbOnlyCached() : getCategoriesCached()
+}
+
+async function fetchBrands(dbOnly: boolean): Promise<Brand[]> {
+  const useSeedFallback = !dbOnly && allowSeedFallback()
   try {
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -157,8 +174,18 @@ export async function getBrands(options?: CatalogReadOptions): Promise<Brand[]> 
   }
 }
 
-export async function getProductCardsFromDb(options?: CatalogReadOptions): Promise<ProductCard[]> {
-  const useSeedFallback = !options?.dbOnly && allowSeedFallback()
+const getBrandsCached = unstable_cache(
+  () => fetchBrands(false),
+  ['catalog-brands'],
+  { revalidate: 120 }
+)
+
+export async function getBrands(options?: CatalogReadOptions): Promise<Brand[]> {
+  return options?.dbOnly ? fetchBrands(true) : getBrandsCached()
+}
+
+async function fetchProductCards(dbOnly: boolean): Promise<ProductCard[]> {
+  const useSeedFallback = !dbOnly && allowSeedFallback()
   try {
     const supabase = await createClient()
     const { data, error } = await supabase
@@ -176,6 +203,16 @@ export async function getProductCardsFromDb(options?: CatalogReadOptions): Promi
   } catch {
     return useSeedFallback ? getProductCards() : []
   }
+}
+
+const getProductCardsCached = unstable_cache(
+  () => fetchProductCards(false),
+  ['catalog-product-cards'],
+  { revalidate: 60 }
+)
+
+export async function getProductCardsFromDb(options?: CatalogReadOptions): Promise<ProductCard[]> {
+  return options?.dbOnly ? fetchProductCards(true) : getProductCardsCached()
 }
 
 export async function getProductsFromDb(): Promise<Product[]> {
@@ -246,39 +283,47 @@ export async function getProductBySlugFromDb(slug: string): Promise<Product | un
   }
 }
 
-export async function getCarMakes(): Promise<CarMake[]> {
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('car_makes')
-      .select('id,name')
-      .order('name', { ascending: true })
+export const getCarMakes = unstable_cache(
+  async (): Promise<CarMake[]> => {
+    try {
+      const supabase = await createClient()
+      const { data, error } = await supabase
+        .from('car_makes')
+        .select('id,name')
+        .order('name', { ascending: true })
 
-    if (error || !data) return allowSeedFallback() ? CAR_MAKES : []
-    if (data.length === 0) return allowSeedFallback() ? CAR_MAKES : []
-    return (data as DbCarMakeRow[]).map((row) => ({ id: row.id, name: row.name }))
-  } catch {
-    return allowSeedFallback() ? CAR_MAKES : []
-  }
-}
+      if (error || !data) return allowSeedFallback() ? CAR_MAKES : []
+      if (data.length === 0) return allowSeedFallback() ? CAR_MAKES : []
+      return (data as DbCarMakeRow[]).map((row) => ({ id: row.id, name: row.name }))
+    } catch {
+      return allowSeedFallback() ? CAR_MAKES : []
+    }
+  },
+  ['catalog-car-makes'],
+  { revalidate: 300 }
+)
 
-export async function getCarModelsByMake(): Promise<Record<string, string[]>> {
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('car_models')
-      .select('id,make_id,name')
-      .order('name', { ascending: true })
+export const getCarModelsByMake = unstable_cache(
+  async (): Promise<Record<string, string[]>> => {
+    try {
+      const supabase = await createClient()
+      const { data, error } = await supabase
+        .from('car_models')
+        .select('id,make_id,name')
+        .order('name', { ascending: true })
 
-    if (error || !data) return allowSeedFallback() ? CAR_MODELS : {}
-    if (data.length === 0) return allowSeedFallback() ? CAR_MODELS : {}
-    return (data as DbCarModelRow[]).reduce<Record<string, string[]>>((acc, row) => {
-      const bucket = acc[row.make_id] ?? []
-      bucket.push(row.name)
-      acc[row.make_id] = bucket
-      return acc
-    }, {})
-  } catch {
-    return allowSeedFallback() ? CAR_MODELS : {}
-  }
-}
+      if (error || !data) return allowSeedFallback() ? CAR_MODELS : {}
+      if (data.length === 0) return allowSeedFallback() ? CAR_MODELS : {}
+      return (data as DbCarModelRow[]).reduce<Record<string, string[]>>((acc, row) => {
+        const bucket = acc[row.make_id] ?? []
+        bucket.push(row.name)
+        acc[row.make_id] = bucket
+        return acc
+      }, {})
+    } catch {
+      return allowSeedFallback() ? CAR_MODELS : {}
+    }
+  },
+  ['catalog-car-models'],
+  { revalidate: 300 }
+)
