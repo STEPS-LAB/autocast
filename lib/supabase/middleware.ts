@@ -1,43 +1,19 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getSessionUserFromCookies } from './middleware-cookies'
 import { getSupabaseAnonKey, getSupabaseUrl } from './env'
 
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = getSupabaseUrl()
-  const supabaseKey = getSupabaseAnonKey()
 
   // Skip auth middleware if Supabase isn't configured
-  if (!supabaseUrl || !supabaseKey) {
+  if (!supabaseUrl || !getSupabaseAnonKey()) {
     return NextResponse.next({ request })
   }
 
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll()
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        )
-        supabaseResponse = NextResponse.next({ request })
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        )
-      },
-    },
-  })
-
-  // getUser() hits the Auth API on every request and often exceeds Vercel Edge
-  // middleware limits (504 MIDDLEWARE_INVOCATION_TIMEOUT). getSession() reads
-  // the session from cookies so the middleware stays fast; admin role is
-  // enforced again in app/admin/layout.tsx via getUser().
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  const user = session?.user ?? null
+  // Do not use createServerClient + auth.getSession()/getUser() here: both can
+  // trigger token refresh over the network on Edge and cause
+  // MIDDLEWARE_INVOCATION_TIMEOUT. Cookie-only read is synchronous I/O only.
+  const user = await getSessionUserFromCookies(request, supabaseUrl)
 
   // Protect auth pages (redirect logged-in users away)
   const authPaths = ['/login', '/register']
@@ -55,13 +31,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Admin UI: require login in middleware (fast). Role check runs on the server
-  // in app/admin/layout.tsx to avoid an extra PostgREST round trip on Edge.
+  // Admin UI: require a non-expired session cookie. Role check in app/admin/layout.tsx.
   if (request.nextUrl.pathname.startsWith('/admin') && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  return supabaseResponse
+  return NextResponse.next({ request })
 }
