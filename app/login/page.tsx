@@ -11,6 +11,7 @@ import { Mail, Lock } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
+import SiteLogo from '@/components/layout/SiteLogo'
 
 const loginSchema = z.object({
   email: z.string().email('Некоректний email'),
@@ -36,12 +37,23 @@ export default function LoginPage() {
     try {
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
+      const email = data.email.trim().toLowerCase()
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: data.email,
+        email,
         password: data.password,
       })
       if (authError) {
-        setError('Невірний email або пароль')
+        const code = 'code' in authError ? String(authError.code ?? '') : ''
+        if (code === 'email_not_confirmed' || /email not confirmed/i.test(authError.message)) {
+          setError('Підтвердіть email за посиланням у листі, потім увійдіть знову.')
+        } else if (
+          code === 'invalid_credentials' ||
+          /invalid login credentials/i.test(authError.message)
+        ) {
+          setError('Невірний email або пароль')
+        } else {
+          setError(authError.message || 'Невірний email або пароль')
+        }
         return
       }
       router.push('/account')
@@ -61,11 +73,8 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-sm"
         >
-          {/* Logo */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <span className="font-bold text-xl text-text-primary">
-              AUTO<span className="text-accent">CAST</span>
-            </span>
+          <div className="flex justify-center mb-8">
+            <SiteLogo />
           </div>
 
           <div className="bg-bg-surface border border-border rounded-md p-6">

@@ -11,6 +11,7 @@ import { Mail, Lock } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
+import SiteLogo from '@/components/layout/SiteLogo'
 
 const registerSchema = z.object({
   email: z.string().email('Некоректний email'),
@@ -38,6 +39,7 @@ export default function RegisterPage() {
   async function onSubmit(data: RegisterInput) {
     setLoading(true)
     setError('')
+    const email = data.email.trim().toLowerCase()
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -45,7 +47,7 @@ export default function RegisterPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: data.email,
+          email,
           password: data.password,
         }),
       })
@@ -63,7 +65,7 @@ export default function RegisterPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: data.email,
+          email,
           password: data.password,
         }),
       })
@@ -112,10 +114,8 @@ export default function RegisterPage() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-sm"
         >
-          <div className="flex items-center justify-center gap-2 mb-8">
-            <span className="font-bold text-xl text-text-primary">
-              AUTO<span className="text-accent">CAST</span>
-            </span>
+          <div className="flex justify-center mb-8">
+            <SiteLogo />
           </div>
 
           <div className="bg-bg-surface border border-border rounded-md p-6">
