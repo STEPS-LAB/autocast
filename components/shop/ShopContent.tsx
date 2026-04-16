@@ -21,7 +21,6 @@ interface ShopContentProps {
 }
 
 export default function ShopContent({ products, categories, brands }: ShopContentProps) {
-  const strictDb = process.env['NEXT_PUBLIC_CATALOG_STRICT_DB'] === 'true'
   const searchParams = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -141,7 +140,7 @@ export default function ShopContent({ products, categories, brands }: ShopConten
   ])
 
   const hasFilters = Object.values(filters).some(Boolean)
-  const showCatalogNotReady = strictDb && allProducts.length === 0 && !query && !hasFilters
+  const showCatalogNotReady = allProducts.length === 0 && !query && !hasFilters
 
   const headingText = categoriesSelected.length === 1
     ? allProducts.find(p => p.category?.slug === categoriesSelected[0])?.category?.name_ua ?? 'Каталог'
@@ -190,9 +189,9 @@ export default function ShopContent({ products, categories, brands }: ShopConten
 
             {showCatalogNotReady ? (
               <div className="rounded-md border border-border bg-bg-surface p-8 text-center">
-                <h3 className="text-base font-semibold text-text-primary mb-1">Каталог не ініціалізовано</h3>
+                <h3 className="text-base font-semibold text-text-primary mb-1">Каталог порожній</h3>
                 <p className="text-sm text-text-muted">
-                  Увімкнено strict DB режим і в БД немає товарів. Виконайте синхронізацію каталогу в адмін-панелі.
+                  У базі немає товарів або запит не повернув дані. Перевірте таблицю products і RLS у Supabase, або виконайте синхронізацію в адмін-панелі.
                 </p>
                 <div className="mt-4 flex justify-center">
                   <Link href="/admin">

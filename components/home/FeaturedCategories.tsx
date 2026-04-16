@@ -32,7 +32,6 @@ interface FeaturedCategoriesProps {
 }
 
 export default function FeaturedCategories({ categories }: FeaturedCategoriesProps) {
-  const strictDb = process.env['NEXT_PUBLIC_CATALOG_STRICT_DB'] === 'true'
   const topLevel = categories.filter((c) => !c.parent_id)
   const displayNameUa = (cat: Category) =>
     cat.slug === 'zakhyst-vid-uhonu' ? 'Охоронні системи' : cat.name_ua
@@ -97,7 +96,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
               Каталог ще не ініціалізовано.
             </p>
             <p className="text-xs text-text-muted mt-1">
-              {strictDb ? 'Увімкнено strict DB режим. Запустіть синхронізацію каталогу в адмінці.' : 'Додайте категорії в адмін-панелі.'}
+              Додайте категорії в Supabase або запустіть синхронізацію каталогу в адмін-панелі.
             </p>
             <div className="mt-4 flex justify-center">
               <Link href="/admin">
