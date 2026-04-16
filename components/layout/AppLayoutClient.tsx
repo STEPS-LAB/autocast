@@ -16,7 +16,7 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
   return (
     <>
       {!isAdminPath && <Header />}
-      <main className={cn('flex-1', !isAdminPath && 'pt-16')}>
+      <main className={cn('flex-1', !isAdminPath && 'pt-[70px]')}>
         {children}
       </main>
       <Footer />

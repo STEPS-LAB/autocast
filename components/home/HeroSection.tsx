@@ -70,7 +70,7 @@ export default function HeroSection() {
     >
       <motion.div
         style={{ y: disableScrollEffects ? 0 : bgY, willChange: 'transform' }}
-        className="absolute inset-0 -z-10"
+        className="absolute inset-0 -z-10 pointer-events-none"
       >
         <div className="absolute inset-0">
           <Image
