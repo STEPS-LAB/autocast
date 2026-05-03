@@ -126,7 +126,7 @@ export default function HeroSection() {
                   <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link href="/#car-search" className="lg:min-w-[11.7rem]">
+              <Link href="/shop" className="lg:min-w-[11.7rem]">
                 <Button size="lg" variant="secondary" fullWidth className="micro-pop">
                   Знайти деталь
                 </Button>

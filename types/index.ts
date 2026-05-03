@@ -48,25 +48,6 @@ export interface ProductCard {
   brand?: { name: string }
 }
 
-// ─── Car search ────────────────────────────────────────────────────
-export interface CarMake {
-  id: string
-  name: string
-}
-
-export interface CarModel {
-  id: string
-  make_id: string
-  name: string
-}
-
-export interface CarEngine {
-  id: string
-  model_id: string
-  displacement: string
-  fuel_type: string
-}
-
 // ─── Cart ──────────────────────────────────────────────────────────
 export interface CartItem {
   id: string

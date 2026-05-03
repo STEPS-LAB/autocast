@@ -3,7 +3,7 @@ import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { createStaticClient } from '@/lib/supabase/static'
 import { unstable_cache } from 'next/cache'
-import type { Brand, CarMake, CarModel, Category, Product, ProductCard } from '@/types'
+import type { Brand, Category, Product, ProductCard } from '@/types'
 
 interface DbCategoryRow {
   id: string
@@ -37,17 +37,6 @@ interface DbProductRow {
   created_at: string
   category?: DbCategoryRow | DbCategoryRow[]
   brand?: DbBrandRow | DbBrandRow[]
-}
-
-interface DbCarMakeRow {
-  id: string
-  name: string
-}
-
-interface DbCarModelRow {
-  id: string
-  make_id: string
-  name: string
 }
 
 interface CatalogReadOptions {
@@ -270,45 +259,3 @@ export async function getProductBySlugFromDb(slug: string): Promise<Product | un
   }
 }
 
-export const getCarMakes = unstable_cache(
-  async (): Promise<CarMake[]> => {
-    try {
-      const supabase = createStaticClient()
-      const { data, error } = await supabase
-        .from('car_makes')
-        .select('id,name')
-        .order('name', { ascending: true })
-
-      if (error || !data || data.length === 0) return []
-      return (data as DbCarMakeRow[]).map((row) => ({ id: row.id, name: row.name }))
-    } catch {
-      return []
-    }
-  },
-  ['catalog-car-makes', 'db-only'],
-  { revalidate: 300 }
-)
-
-export const getCarModelsByMake = unstable_cache(
-  async (): Promise<Record<string, string[]>> => {
-    try {
-      const supabase = createStaticClient()
-      const { data, error } = await supabase
-        .from('car_models')
-        .select('id,make_id,name')
-        .order('name', { ascending: true })
-
-      if (error || !data || data.length === 0) return {}
-      return (data as DbCarModelRow[]).reduce<Record<string, string[]>>((acc, row) => {
-        const bucket = acc[row.make_id] ?? []
-        bucket.push(row.name)
-        acc[row.make_id] = bucket
-        return acc
-      }, {})
-    } catch {
-      return {}
-    }
-  },
-  ['catalog-car-models', 'db-only'],
-  { revalidate: 300 }
-)

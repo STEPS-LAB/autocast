@@ -1,12 +1,11 @@
 import type { Metadata } from 'next'
 import HeroSection from '@/components/home/HeroSection'
-import CarSearch from '@/components/home/CarSearch'
 import FeaturedCategories from '@/components/home/FeaturedCategories'
 import TrustHighlights from '@/components/home/TrustHighlights'
 import HomeReviews from '@/components/home/HomeReviews'
 import ServicesSection from '@/components/home/ServicesSection'
 import PageTransition from '@/components/layout/PageTransition'
-import { getCarMakes, getCarModelsByMake, getCategories } from '@/lib/data/catalog-db'
+import { getCategories } from '@/lib/data/catalog-db'
 
 export const metadata: Metadata = {
   title: 'Autocast — Преміальні автозапчастини',
@@ -17,16 +16,11 @@ export const metadata: Metadata = {
 export const revalidate = 120
 
 export default async function HomePage() {
-  const [categories, makes, modelsByMake] = await Promise.all([
-    getCategories(),
-    getCarMakes(),
-    getCarModelsByMake(),
-  ])
+  const categories = await getCategories()
 
   return (
     <PageTransition>
       <HeroSection />
-      <CarSearch makes={makes} modelsByMake={modelsByMake} />
       <FeaturedCategories categories={categories} />
       <ServicesSection />
       <TrustHighlights />
