@@ -26,7 +26,7 @@ const REVIEWS = [
 
 export default function HomeReviews() {
   return (
-    <section className="py-16 bg-bg-surface border-y border-border">
+    <section className="py-16 bg-bg-surface border-y border-graphite/12">
       <div className="container-xl">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -48,12 +48,12 @@ export default function HomeReviews() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.08 }}
-              className="h-full rounded-md border border-border bg-bg-elevated p-5 flex flex-col"
+              className="h-full rounded-md border border-graphite/15 bg-bg-surface p-5 flex flex-col micro-lift shadow-[0_12px_40px_-16px_rgb(30_35_41/0.2)]"
             >
               <p className="text-sm text-text-secondary leading-relaxed flex-1">{review.text}</p>
-              <div className="pt-5 mt-5 border-t border-border/70">
+              <div className="pt-5 mt-5 border-t border-graphite/10">
                 <div className="inline-flex items-center gap-2.5">
-                  <span className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-bg-surface text-text-muted">
+                  <span className="inline-flex size-8 items-center justify-center rounded-full border border-graphite/15 bg-graphite/8 text-graphite">
                     <UserRound size={16} />
                   </span>
                   <div>

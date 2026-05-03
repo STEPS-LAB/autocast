@@ -78,7 +78,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 768px) 50vw, 25vw"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/80 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-graphite-deep/88 via-graphite/15 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 p-3" />
                     <div className="absolute inset-0 bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>

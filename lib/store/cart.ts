@@ -82,6 +82,7 @@ export const useCartStore = create<CartStore>()(
       name: 'autocast-cart',
       storage: createJSONStorage(() => localStorage),
       partialize: state => ({ items: state.items }),
+      skipHydration: true,
     }
   )
 )

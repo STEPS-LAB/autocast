@@ -23,6 +23,8 @@ export default function Header() {
   const pathname = usePathname()
   const isAdminPage = pathname.startsWith('/admin')
   const [scrolled, setScrolled] = useState(false)
+  /** Avoid scroll-dependent chrome on the first client paint so SSR HTML matches hydration. */
+  const [hasMounted, setHasMounted] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const count = useCartStore(selectCartCount)
@@ -45,6 +47,7 @@ export default function Header() {
   }
 
   useEffect(() => {
+    setHasMounted(true)
     const onScroll = () => setScrolled(window.scrollY > 1)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -73,22 +76,32 @@ export default function Header() {
     unlockBodyScrollAfterMobileMenu()
   }, [])
 
+  const scrolledForShell = isAdminPage ? scrolled : hasMounted && scrolled
+  const publicDarkBar = hasMounted && scrolled && !isAdminPage
+
   return (
     <>
       <header
         className={cn(
           'fixed top-0 left-0 right-0 z-[45] transition-all duration-300',
-          !scrolled
-            ? (isAdminPage ? 'bg-bg-surface/95 border-b border-border/70 backdrop-blur-xl' : 'bg-transparent')
-            : 'border-b border-white/15 bg-bg-surface/85 backdrop-blur-xl shadow-[0_8px_28px_rgba(0,0,0,0.18)]',
-          scrolled && 'shadow-[0_10px_32px_rgba(0,0,0,0.22)]',
-          isAdminPage && scrolled && 'border-border/70'
+          !scrolledForShell
+            ? isAdminPage
+              ? 'border-b border-border/70 bg-bg-surface/95 backdrop-blur-xl'
+              : 'bg-transparent'
+            : isAdminPage
+              ? 'border-b border-border/70 bg-bg-surface/95 backdrop-blur-xl shadow-[0_10px_32px_rgba(0,0,0,0.22)]'
+              : 'border-b-0 bg-graphite-deep/68 backdrop-blur-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.35)]'
         )}
       >
         <div className="container-xl">
           <div className="flex items-center justify-between h-[70px] gap-4">
             <Link href="/" className="flex items-center gap-2 shrink-0 group">
-              <span className="font-bold text-[22px] tracking-tight text-text-primary">
+              <span
+                className={cn(
+                  'font-bold text-[22px] tracking-tight',
+                  publicDarkBar ? 'text-white' : 'text-text-primary'
+                )}
+              >
                 AUTO<span className="text-accent">CAST</span>
               </span>
             </Link>
@@ -112,8 +125,12 @@ export default function Header() {
                         'after:bg-gradient-to-r after:from-accent/80 after:to-accent/40 after:transition-transform after:duration-300',
                       !isActive && 'hover:after:scale-x-100',
                       isActive
-                        ? 'text-text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
+                        ? publicDarkBar
+                          ? 'text-white'
+                          : 'text-text-primary'
+                        : publicDarkBar
+                          ? 'text-white/72 hover:text-white/95'
+                          : 'text-text-secondary hover:text-text-primary'
                     )}
                   >
                     <span className="relative z-10">{link.label}</span>
@@ -137,7 +154,12 @@ export default function Header() {
             {/* Actions */}
             <div className="flex items-center gap-1">
               <button
-                className="md:hidden p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                className={cn(
+                  'md:hidden p-2 rounded transition-colors',
+                  publicDarkBar
+                    ? 'text-white/78 hover:text-white hover:bg-white/12'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                )}
                 onClick={() => setMobileSearchOpen(v => !v)}
                 aria-label="Пошук"
                 aria-expanded={mobileSearchOpen}
@@ -152,7 +174,12 @@ export default function Header() {
                   setMobileSearchOpen(false)
                   openWishlist()
                 }}
-                className="relative p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                className={cn(
+                  'relative p-2 rounded transition-colors',
+                  publicDarkBar
+                    ? 'text-white/78 hover:text-white hover:bg-white/12'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                )}
                 aria-label={`Вішліст (${wishlistCount})`}
               >
                 <Heart size={20} />
@@ -177,7 +204,12 @@ export default function Header() {
                   setMobileSearchOpen(false)
                   openCart()
                 }}
-                className="relative p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                className={cn(
+                  'relative p-2 rounded transition-colors',
+                  publicDarkBar
+                    ? 'text-white/78 hover:text-white hover:bg-white/12'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                )}
                 aria-label={`Кошик (${count})`}
               >
                 <ShoppingCart size={20} />
@@ -198,7 +230,12 @@ export default function Header() {
 
               <Link
                 href="/account"
-                className="hidden md:inline-flex p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                className={cn(
+                  'hidden md:inline-flex p-2 rounded transition-colors',
+                  publicDarkBar
+                    ? 'text-white/78 hover:text-white hover:bg-white/12'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                )}
                 aria-label="Акаунт"
               >
                 <User size={20} />
@@ -206,7 +243,12 @@ export default function Header() {
 
               {/* Mobile menu toggle */}
               <button
-                className="md:hidden p-2 rounded text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                className={cn(
+                  'md:hidden p-2 rounded transition-colors',
+                  publicDarkBar
+                    ? 'text-white/78 hover:text-white hover:bg-white/12'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                )}
                 onClick={() => {
                   setMobileSearchOpen(false)
                   setMobileOpen(v => !v)

@@ -60,6 +60,7 @@ export const useWishlistStore = create<WishlistStore>()(
       name: 'autocast-wishlist',
       storage: createJSONStorage(() => localStorage),
       partialize: state => ({ items: state.items }),
+      skipHydration: true,
     }
   )
 )

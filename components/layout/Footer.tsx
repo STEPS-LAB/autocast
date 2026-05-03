@@ -21,20 +21,20 @@ const INFO_LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="mt-auto bg-zinc-900 border-t border-zinc-700/80 text-zinc-100">
+    <footer className="mt-auto bg-graphite-deep border-t border-white/10 text-text-inverse">
       <div className="container-xl py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
             <SiteLogo variant="footer" className="mb-4" />
-            <p className="text-sm text-zinc-300 leading-relaxed">
+            <p className="text-sm text-text-inverse-muted leading-relaxed">
               Преміальні автозапчастини та електроніка. Якість, яка говорить сама за себе.
             </p>
           </div>
 
           {/* Catalog */}
           <div>
-            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-text-inverse mb-4 uppercase tracking-wider">
               Каталог
             </h4>
             <ul className="flex flex-col gap-2.5">
@@ -42,7 +42,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-zinc-300 hover:text-white transition-colors"
+                    className="text-sm text-text-inverse-muted hover:text-text-inverse transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -53,7 +53,7 @@ export default function Footer() {
 
           {/* Info */}
           <div>
-            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-text-inverse mb-4 uppercase tracking-wider">
               Інформація
             </h4>
             <ul className="flex flex-col gap-2.5">
@@ -61,7 +61,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-zinc-300 hover:text-white transition-colors"
+                    className="text-sm text-text-inverse-muted hover:text-text-inverse transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -72,29 +72,29 @@ export default function Footer() {
 
           {/* Contacts */}
           <div>
-            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-text-inverse mb-4 uppercase tracking-wider">
               Контакти
             </h4>
             <ul className="flex flex-col gap-3">
-              <li className="flex items-center gap-2.5 text-sm text-zinc-300">
+              <li className="flex items-center gap-2.5 text-sm text-text-inverse-muted">
                 <Phone size={15} className="text-accent shrink-0" />
-                <a href="tel:+380672391640" className="hover:text-white transition-colors">
+                <a href="tel:+380672391640" className="hover:text-text-inverse transition-colors">
                   +38 067 239 1640
                 </a>
               </li>
-              <li className="flex items-center gap-2.5 text-sm text-zinc-300">
+              <li className="flex items-center gap-2.5 text-sm text-text-inverse-muted">
                 <Mail size={15} className="text-accent shrink-0" />
-                <a href="mailto:autocast.com.ua@gmail.com" className="hover:text-white transition-colors">
+                <a href="mailto:autocast.com.ua@gmail.com" className="hover:text-text-inverse transition-colors">
                   autocast.com.ua@gmail.com
                 </a>
               </li>
-              <li className="flex items-start gap-2.5 text-sm text-zinc-300">
+              <li className="flex items-start gap-2.5 text-sm text-text-inverse-muted">
                 <MapPin size={15} className="text-accent shrink-0 mt-0.5" />
                 <a
                   href={GOOGLE_MAPS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-text-inverse transition-colors"
                 >
                   {ADDRESS}
                 </a>
@@ -105,7 +105,7 @@ export default function Footer() {
                 href="https://www.instagram.com/autocast.com.ua/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-zinc-300 hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm text-text-inverse-muted hover:text-text-inverse transition-colors"
               >
                 <Instagram size={15} className="text-accent" />
                 Instagram
@@ -114,7 +114,7 @@ export default function Footer() {
                 href="https://autocast.com.ua/about-us/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-zinc-300 hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm text-text-inverse-muted hover:text-text-inverse transition-colors"
               >
                 <Facebook size={15} className="text-accent" />
                 Facebook
@@ -126,16 +126,16 @@ export default function Footer() {
 
       <div>
         <div className="container-xl py-5 grid grid-cols-1 md:grid-cols-3 items-center gap-2">
-          <p className="text-xs text-zinc-400 text-center md:text-left">
+          <p className="text-xs text-text-inverse-muted/80 text-center md:text-left">
             © {new Date().getFullYear()} Autocast. Усі права захищено.
           </p>
-          <p className="text-xs text-zinc-400 text-center">
+          <p className="text-xs text-text-inverse-muted/80 text-center">
             Developed by{' '}
             <a
               href="https://stepslab.vercel.app"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-300 hover:text-white transition-colors underline-offset-2 hover:underline"
+              className="text-text-inverse-muted hover:text-text-inverse transition-colors underline-offset-2 hover:underline"
             >
               STEPS LAB
             </a>

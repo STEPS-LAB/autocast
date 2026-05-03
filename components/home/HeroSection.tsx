@@ -57,8 +57,19 @@ export default function HeroSection() {
     target: ref,
     offset: ['start start', 'end start'],
   })
-  const bgY = useTransform(scrollYProgress, [0, 1], ['0%', '30%'])
+  const bgY = useTransform(scrollYProgress, [0, 1], ['0%', '22%'])
   const textY = useTransform(scrollYProgress, [0, 1], ['0%', '15%'])
+
+  /**
+   * Full-bleed overlays (not parallax): layered radials so the photo “opens” toward center-right
+   * instead of a flat plate — still graphite-only, no light band at the bottom.
+   */
+  const heroOverlayBg = [
+    'radial-gradient(ellipse 70% 54% at 34% 36%, rgb(255 193 7 / 0.11), transparent 54%)',
+    'radial-gradient(ellipse 118% 108% at 6% 52%, rgb(30 35 41 / 0.6) 0%, rgb(30 35 41 / 0.32) 40%, rgb(30 35 41 / 0.08) 56%, transparent 72%)',
+    'radial-gradient(ellipse 95% 100% at 96% 28%, rgb(30 35 41 / 0.26) 0%, rgb(30 35 41 / 0.06) 45%, transparent 62%)',
+    'linear-gradient(to bottom, rgb(30 35 41 / 0.12) 0%, transparent 22%, transparent 78%, rgb(30 35 41 / 0.14) 100%)',
+  ].join(',')
 
   return (
     <section
@@ -68,11 +79,12 @@ export default function HeroSection() {
         disableScrollEffects ? '' : 'noise-overlay',
       ].join(' ')}
     >
+      {/* Parallax: only the photo — taller layer avoids empty strips when `y` shifts */}
       <motion.div
         style={{ y: disableScrollEffects ? 0 : bgY, willChange: 'transform' }}
-        className="absolute inset-0 -z-10 pointer-events-none"
+        className="absolute inset-0 -z-20 overflow-hidden pointer-events-none"
       >
-        <div className="absolute inset-0">
+        <div className="absolute left-0 right-0 top-[-12%] h-[124%] w-full">
           <Image
             src={HERO_SLIDE.image}
             alt={HERO_SLIDE.title}
@@ -82,11 +94,14 @@ export default function HeroSection() {
             quality={75}
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-bg-primary/95 via-bg-primary/70 to-bg-primary/40" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_45%_at_30%_40%,rgb(255_193_7/0.22),transparent)]" />
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-bg-primary to-transparent" />
       </motion.div>
+
+      <div
+        className="absolute inset-0 -z-10 pointer-events-none"
+        aria-hidden
+        style={{ backgroundImage: heroOverlayBg }}
+      />
 
       <div className="container-xl relative z-10 py-24">
         <motion.div
@@ -99,7 +114,7 @@ export default function HeroSection() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="text-display text-text-primary mb-6"
+              className="text-display text-text-inverse mb-6"
             >
               <span className="text-accent">Автозвук</span>, світло, електроніка.
             </motion.h1>
@@ -109,7 +124,7 @@ export default function HeroSection() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: 0.05 }}
-              className="text-lg text-text-secondary leading-relaxed mb-10 max-w-xl"
+              className="text-lg text-white/88 leading-relaxed mb-10 max-w-xl"
             >
               {HERO_SLIDE.description}
             </motion.p>
@@ -158,8 +173,8 @@ export default function HeroSection() {
             >
               {STATS.map(({ label, value }) => (
                 <div key={label} className="text-center">
-                  <p className="text-impact text-text-primary">{value}</p>
-                  <p className="text-[11px] leading-tight text-text-secondary mt-0.5">{label}</p>
+                  <p className="text-impact text-text-inverse">{value}</p>
+                  <p className="text-[11px] leading-tight text-text-inverse-muted mt-0.5">{label}</p>
                 </div>
               ))}
             </motion.div>

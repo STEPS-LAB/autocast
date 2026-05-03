@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Header from '@/components/layout/Header'
+import StorePersistHydration from '@/components/layout/StorePersistHydration'
 import Footer from '@/components/layout/Footer'
 import MobileNav from '@/components/layout/MobileNav'
 import CartDrawer from '@/components/cart/CartDrawer'
@@ -15,6 +16,7 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
 
   return (
     <>
+      <StorePersistHydration />
       {!isAdminPath && <Header />}
       <main className={cn('flex-1', !isAdminPath && 'pt-[70px]')}>
         {children}
