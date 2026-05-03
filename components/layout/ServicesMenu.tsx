@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { SERVICES } from '@/lib/data/services'
 import { cn } from '@/lib/utils'
@@ -32,6 +32,7 @@ function clampMenuCenterX(triggerCenterX: number, viewportW: number) {
 
 export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
   const pathname = usePathname()
+  const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -155,89 +156,101 @@ export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
         )}
       </Link>
 
-      {open &&
-        portalTarget &&
+      {portalTarget &&
         createPortal(
-            <div
-              id="services-nav-menu"
-              role="menu"
-              aria-labelledby="services-nav-trigger"
-              style={{
-                left: menuCenterX,
-                top: MENU_TOP_PX,
-              }}
-              className={cn(
-                'pointer-events-auto fixed z-[9999] hidden w-[min(40rem,calc(100vw-2rem))] max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 rounded-md shadow-lg outline-none ring-0 md:block',
-                publicDarkBar
-                  ? 'border-0 bg-graphite-deep/68 backdrop-blur-2xl shadow-[0_16px_48px_-10px_rgba(0,0,0,0.55)]'
-                  : 'border border-border/45 bg-bg-surface/92 backdrop-blur-xl shadow-[0_12px_40px_-12px_rgba(15,23,42,0.14)]'
-              )}
-              onPointerEnter={openMenu}
-              onPointerLeave={scheduleClose}
-            >
-            <div className="overflow-hidden rounded-md px-3 pt-3 pb-1.5 md:px-4 md:pt-4 md:pb-2">
-            <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                {SERVICES.map(service => {
-                  const Icon = service.icon
-                  return (
+          <AnimatePresence>
+            {open ? (
+              <motion.div
+                key="services-nav-dropdown"
+                id="services-nav-menu"
+                role="menu"
+                aria-labelledby="services-nav-trigger"
+                style={{
+                  left: menuCenterX,
+                  top: MENU_TOP_PX,
+                }}
+                className={cn(
+                  'pointer-events-auto fixed z-[9999] hidden w-[min(40rem,calc(100vw-2rem))] max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 rounded-md shadow-lg outline-none ring-0 md:block',
+                  publicDarkBar
+                    ? 'border-0 bg-graphite-deep/68 backdrop-blur-2xl shadow-[0_16px_48px_-10px_rgba(0,0,0,0.55)]'
+                    : 'border border-border/45 bg-bg-surface/92 backdrop-blur-xl shadow-[0_12px_40px_-12px_rgba(15,23,42,0.14)]'
+                )}
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0.12 }
+                    : { duration: 0.24, ease: [0.16, 1, 0.3, 1] }
+                }
+                onPointerEnter={openMenu}
+                onPointerLeave={scheduleClose}
+              >
+                <div className="overflow-hidden rounded-md px-3 pt-3 pb-1.5 md:px-4 md:pt-4 md:pb-2">
+                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                    {SERVICES.map(service => {
+                      const Icon = service.icon
+                      return (
+                        <Link
+                          key={service.slug}
+                          href={`/services/${service.slug}`}
+                          role="menuitem"
+                          className={cn(
+                            'services-nav-menuitem group flex items-center gap-3 rounded-md px-2.5 py-2.5 text-left',
+                            'outline-none focus-visible:outline-none [-webkit-tap-highlight-color:transparent]',
+                            'translate-x-0 hover:translate-x-0.5 motion-reduce:hover:translate-x-0',
+                            publicDarkBar
+                              ? 'hover:bg-white/10 focus-visible:bg-white/10'
+                              : 'hover:bg-bg-elevated focus-visible:bg-bg-elevated'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'services-nav-menuicon inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-accent/10',
+                              publicDarkBar
+                                ? 'border-0 ring-0 group-hover:bg-accent/18'
+                                : 'border border-accent/25 group-hover:border-accent/45 group-hover:bg-accent/16 group-hover:shadow-[0_0_0_1px_rgb(255_193_7/0.12)]'
+                            )}
+                          >
+                            <Icon size={16} className="text-accent" aria-hidden />
+                          </span>
+                          <span
+                            className={cn(
+                              'min-w-0 text-sm font-semibold',
+                              publicDarkBar ? 'text-white/95' : 'text-text-primary'
+                            )}
+                          >
+                            {service.title}
+                          </span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                  <div
+                    className={cn(
+                      'mt-2 pt-2',
+                      publicDarkBar ? 'border-t-0' : 'border-t border-border'
+                    )}
+                  >
+                    {publicDarkBar && <div className="mb-2 h-px w-full bg-white/10" aria-hidden />}
                     <Link
-                      key={service.slug}
-                      href={`/services/${service.slug}`}
+                      href="/services"
                       role="menuitem"
                       className={cn(
-                        'services-nav-menuitem group flex items-center gap-3 rounded-md px-2.5 py-2.5 text-left',
+                        'flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium text-accent',
                         'outline-none focus-visible:outline-none [-webkit-tap-highlight-color:transparent]',
-                        'translate-x-0 hover:translate-x-0.5 motion-reduce:hover:translate-x-0',
-                        publicDarkBar
-                          ? 'hover:bg-white/10 focus-visible:bg-white/10'
-                          : 'hover:bg-bg-elevated focus-visible:bg-bg-elevated'
+                        'transition-[background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:duration-100',
+                        publicDarkBar ? 'hover:bg-accent/15' : 'hover:bg-accent/10'
                       )}
                     >
-                      <span
-                        className={cn(
-                          'services-nav-menuicon inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-accent/10',
-                          publicDarkBar
-                            ? 'border-0 ring-0 group-hover:bg-accent/18'
-                            : 'border border-accent/25 group-hover:border-accent/45 group-hover:bg-accent/16 group-hover:shadow-[0_0_0_1px_rgb(255_193_7/0.12)]'
-                        )}
-                      >
-                        <Icon size={16} className="text-accent" aria-hidden />
-                      </span>
-                      <span
-                        className={cn(
-                          'min-w-0 text-sm font-semibold',
-                          publicDarkBar ? 'text-white/95' : 'text-text-primary'
-                        )}
-                      >
-                        {service.title}
-                      </span>
+                      Всі послуги
+                      <ArrowRight size={14} />
                     </Link>
-                  )
-                })}
-              </div>
-              <div
-                className={cn(
-                  'mt-2 pt-2',
-                  publicDarkBar ? 'border-t-0' : 'border-t border-border'
-                )}
-              >
-                {publicDarkBar && <div className="mb-2 h-px w-full bg-white/10" aria-hidden />}
-                <Link
-                  href="/services"
-                  role="menuitem"
-                  className={cn(
-                    'flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium text-accent',
-                    'outline-none focus-visible:outline-none [-webkit-tap-highlight-color:transparent]',
-                    'transition-[background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:duration-100',
-                    publicDarkBar ? 'hover:bg-accent/15' : 'hover:bg-accent/10'
-                  )}
-                >
-                  Всі послуги
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-            </div>
-          </div>,
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>,
           portalTarget
         )}
     </div>
