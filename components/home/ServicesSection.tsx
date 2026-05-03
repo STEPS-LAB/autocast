@@ -2,41 +2,12 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, Radio, Speaker, Lightbulb, Shield, Layers, Aperture } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import ServiceCard from '@/components/services/ServiceCard'
+import { SERVICES } from '@/lib/data/services'
 
-const SERVICES = [
-  {
-    icon: Speaker,
-    title: 'Установка та заміна аудіосистем',
-    text: 'Підбір, монтаж, налаштування та акуратна інтеграція в інтерʼєр.',
-  },
-  {
-    icon: Radio,
-    title: 'Установка магнітол',
-    text: 'Сумісність, підключення, функціонал, керування з керма та камери.',
-  },
-  {
-    icon: Lightbulb,
-    title: 'Установка / заміна фар',
-    text: 'Світло без “колхозу”: правильно, надійно, з фокусом на безпеку.',
-  },
-  {
-    icon: Shield,
-    title: 'Сигналізації: установка та демонтаж',
-    text: 'Монтаж, сервіс і коректний демонтаж з перевіркою електрики.',
-  },
-  {
-    icon: Layers,
-    title: 'Шумоізоляція та віброізоляція',
-    text: 'Комфорт у салоні: зменшення шуму та вібрацій на потрібних зонах.',
-  },
-  {
-    icon: Aperture,
-    title: 'Установка лінз / перелінзовка',
-    text: 'Оновлення оптики для чіткої світлотіньової межі та рівного пучка.',
-  },
-] as const
+const HOME_SERVICES = SERVICES.slice(0, 3)
 
 export default function ServicesSection() {
   return (
@@ -66,33 +37,14 @@ export default function ServicesSection() {
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-          {SERVICES.map(({ icon: Icon, title, text }, index) => (
-            <motion.article
-              key={title}
-              className="h-full"
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.06 }}
-            >
-              {/*
-                Hover transform/shadow live on an inner div so they do not fight Framer Motion’s
-                inline transform on the motion.article (that conflict caused jerky hovers).
-              */}
-              <div
-                className={[
-                  'service-card-lift group relative h-full rounded-xl p-6 backface-hidden',
-                  'bg-gradient-to-br from-white/[0.16] via-white/[0.09] to-white/[0.05]',
-                  'ring-1 ring-inset ring-white/[0.07]',
-                ].join(' ')}
-              >
-                <div className="inline-flex size-11 items-center justify-center rounded-xl bg-accent/14 mb-4 transition-colors duration-1000 ease-out group-hover:bg-accent/20 motion-reduce:transition-none">
-                  <Icon size={18} className="text-accent" />
-                </div>
-                <h3 className="text-base font-semibold text-text-inverse mb-1">{title}</h3>
-                <p className="text-sm text-text-inverse-muted leading-relaxed">{text}</p>
-              </div>
-            </motion.article>
+          {HOME_SERVICES.map((service, index) => (
+            <ServiceCard
+              key={service.slug}
+              slug={service.slug}
+              variant="dark"
+              index={index}
+              hideFocusOutline
+            />
           ))}
         </div>
 
@@ -116,4 +68,3 @@ export default function ServicesSection() {
     </section>
   )
 }
-

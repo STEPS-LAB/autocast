@@ -2,6 +2,8 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   images: {
+    /** Дозволяє `next/image` для файлів з `public/images/` і query (напр. `?rev=` для скидання кешу). */
+    localPatterns: [{ pathname: '/images/**' }],
     qualities: [75, 80],
     // DNS (e.g. NAT64 / 64:ff9b::…) can make public CDNs resolve to addresses Next
     // treats as “private”, which breaks `/_next/image` for Supabase storage.

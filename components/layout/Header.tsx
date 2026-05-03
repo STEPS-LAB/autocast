@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, User, Menu, X, Search, Heart } from 'lucide-react'
+import { ShoppingCart, User, Menu, X, Search, Heart, ChevronDown } from 'lucide-react'
 import { useCartStore, selectCartCount } from '@/lib/store/cart'
 import { useWishlistStore, selectWishlistCount } from '@/lib/store/wishlist'
 import { cn } from '@/lib/utils'
 import SmartSearchBar from '@/components/search/SmartSearchBar'
 import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/components/layout/DocumentBodyPortal'
+import ServicesMenu from '@/components/layout/ServicesMenu'
+import { SERVICES } from '@/lib/data/services'
 
 const NAV_LINKS = [
   { href: '/', label: 'Головна' },
@@ -22,11 +24,13 @@ const NAV_LINKS = [
 export default function Header() {
   const pathname = usePathname()
   const isAdminPage = pathname.startsWith('/admin')
+  const isServiceDetail = /^\/services\/[^/]+$/.test(pathname)
   const [scrolled, setScrolled] = useState(false)
   /** Avoid scroll-dependent chrome on the first client paint so SSR HTML matches hydration. */
   const [hasMounted, setHasMounted] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(true)
   const count = useCartStore(selectCartCount)
   const openCart = useCartStore(s => s.openCart)
   const closeCart = useCartStore(s => s.closeCart)
@@ -76,8 +80,8 @@ export default function Header() {
     unlockBodyScrollAfterMobileMenu()
   }, [])
 
-  const scrolledForShell = isAdminPage ? scrolled : hasMounted && scrolled
-  const publicDarkBar = hasMounted && scrolled && !isAdminPage
+  const scrolledForShell = isAdminPage ? scrolled : isServiceDetail || (hasMounted && scrolled)
+  const publicDarkBar = !isAdminPage && (isServiceDetail || (hasMounted && scrolled))
 
   return (
     <>
@@ -109,6 +113,14 @@ export default function Header() {
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-6">
               {NAV_LINKS.map(link => {
+                if (link.href === '/services') {
+                  return (
+                    <ServicesMenu
+                      key={`nav-services-${pathname}`}
+                      publicDarkBar={publicDarkBar}
+                    />
+                  )
+                }
                 const isActive =
                   link.href === '/'
                     ? pathname === '/'
@@ -357,6 +369,80 @@ export default function Header() {
                   link.href === '/'
                     ? pathname === '/'
                     : pathname.startsWith(link.href)
+                if (link.href === '/services') {
+                  return (
+                    <div key={link.href} className="flex flex-col gap-0.5">
+                      <div className="flex items-stretch gap-0.5 rounded-md">
+                        <Link
+                          href="/services"
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            'min-w-0 flex-1 px-3 py-3 rounded-l-md text-base font-medium transition-colors',
+                            isActive
+                              ? 'bg-accent/10 text-accent'
+                              : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                          )}
+                        >
+                          {link.label}
+                        </Link>
+                        <button
+                          type="button"
+                          aria-expanded={mobileServicesOpen}
+                          aria-controls="mobile-nav-services-sub"
+                          id="mobile-nav-services-trigger"
+                          onClick={() => setMobileServicesOpen(v => !v)}
+                          className="shrink-0 rounded-r-md px-2.5 text-text-muted transition-colors hover:bg-bg-elevated hover:text-text-primary"
+                          aria-label={mobileServicesOpen ? 'Згорнути підпункти послуг' : 'Розгорнути підпункти послуг'}
+                        >
+                          <ChevronDown
+                            size={20}
+                            className={cn(
+                              'transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                              mobileServicesOpen && 'rotate-180'
+                            )}
+                            aria-hidden
+                          />
+                        </button>
+                      </div>
+                      <AnimatePresence initial={false}>
+                        {mobileServicesOpen ? (
+                          <motion.div
+                            key="mobile-services-sub"
+                            id="mobile-nav-services-sub"
+                            role="region"
+                            aria-labelledby="mobile-nav-services-trigger"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                            className="overflow-hidden"
+                          >
+                            <div className="ml-3 flex flex-col gap-0.5 border-l border-border py-1 pl-3">
+                              {SERVICES.map(s => {
+                                const subActive = pathname === `/services/${s.slug}`
+                                return (
+                                  <Link
+                                    key={s.slug}
+                                    href={`/services/${s.slug}`}
+                                    onClick={() => setMobileOpen(false)}
+                                    className={cn(
+                                      'px-3 py-2 rounded text-sm font-medium transition-colors duration-200',
+                                      subActive
+                                        ? 'bg-accent/10 text-accent'
+                                        : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated'
+                                    )}
+                                  >
+                                    {s.title}
+                                  </Link>
+                                )
+                              })}
+                            </div>
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </div>
+                  )
+                }
                 return (
                   <Link
                     key={link.href}

@@ -1,143 +1,75 @@
-'use client'
-
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { Radio, Speaker, Lightbulb, Shield, Layers, Aperture, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import PageTransition from '@/components/layout/PageTransition'
 import Button from '@/components/ui/Button'
+import ServiceCard from '@/components/services/ServiceCard'
+import { CornerAccentLines } from '@/components/services/ServiceSectionDecor'
+import { SERVICES } from '@/lib/data/services'
 
-const SERVICES = [
-  {
-    icon: Speaker,
-    title: 'Установка / заміна аудіосистем',
-    bullets: [
-      'Підбір компонентів під ваш бюджет та авто',
-      'Акуратний монтаж та укладка проводки',
-      'Налаштування звучання',
-    ],
-  },
-  {
-    icon: Radio,
-    title: 'Установка магнітол',
-    bullets: [
-      'Підключення та налаштування',
-      'Інтеграція керування з керма (за наявності)',
-      'Підключення камери заднього виду',
-    ],
-  },
-  {
-    icon: Lightbulb,
-    title: 'Установка / заміна фар',
-    bullets: [
-      'Підбір та заміна оптики',
-      'Перевірка коректності підключення',
-      'Фокус на безпеку та правильне світло',
-    ],
-  },
-  {
-    icon: Shield,
-    title: 'Установка / демонтаж сигналізацій',
-    bullets: [
-      'Монтаж охоронних систем',
-      'Сервіс та діагностика',
-      'Коректний демонтаж без “сюрпризів” в електриці',
-    ],
-  },
-  {
-    icon: Layers,
-    title: 'Шумоізоляція та віброізоляція',
-    bullets: [
-      'Підбір матеріалів під зони салону',
-      'Двері / арки / підлога / багажник (за потреби)',
-      'Відчутний комфорт на трасі',
-    ],
-  },
-  {
-    icon: Aperture,
-    title: 'Установка лінз / перелінзовка',
-    bullets: [
-      'Оновлення оптики під сучасні стандарти',
-      'Рівний пучок та чітка світлотіньова межа',
-      'Професійний підхід до результату',
-    ],
-  },
-] as const
+export const metadata: Metadata = {
+  title: 'Послуги',
+  description:
+    'Майстерня Autocast: установка автозвуку, магнітол, фар, сигналізацій, шумоізоляція та перелінзовка. Професійний монтаж і консультація.',
+}
 
 export default function ServicesPage() {
   return (
     <PageTransition>
-      <section className="py-16">
-        <div className="container-xl">
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="max-w-3xl mb-10"
-          >
-            <h1 className="text-headline text-text-primary mb-3">Послуги</h1>
-            <p className="text-text-secondary leading-relaxed">
-              Autocast — майстерня з акуратним монтажем і повагою до електрики вашого авто. Підкажемо оптимальний варіант
-              та зробимо роботу якісно.
-            </p>
-          </motion.div>
+      <section className="relative overflow-hidden pt-20 pb-14 md:pt-24 md:pb-16">
+        <div className="pointer-events-none absolute right-4 top-28 text-accent/20 md:right-12">
+          <CornerAccentLines className="h-20 w-20 md:h-28 md:w-28" />
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border/80 to-transparent" />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {SERVICES.map(({ icon: Icon, title, bullets }, index) => (
-              <motion.article
-                key={title}
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.06 }}
-                className="rounded-md border border-border bg-bg-surface p-5 micro-lift"
-              >
-                <div className="inline-flex size-10 items-center justify-center rounded border border-accent/30 bg-accent/10 mb-3">
-                  <Icon size={18} className="text-accent" />
-                </div>
-                <h2 className="text-base font-semibold text-text-primary mb-2">{title}</h2>
-                <ul className="space-y-1.5">
-                  {bullets.map(b => (
-                    <li key={b} className="text-sm text-text-secondary leading-relaxed">
-                      <span className="text-accent">• </span>
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              </motion.article>
+        <div className="container-xl relative">
+          <div className="max-w-3xl">
+            <h1 className="text-headline text-text-primary mb-4">Послуги</h1>
+            <p className="text-lg leading-relaxed text-text-secondary">
+              Autocast — майстерня з акуратним монтажем і повагою до електрики вашого авто. Обирайте напрямок нижче —
+              підкажемо оптимальний варіант і зробимо роботу якісно.
+            </p>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 md:gap-6">
+            {SERVICES.map((service, index) => (
+              <ServiceCard
+                key={service.slug}
+                slug={service.slug}
+                variant="light"
+                index={index}
+                hideIconBadgeBorder
+              />
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-16">
+      <section className="relative pb-20 pt-6 md:pb-24">
         <div className="container-xl">
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.45 }}
-            className="flex flex-col md:flex-row md:items-center md:justify-between gap-6"
-          >
-            <div className="max-w-2xl">
-              <h2 className="text-headline text-text-primary mb-2">Хочете підібрати рішення під ваше авто?</h2>
-              <p className="text-lg text-text-secondary leading-relaxed">
-                Напишіть нам — підкажемо комплектацію, терміни та варіанти.
-              </p>
+          <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-bg-surface/85 p-8 shadow-[0_24px_56px_-24px_rgb(15_23_42/0.18)] backdrop-blur-md md:p-10">
+            <div className="pointer-events-none absolute -right-16 top-0 h-48 w-48 rounded-full bg-accent/[0.07] blur-3xl" />
+            <div className="relative flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-2xl">
+                <h2 className="text-headline text-text-primary mb-2">Хочете підібрати рішення під ваше авто?</h2>
+                <p className="text-lg leading-relaxed text-text-secondary">
+                  Напишіть нам — підкажемо комплектацію, терміни та варіанти.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/contact">
+                  <Button className="micro-pop">Звʼязатися</Button>
+                </Link>
+                <Link href="/shop">
+                  <Button variant="secondary" className="micro-pop">
+                    Перейти в магазин <ArrowRight size={16} />
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <Link href="/contact">
-                <Button className="micro-pop">Звʼязатися</Button>
-              </Link>
-              <Link href="/shop">
-                <Button variant="secondary" className="micro-pop">
-                  Перейти в магазин <ArrowRight size={16} />
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
+          </div>
         </div>
       </section>
     </PageTransition>
   )
 }
-
