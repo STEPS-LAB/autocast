@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import StorePersistHydration from '@/components/layout/StorePersistHydration'
@@ -13,6 +14,14 @@ import { cn } from '@/lib/utils'
 export default function AppLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isAdminPath = pathname.startsWith('/admin')
+  const isHome = pathname === '/'
+
+  useEffect(() => {
+    document.body.classList.toggle('page-bg-subtle-dark', !isHome)
+    return () => {
+      document.body.classList.remove('page-bg-subtle-dark')
+    }
+  }, [isHome])
 
   return (
     <>
