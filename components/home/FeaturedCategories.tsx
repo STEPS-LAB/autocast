@@ -70,7 +70,10 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
             {topLevelForHome.map(cat => {
               return (
               <motion.div key={cat.id} variants={item}>
-                <Link href={`/shop/${cat.slug}`} className="group block">
+                <Link
+                  href={`/shop/${cat.slug}`}
+                  className="group block origin-center transition-transform duration-150 ease-out active:scale-[0.98]"
+                >
                   <div className="mb-3 md:mb-4 rounded-lg shadow-[0_8px_26px_-10px_rgba(15,23,42,0.14)] transition-shadow duration-300 ease-out group-hover:shadow-[0_22px_48px_-12px_rgba(15,23,42,0.32)]">
                   <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-bg-surface border border-border">
                     <Image

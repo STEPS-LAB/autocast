@@ -113,7 +113,8 @@ export default function ServiceCard({
       <Link
         href={`/services/${slug}`}
         className={cn(
-          'service-card-link group block h-full rounded-md outline-none [-webkit-tap-highlight-color:transparent] [&_svg]:outline-none',
+          'service-card-link group block h-full origin-center rounded-md outline-none [-webkit-tap-highlight-color:transparent] [&_svg]:outline-none',
+          'transition-transform duration-150 ease-out active:scale-[0.98]',
           !hideFocusOutline &&
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
           !hideFocusOutline &&

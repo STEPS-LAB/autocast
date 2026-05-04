@@ -36,7 +36,7 @@ export default function ServicesSection() {
           </Link>
         </motion.div>
 
-        <div className="grid grid-cols-2 gap-5 md:gap-8">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:gap-8">
           {HOME_SERVICES.map((service, index) => (
             <ServiceCard
               key={service.slug}
@@ -45,7 +45,7 @@ export default function ServicesSection() {
               size="large"
               index={index}
               hideFocusOutline
-              imageSizes="(max-width: 768px) 50vw, min(700px, calc((100vw - 6rem) / 2))"
+              imageSizes="(max-width: 639px) calc(100vw - 2.5rem), min(700px, calc((100vw - 6rem) / 2))"
             />
           ))}
         </div>
