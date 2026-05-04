@@ -38,7 +38,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
     cat.slug === 'zakhyst-vid-uhonu' ? 'Охоронні системи' : cat.name_ua
 
   return (
-    <section className="py-20">
+    <section className="py-20 bg-graphite/5">
       <div className="container-xl">
         {/* Heading */}
         <motion.div

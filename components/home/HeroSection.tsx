@@ -149,7 +149,7 @@ export default function HeroSection() {
             </motion.div>
           </div>
 
-          <div className="mt-16 lg:mt-24 flex justify-center lg:justify-end">
+          <div className="mt-28 lg:mt-44 flex justify-center lg:justify-end">
             <motion.div
               initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
