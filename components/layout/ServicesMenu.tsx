@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
@@ -14,8 +15,8 @@ interface ServicesMenuProps {
 }
 
 const CLOSE_DELAY_MS = 120
-/** max-w-[40rem] — має збігатися з clamp у `menuMaxWidthPx` */
-const MENU_MAX_WIDTH_PX = 40 * 16
+/** max-w-[60rem] — має збігатися з clamp у `menuMaxWidthPx` (3 колонки) */
+const MENU_MAX_WIDTH_PX = 60 * 16
 const MENU_VIEWPORT_MARGIN_PX = 16
 const MENU_TOP_PX = 70 + 8
 
@@ -169,12 +170,7 @@ export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
                   left: menuCenterX,
                   top: MENU_TOP_PX,
                 }}
-                className={cn(
-                  'pointer-events-auto fixed z-[9999] hidden w-[min(40rem,calc(100vw-2rem))] max-w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 rounded-md shadow-lg outline-none ring-0 md:block',
-                  publicDarkBar
-                    ? 'border-0 bg-graphite-deep/68 backdrop-blur-2xl shadow-[0_16px_48px_-10px_rgba(0,0,0,0.55)]'
-                    : 'border border-border/45 bg-bg-surface/92 backdrop-blur-xl shadow-[0_12px_40px_-12px_rgba(15,23,42,0.14)]'
-                )}
+                className="pointer-events-auto fixed z-[9999] hidden w-[min(60rem,calc(100vw-2rem))] max-w-[min(60rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border-0 bg-graphite-deep/68 shadow-[0_16px_48px_-10px_rgba(0,0,0,0.55)] backdrop-blur-2xl outline-none ring-0 md:block"
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -186,8 +182,8 @@ export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
                 onPointerEnter={openMenu}
                 onPointerLeave={scheduleClose}
               >
-                <div className="overflow-hidden rounded-md px-3 pt-3 pb-1.5 md:px-4 md:pt-4 md:pb-2">
-                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                <div className="overflow-hidden rounded-lg px-2.5 pt-2.5 pb-1.5 md:px-3 md:pt-3 md:pb-2">
+                  <div className="grid grid-cols-3 grid-rows-2 gap-2 sm:gap-2.5">
                     {SERVICES.map(service => {
                       const Icon = service.icon
                       return (
@@ -195,53 +191,48 @@ export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
                           key={service.slug}
                           href={`/services/${service.slug}`}
                           role="menuitem"
-                          className={cn(
-                            'services-nav-menuitem group flex items-center gap-3 rounded-md px-2.5 py-2.5 text-left',
-                            'outline-none focus-visible:outline-none [-webkit-tap-highlight-color:transparent]',
-                            'translate-x-0 hover:translate-x-0.5 motion-reduce:hover:translate-x-0',
-                            publicDarkBar
-                              ? 'hover:bg-white/10 focus-visible:bg-white/10'
-                              : 'hover:bg-bg-elevated focus-visible:bg-bg-elevated'
-                          )}
+                          className="services-nav-menuitem group relative block overflow-hidden rounded-lg ring-1 ring-white/14 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] outline-none [-webkit-tap-highlight-color:transparent] hover:ring-white/28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
-                          <span
-                            className={cn(
-                              'services-nav-menuicon inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-accent/10',
-                              publicDarkBar
-                                ? 'border-0 ring-0 group-hover:bg-accent/18'
-                                : 'border border-accent/25 group-hover:border-accent/45 group-hover:bg-accent/16 group-hover:shadow-[0_0_0_1px_rgb(255_193_7/0.12)]'
-                            )}
-                          >
-                            <Icon size={16} className="text-accent" aria-hidden />
-                          </span>
-                          <span
-                            className={cn(
-                              'min-w-0 text-sm font-semibold',
-                              publicDarkBar ? 'text-white/95' : 'text-text-primary'
-                            )}
-                          >
-                            {service.title}
-                          </span>
+                          <div className="relative aspect-[4/3] bg-bg-elevated">
+                            <Image
+                              src={service.image}
+                              alt=""
+                              fill
+                              className="object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                              sizes="(min-width: 768px) 200px, 33vw"
+                            />
+                            <div
+                              className="absolute inset-0 bg-gradient-to-t from-graphite-deep/95 via-graphite-deep/45 to-transparent"
+                              aria-hidden
+                            />
+                            <div
+                              className="pointer-events-none absolute inset-0 bg-accent/12 opacity-0 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:transition-none"
+                              aria-hidden
+                            />
+                            <div
+                              className="services-nav-menuicon pointer-events-none absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-md bg-graphite-deep/72 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.5)] backdrop-blur-sm"
+                              aria-hidden
+                            >
+                              <Icon size={15} className="text-accent" />
+                            </div>
+                            <div className="absolute inset-x-0 bottom-0 p-2.5 pt-8 sm:p-3 sm:pt-10">
+                              <span
+                                className="line-clamp-2 text-left text-sm font-semibold leading-snug tracking-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] sm:text-base"
+                              >
+                                {service.title}
+                              </span>
+                            </div>
+                          </div>
                         </Link>
                       )
                     })}
                   </div>
-                  <div
-                    className={cn(
-                      'mt-2 pt-2',
-                      publicDarkBar ? 'border-t-0' : 'border-t border-border'
-                    )}
-                  >
-                    {publicDarkBar && <div className="mb-2 h-px w-full bg-white/10" aria-hidden />}
+                  <div className="mt-2 border-t-0 pt-2">
+                    <div className="mb-2 h-px w-full bg-white/10" aria-hidden />
                     <Link
                       href="/services"
                       role="menuitem"
-                      className={cn(
-                        'flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium text-accent',
-                        'outline-none focus-visible:outline-none [-webkit-tap-highlight-color:transparent]',
-                        'transition-[background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:duration-100',
-                        publicDarkBar ? 'hover:bg-accent/15' : 'hover:bg-accent/10'
-                      )}
+                      className="flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium text-accent outline-none [-webkit-tap-highlight-color:transparent] transition-[background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:duration-100 hover:bg-accent/15 focus-visible:outline-none"
                     >
                       Всі послуги
                       <ArrowRight size={14} />
