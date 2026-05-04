@@ -52,7 +52,7 @@ export default async function ServiceDetailPage({ params }: Props) {
     <PageTransition>
       <article>
         {/* Hero — повноекранний фон */}
-        <section className="relative flex min-h-[min(63vh,39.2rem)] flex-col overflow-hidden">
+        <section className="relative flex min-h-[min(85vh,45rem)] flex-col overflow-hidden">
           <Image
             src={service.image}
             alt=""

@@ -81,7 +81,7 @@ export interface ServiceItem {
 }
 
 /** Збільшуй після заміни `p*.webp` під тим самим ім’ям (кеш `/_next/image` і браузера). */
-const IMG_REV = '2'
+const IMG_REV = '3'
 
 const IMG = {
   audio: `/images/services/p1.webp?rev=${IMG_REV}`,
