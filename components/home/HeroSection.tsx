@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
-import SmartSearchBar from '@/components/search/SmartSearchBar'
 
 const STATS = [
   { label: 'Товарів в каталозі', value: '500+' },
@@ -19,9 +18,9 @@ const HERO_SLIDE = {
   eyebrow: 'Гарантія якості',
   title: 'Автозвук, світло, електроніка.',
   description:
-    'Все для тюнінгу, комфорту та безпеки вашого авто — від автозвуку до охоронних систем.',
-  cta: 'Переглянути каталог',
-  href: '/shop',
+    'Професійні послуги з автозвуку та електроніки — з якісними товарами під ключ.',
+  cta: 'Переглянути послуги',
+  href: '/services',
   image:
     '/images/hero.webp',
 }
@@ -150,27 +149,12 @@ export default function HeroSection() {
             </motion.div>
           </div>
 
-          <div className="mt-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+          <div className="mt-16 lg:mt-24 flex justify-center lg:justify-end">
             <motion.div
               initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className={[
-                'max-w-md w-full rounded-lg border border-accent/35 bg-bg-surface/88 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.25)]',
-                disableScrollEffects ? '' : 'backdrop-blur-md',
-              ].join(' ')}
-            >
-              <p className="text-[11px] text-accent uppercase tracking-[0.2em] mb-2 font-semibold">
-                Швидкий пошук
-              </p>
-              <SmartSearchBar className="drop-shadow-sm" />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 1, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="grid grid-cols-3 gap-4 lg:flex lg:flex-nowrap lg:gap-10 lg:justify-end lg:ml-auto lg:text-right"
+              className="grid grid-cols-3 gap-4 lg:flex lg:flex-nowrap lg:gap-10 lg:text-right w-full max-w-xl lg:max-w-none lg:w-auto lg:translate-x-4"
             >
               {STATS.map(({ label, value }) => (
                 <div key={label} className="text-center">
