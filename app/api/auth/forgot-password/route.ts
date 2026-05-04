@@ -31,8 +31,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const requestOrigin = new URL(request.url).origin
-    const siteUrl = requestOrigin || getSiteUrl()
+    const siteUrl = getSiteUrl(request)
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
     await supabase.auth.resetPasswordForEmail(parsed.data.email, {
