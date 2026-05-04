@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Eurostile Rounded";
+  src: url("/fonts/EurostileRounded.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Хедер: Eurostile має «порожній» низ у em-box — без зсуву виглядає вище за Inter / іконки */
+.header-autocast-wordmark {
+  display: inline-block;
+  /* Менший зсув униз — оптично симетричніші відступи зверху/знизу в смузі хедера */
+  transform: translateY(0.08em);
+}
+
 /* ─── Design Tokens ────────────────────────────────────────────── */
 @theme inline {
   /* Background layers */
@@ -39,6 +54,8 @@
   /* Typography */
   --font-sans:    var(--font-inter);
   --font-mono:    var(--font-jetbrains-mono);
+  /* Логотип auto+cast: покладіть ліцензований .otf у public/fonts/EurostileRounded.otf (див. @font-face вище). */
+  --font-brand:   "Eurostile Rounded", var(--font-sans);
 
   /* Radius — unified (10px) */
   --radius-sm:  10px;

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import SmartSearchBar from '@/components/search/SmartSearchBar'
 import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/components/layout/DocumentBodyPortal'
 import ServicesMenu from '@/components/layout/ServicesMenu'
+import SiteLogo from '@/components/layout/SiteLogo'
 import { SERVICES } from '@/lib/data/services'
 
 const NAV_LINKS = [
@@ -98,20 +99,11 @@ export default function Header() {
         )}
       >
         <div className="container-xl">
-          <div className="flex items-center justify-between h-[70px] gap-4">
-            <Link href="/" className="flex items-center gap-2 shrink-0 group">
-              <span
-                className={cn(
-                  'font-bold text-[22px] tracking-tight',
-                  publicDarkBar ? 'text-white' : 'text-text-primary'
-                )}
-              >
-                AUTO<span className="text-accent">CAST</span>
-              </span>
-            </Link>
+          <div className="flex h-[70px] min-w-0 flex-nowrap items-center justify-between gap-4">
+            <SiteLogo variant="header" darkBar={publicDarkBar} />
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden flex-nowrap items-center gap-6 md:flex">
               {NAV_LINKS.map(link => {
                 if (link.href === '/services') {
                   return (
@@ -159,12 +151,12 @@ export default function Header() {
             </nav>
 
             {/* Search (desktop) */}
-            <div className="hidden md:flex flex-1 max-w-xs">
+            <div className="hidden min-h-0 min-w-0 max-w-xs flex-1 items-center md:flex">
               <SmartSearchBar compact />
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 flex-nowrap items-center gap-1">
               <button
                 className={cn(
                   'md:hidden p-2 rounded transition-colors',

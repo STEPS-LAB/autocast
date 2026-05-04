@@ -5,9 +5,11 @@ type SiteLogoProps = {
   className?: string
   /** Footer sits on dark background; header uses page tokens. */
   variant?: 'footer' | 'header'
+  /** Головний хедер на тьмяному тлі (скрол / сторінка послуги): «auto» білим */
+  darkBar?: boolean
 }
 
-export default function SiteLogo({ className, variant = 'header' }: SiteLogoProps) {
+export default function SiteLogo({ className, variant = 'header', darkBar = false }: SiteLogoProps) {
   return (
     <Link
       href="/"
@@ -19,12 +21,16 @@ export default function SiteLogo({ className, variant = 'header' }: SiteLogoProp
     >
       <span
         className={cn(
-          'font-bold tracking-tight',
-          variant === 'footer' && 'text-lg text-zinc-100',
-          variant === 'header' && 'text-[22px] text-text-primary'
+          'font-brand font-bold tracking-tight',
+          variant === 'footer' && 'text-2xl leading-tight text-zinc-100',
+          variant === 'header' &&
+            cn(
+              'header-autocast-wordmark text-[26px] leading-none',
+              darkBar ? 'text-white' : 'text-text-primary'
+            )
         )}
       >
-        AUTO<span className="text-accent">CAST</span>
+        auto<span className="text-accent">cast</span>
       </span>
     </Link>
   )
