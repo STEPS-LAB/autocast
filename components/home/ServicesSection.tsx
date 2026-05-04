@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
 import { SERVICES } from '@/lib/data/services'
 
-const HOME_SERVICES = SERVICES.slice(0, 3)
+const HOME_SERVICES = SERVICES.slice(0, 4)
 
 export default function ServicesSection() {
   return (
@@ -36,14 +36,16 @@ export default function ServicesSection() {
           </Link>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+        <div className="grid grid-cols-2 gap-5 md:gap-8">
           {HOME_SERVICES.map((service, index) => (
             <ServiceCard
               key={service.slug}
               slug={service.slug}
               variant="dark"
+              size="large"
               index={index}
               hideFocusOutline
+              imageSizes="(max-width: 768px) 50vw, min(700px, calc((100vw - 6rem) / 2))"
             />
           ))}
         </div>

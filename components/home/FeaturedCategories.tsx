@@ -33,6 +33,7 @@ interface FeaturedCategoriesProps {
 
 export default function FeaturedCategories({ categories }: FeaturedCategoriesProps) {
   const topLevel = categories.filter((c) => !c.parent_id)
+  const topLevelForHome = topLevel.slice(0, 4)
   const displayNameUa = (cat: Category) =>
     cat.slug === 'zakhyst-vid-uhonu' ? 'Охоронні системи' : cat.name_ua
 
@@ -64,25 +65,27 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
+            className="grid grid-cols-2 gap-5 md:gap-8"
           >
-            {topLevel.map(cat => {
+            {topLevelForHome.map(cat => {
               return (
               <motion.div key={cat.id} variants={item}>
                 <Link href={`/shop/${cat.slug}`} className="group block">
-                  <div className="relative aspect-[4/3] rounded-md overflow-hidden bg-bg-surface border border-border mb-3">
+                  <div className="mb-3 md:mb-4 rounded-lg shadow-[0_8px_26px_-10px_rgba(15,23,42,0.14)] transition-shadow duration-300 ease-out group-hover:shadow-[0_22px_48px_-12px_rgba(15,23,42,0.32)]">
+                  <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-bg-surface border border-border">
                     <Image
                       src={CATEGORY_IMAGES[cat.slug] ?? cat.image_url ?? '/images/placeholder-category.svg'}
                       alt={cat.name_ua}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 768px) 50vw, 25vw"
+                      sizes="(max-width: 768px) 50vw, min(700px, calc((100vw - 6rem) / 2))"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-graphite-deep/88 via-graphite/15 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 p-3" />
+                    <div className="absolute inset-x-0 bottom-0 p-4 md:p-5" />
                     <div className="absolute inset-0 bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
-                  <h3 className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors px-0.5">
+                  </div>
+                  <h3 className="text-base md:text-lg font-semibold text-text-primary group-hover:text-accent transition-colors px-0.5">
                     {displayNameUa(cat)}
                   </h3>
                 </Link>
