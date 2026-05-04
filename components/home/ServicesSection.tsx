@@ -14,7 +14,7 @@ export default function ServicesSection() {
     <section className="py-20 bg-graphite-deep text-text-inverse border-y border-text-inverse-muted/25">
       <div className="container-xl">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 1, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45 }}

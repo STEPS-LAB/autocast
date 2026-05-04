@@ -90,6 +90,7 @@ export default function HeroSection() {
             alt={HERO_SLIDE.title}
             fill
             priority
+            fetchPriority="high"
             sizes="100vw"
             quality={75}
             className="object-cover"
@@ -111,7 +112,7 @@ export default function HeroSection() {
           <div className="max-w-3xl">
             <motion.h1
               key={HERO_SLIDE.id}
-              initial={{ opacity: 0, y: 18 }}
+              initial={{ opacity: 1, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
               className="text-display text-text-inverse mb-6"
@@ -121,7 +122,7 @@ export default function HeroSection() {
 
             <motion.p
               key={`${HERO_SLIDE.id}-desc`}
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 1, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: 0.05 }}
               className="text-lg text-white/88 leading-relaxed mb-10 max-w-xl"
@@ -130,7 +131,7 @@ export default function HeroSection() {
             </motion.p>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-wrap gap-3 mb-12"
@@ -151,7 +152,7 @@ export default function HeroSection() {
 
           <div className="mt-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
               className={[
@@ -166,7 +167,7 @@ export default function HeroSection() {
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
               className="grid grid-cols-3 gap-4 lg:flex lg:flex-nowrap lg:gap-10 lg:justify-end lg:ml-auto lg:text-right"

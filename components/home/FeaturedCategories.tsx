@@ -8,7 +8,7 @@ import type { Category } from '@/types'
 import Button from '@/components/ui/Button'
 
 const container = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 1 },
   show: {
     opacity: 1,
     transition: { staggerChildren: 0.1 },
@@ -16,7 +16,7 @@ const container = {
 }
 
 const item = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 1, y: 20 },
   show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 }
 
@@ -42,7 +42,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
       <div className="container-xl">
         {/* Heading */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 1, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
