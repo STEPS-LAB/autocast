@@ -6,6 +6,7 @@ import HomeReviews from '@/components/home/HomeReviews'
 import ServicesSection from '@/components/home/ServicesSection'
 import PageTransition from '@/components/layout/PageTransition'
 import { getCategories } from '@/lib/data/catalog-db'
+import { getServicesForListing } from '@/lib/data/services-db'
 
 export const metadata: Metadata = {
   title: 'Autocast — Преміальні автозапчастини',
@@ -16,13 +17,16 @@ export const metadata: Metadata = {
 export const revalidate = 120
 
 export default async function HomePage() {
-  const categories = await getCategories()
+  const [categories, services] = await Promise.all([
+    getCategories(),
+    getServicesForListing(),
+  ])
 
   return (
     <PageTransition>
       <HeroSection />
       <FeaturedCategories categories={categories} />
-      <ServicesSection />
+      <ServicesSection services={services} />
       <TrustHighlights />
       <HomeReviews />
     </PageTransition>

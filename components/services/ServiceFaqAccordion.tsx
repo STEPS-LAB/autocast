@@ -2,8 +2,12 @@
 
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import type { ServiceFaq } from '@/lib/data/services'
 import { cn } from '@/lib/utils'
+
+interface ServiceFaq {
+  q: string
+  a: string
+}
 
 export default function ServiceFaqAccordion({ faqs }: { faqs: ServiceFaq[] }) {
   return (

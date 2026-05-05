@@ -3,12 +3,12 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import type { ServiceSlug } from '@/lib/data/services'
-import { SERVICES } from '@/lib/data/services'
+import { Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { ServiceListItem } from '@/types'
 
 interface ServiceCardProps {
-  slug: ServiceSlug
+  service: ServiceListItem
   variant?: 'light' | 'dark'
   size?: 'default' | 'large'
   index?: number
@@ -20,7 +20,7 @@ interface ServiceCardProps {
 }
 
 export default function ServiceCard({
-  slug,
+  service,
   variant = 'light',
   size = 'default',
   index = 0,
@@ -28,10 +28,8 @@ export default function ServiceCard({
   hideIconBadgeBorder = false,
   imageSizes = '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw',
 }: ServiceCardProps) {
-  const service = SERVICES.find(s => s.slug === slug)
-  if (!service) return null
-
-  const { title, shortDescription, icon: Icon, image } = service
+  const Icon = Wrench
+  const { title, shortDescription, image } = service
   const isDark = variant === 'dark'
   const isLarge = size === 'large'
 
@@ -111,7 +109,7 @@ export default function ServiceCard({
       transition={{ duration: 0.4, delay: index * 0.06 }}
     >
       <Link
-        href={`/services/${slug}`}
+        href={`/services/${service.slug}`}
         className={cn(
           'service-card-link group block h-full origin-center rounded-md outline-none [-webkit-tap-highlight-color:transparent] [&_svg]:outline-none',
           'transition-transform duration-150 ease-out active:scale-[0.98]',

@@ -23,8 +23,8 @@ const item = {
 const CATEGORY_IMAGES: Record<string, string> = {
   avtozvuk: '/images/avtozvuk.webp',
   avtosvitlo: '/images/avtosvitlo.webp',
-  avtoelektronika: '/images/avtoelektronika.webp',
-  'zakhyst-vid-uhonu': '/images/signalka.webp',
+  avtoelektronika: '/images/ae.jpeg',
+  'zakhyst-vid-uhonu': '/images/signalka.jpg',
 }
 
 interface FeaturedCategoriesProps {

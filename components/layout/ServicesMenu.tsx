@@ -7,11 +7,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, ChevronDown } from 'lucide-react'
-import { SERVICES } from '@/lib/data/services'
+import type { ServiceListItem } from '@/types'
 import { cn } from '@/lib/utils'
 
 interface ServicesMenuProps {
   publicDarkBar: boolean
+  services: ServiceListItem[]
 }
 
 const CLOSE_DELAY_MS = 120
@@ -31,7 +32,7 @@ function clampMenuCenterX(triggerCenterX: number, viewportW: number) {
   return Math.max(minCenter, Math.min(triggerCenterX, maxCenter))
 }
 
-export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
+export default function ServicesMenu({ publicDarkBar, services }: ServicesMenuProps) {
   const pathname = usePathname()
   const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
@@ -184,8 +185,7 @@ export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
               >
                 <div className="overflow-hidden rounded-lg px-2.5 pt-2.5 pb-1.5 md:px-3 md:pt-3 md:pb-2">
                   <div className="grid grid-cols-3 grid-rows-2 gap-2 sm:gap-2.5">
-                    {SERVICES.map(service => {
-                      const Icon = service.icon
+                    {services.map(service => {
                       return (
                         <Link
                           key={service.slug}
@@ -209,12 +209,6 @@ export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
                               className="pointer-events-none absolute inset-0 bg-accent/12 opacity-0 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:transition-none"
                               aria-hidden
                             />
-                            <div
-                              className="services-nav-menuicon pointer-events-none absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-md bg-graphite-deep/72 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.5)] backdrop-blur-sm"
-                              aria-hidden
-                            >
-                              <Icon size={15} className="text-accent" />
-                            </div>
                             <div className="absolute inset-x-0 bottom-0 p-2.5 pt-8 sm:p-3 sm:pt-10">
                               <span
                                 className="line-clamp-2 text-left text-sm font-semibold leading-snug tracking-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] sm:text-base"
@@ -226,6 +220,11 @@ export default function ServicesMenu({ publicDarkBar }: ServicesMenuProps) {
                         </Link>
                       )
                     })}
+                    {services.length === 0 && (
+                      <div className="col-span-3 rounded-lg border border-white/15 px-3 py-5 text-center text-sm text-white/70">
+                        Послуги завантажуються...
+                      </div>
+                    )}
                   </div>
                   <div className="mt-2 border-t-0 pt-2">
                     <div className="mb-2 h-px w-full bg-white/10" aria-hidden />

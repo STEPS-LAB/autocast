@@ -5,7 +5,7 @@ import PageTransition from '@/components/layout/PageTransition'
 import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
 import { CornerAccentLines } from '@/components/services/ServiceSectionDecor'
-import { SERVICES } from '@/lib/data/services'
+import { getServicesForListing } from '@/lib/data/services-db'
 
 export const metadata: Metadata = {
   title: 'Послуги',
@@ -13,7 +13,9 @@ export const metadata: Metadata = {
     'Майстерня Autocast: установка автозвуку, магнітол, фар, сигналізацій, шумоізоляція та перелінзовка. Професійний монтаж і консультація.',
 }
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const services = await getServicesForListing()
+
   return (
     <PageTransition>
       <section className="relative overflow-hidden pt-20 pb-14 md:pt-24 md:pb-16">
@@ -32,10 +34,10 @@ export default function ServicesPage() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 md:gap-6">
-            {SERVICES.map((service, index) => (
+            {services.map((service, index) => (
               <ServiceCard
                 key={service.slug}
-                slug={service.slug}
+                service={service}
                 variant="light"
                 index={index}
                 hideIconBadgeBorder

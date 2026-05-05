@@ -5,11 +5,15 @@ import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
-import { SERVICES } from '@/lib/data/services'
+import type { ServiceListItem } from '@/types'
 
-const HOME_SERVICES = SERVICES.slice(0, 4)
+interface ServicesSectionProps {
+  services: ServiceListItem[]
+}
 
-export default function ServicesSection() {
+export default function ServicesSection({ services }: ServicesSectionProps) {
+  const homeServices = services.slice(0, 4)
+
   return (
     <section className="py-20 bg-graphite-deep text-text-inverse border-y border-text-inverse-muted/25">
       <div className="container-xl">
@@ -37,10 +41,10 @@ export default function ServicesSection() {
         </motion.div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:gap-8">
-          {HOME_SERVICES.map((service, index) => (
+          {homeServices.map((service, index) => (
             <ServiceCard
               key={service.slug}
-              slug={service.slug}
+              service={service}
               variant="dark"
               size="large"
               index={index}

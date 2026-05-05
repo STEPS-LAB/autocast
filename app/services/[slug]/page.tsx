@@ -2,13 +2,14 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Wrench } from 'lucide-react'
 import PageTransition from '@/components/layout/PageTransition'
 import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
 import ServiceFaqAccordion from '@/components/services/ServiceFaqAccordion'
 import { CornerAccentLines, DiagonalStripes } from '@/components/services/ServiceSectionDecor'
-import { getRelatedServices, getServiceBySlug, SERVICES } from '@/lib/data/services'
+import { getRelatedServices, getServiceBySlug, getServicesForListing } from '@/lib/data/services-db'
+import { getServiceBySlug as getStaticServiceBySlug } from '@/lib/data/services'
 import { getSiteUrl } from '@/lib/supabase/env'
 import { cn } from '@/lib/utils'
 
@@ -17,12 +18,13 @@ interface Props {
 }
 
 export async function generateStaticParams() {
-  return SERVICES.map(s => ({ slug: s.slug }))
+  const services = await getServicesForListing()
+  return services.map(s => ({ slug: s.slug }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const service = getServiceBySlug(slug)
+  const service = await getServiceBySlug(slug)
   if (!service) return { title: 'Послуга не знайдена' }
   const siteUrl = getSiteUrl()
   const url = `${siteUrl}/services/${service.slug}`
@@ -43,10 +45,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ServiceDetailPage({ params }: Props) {
   const { slug } = await params
-  const service = getServiceBySlug(slug)
+  const service = await getServiceBySlug(slug)
   if (!service) notFound()
+  const sectionService = getStaticServiceBySlug(service.slug) ?? getStaticServiceBySlug(slug) ?? null
 
-  const related = getRelatedServices(service.relatedSlugs)
+  const related = await getRelatedServices(service.relatedSlugs)
 
   return (
     <PageTransition>
@@ -131,8 +134,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             </div>
 
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {service.whatIncluded.map(item => {
-                const ItemIcon = item.icon
+              {(sectionService?.whatIncluded ?? []).map(item => {
                 return (
                 <li key={item.text}>
                   <div
@@ -149,7 +151,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                         'group-hover:scale-110 group-hover:bg-accent/18'
                       )}
                     >
-                      <ItemIcon size={14} strokeWidth={2.25} aria-hidden />
+                      <Wrench size={14} strokeWidth={2.25} aria-hidden />
                     </span>
                     <p className="text-sm leading-relaxed text-text-secondary transition-colors duration-200 group-hover:text-text-primary">
                       {item.text}
@@ -183,7 +185,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                 aria-hidden
               />
               <ol className="relative grid gap-5 md:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-              {service.howSteps.map((step, i) => (
+              {(sectionService?.howSteps ?? []).map((step, i) => (
                 <li key={step.title} className="relative">
                   <div
                     className={cn(
@@ -227,9 +229,9 @@ export default async function ServiceDetailPage({ params }: Props) {
             <div className="grid gap-10 lg:grid-cols-[1fr_minmax(0,26rem)] lg:items-start lg:gap-14">
               <div>
                 <h2 className="text-headline text-text-primary mb-4">Чому це важливо</h2>
-                <p className="text-text-secondary leading-relaxed mb-8 max-w-prose">{service.whyIntro}</p>
+                <p className="text-text-secondary leading-relaxed mb-8 max-w-prose">{sectionService?.whyIntro ?? ''}</p>
                 <ul className="space-y-3">
-                  {service.whyMatters.map(item => (
+                  {(sectionService?.whyMatters ?? []).map(item => (
                     <li key={item}>
                       <div
                         className={cn(
@@ -290,7 +292,7 @@ export default async function ServiceDetailPage({ params }: Props) {
               {related.map((s, index) => (
                 <ServiceCard
                   key={s.slug}
-                  slug={s.slug}
+                  service={s}
                   variant="light"
                   index={index}
                   hideIconBadgeBorder

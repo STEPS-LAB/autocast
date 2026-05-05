@@ -48,6 +48,24 @@ export interface ProductCard {
   brand?: { name: string }
 }
 
+// ─── Service ───────────────────────────────────────────────────────
+export interface Service {
+  id: string
+  slug: string
+  name_ua: string
+  description_ua: string
+  image_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ServiceListItem {
+  slug: string
+  title: string
+  shortDescription: string
+  image: string
+}
+
 // ─── Cart ──────────────────────────────────────────────────────────
 export interface CartItem {
   id: string

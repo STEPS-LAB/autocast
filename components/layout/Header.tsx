@@ -12,7 +12,8 @@ import SmartSearchBar from '@/components/search/SmartSearchBar'
 import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/components/layout/DocumentBodyPortal'
 import ServicesMenu from '@/components/layout/ServicesMenu'
 import SiteLogo from '@/components/layout/SiteLogo'
-import { SERVICES } from '@/lib/data/services'
+import { SERVICES as STATIC_SERVICES } from '@/lib/data/services'
+import type { ServiceListItem } from '@/types'
 
 const NAV_LINKS = [
   { href: '/', label: 'Головна' },
@@ -32,6 +33,14 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [mobileServicesOpen, setMobileServicesOpen] = useState(true)
+  const [navServices, setNavServices] = useState<ServiceListItem[]>(
+    STATIC_SERVICES.map(item => ({
+      slug: item.slug,
+      title: item.title,
+      shortDescription: item.shortDescription,
+      image: item.image,
+    }))
+  )
   const count = useCartStore(selectCartCount)
   const openCart = useCartStore(s => s.openCart)
   const closeCart = useCartStore(s => s.closeCart)
@@ -69,6 +78,35 @@ export default function Header() {
       document.body.style.overflow = 'hidden'
     }
   }, [mobileOpen])
+
+  useEffect(() => {
+    let isMounted = true
+    async function loadNavServices() {
+      try {
+        const response = await fetch(`/api/services?ts=${Date.now()}`, { cache: 'no-store' })
+        if (!response.ok) return
+        const json = (await response.json()) as { services?: ServiceListItem[] }
+        if (!isMounted || !json.services || json.services.length === 0) return
+        setNavServices(json.services)
+      } catch {
+        // Keep static fallback in state.
+      }
+    }
+
+    const onWindowFocus = () => { void loadNavServices() }
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void loadNavServices()
+    }
+
+    void loadNavServices()
+    window.addEventListener('focus', onWindowFocus)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      isMounted = false
+      window.removeEventListener('focus', onWindowFocus)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [])
 
   /** Не викликати closeCart/closeWishlist у setMobileOpen(updater) — React може виконати updater під час рендеру. */
   useEffect(() => {
@@ -110,6 +148,7 @@ export default function Header() {
                     <ServicesMenu
                       key={`nav-services-${pathname}`}
                       publicDarkBar={publicDarkBar}
+                      services={navServices}
                     />
                   )
                 }
@@ -410,7 +449,7 @@ export default function Header() {
                             className="overflow-hidden"
                           >
                             <div className="ml-3 flex flex-col gap-0.5 border-l border-border py-1 pl-3">
-                              {SERVICES.map(s => {
+                              {navServices.map(s => {
                                 const subActive = pathname === `/services/${s.slug}`
                                 return (
                                   <Link

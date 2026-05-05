@@ -28,6 +28,7 @@ export default function AdminCategoriesPage() {
   const [addingName, setAddingName] = useState('')
   const [addingError, setAddingError] = useState('')
   const [addingSaving, setAddingSaving] = useState(false)
+  const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null)
 
   async function getSupabase() {
     const mod = await import('@/lib/supabase/client')
@@ -285,6 +286,46 @@ export default function AdminCategoriesPage() {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
+  async function reorderCategories(sourceId: string, targetId: string) {
+    if (sourceId === targetId) return
+    const source = categories.find(c => c.id === sourceId)
+    const target = categories.find(c => c.id === targetId)
+    if (!source || !target) return
+    const sourceParent = source.parent_id ?? null
+    const targetParent = target.parent_id ?? null
+    if (sourceParent !== targetParent) return
+
+    const siblings = categories
+      .filter(c => (c.parent_id ?? null) === sourceParent)
+      .sort((a, b) => (a.sort_order - b.sort_order) || a.name_ua.localeCompare(b.name_ua))
+    const sourceIndex = siblings.findIndex(c => c.id === sourceId)
+    const targetIndex = siblings.findIndex(c => c.id === targetId)
+    if (sourceIndex < 0 || targetIndex < 0) return
+
+    const reordered = [...siblings]
+    const [moved] = reordered.splice(sourceIndex, 1)
+    if (!moved) return
+    reordered.splice(targetIndex, 0, moved)
+
+    const updates = reordered.map((item, index) => ({
+      id: item.id,
+      sort_order: index + 1,
+    }))
+    const updateById = new Map(updates.map(item => [item.id, item.sort_order]))
+    setCategories(prev => prev.map(c => {
+      const nextSort = updateById.get(c.id)
+      return nextSort !== undefined ? { ...c, sort_order: nextSort } : c
+    }))
+
+    const supabase = await getSupabase()
+    await Promise.all(
+      updates.map(item =>
+        supabase.from('categories').update({ sort_order: item.sort_order }).eq('id', item.id)
+      )
+    )
+    await syncCatalogAfterChange()
+  }
+
   function startAddSubcategory(parentId: string) {
     const parent = categories.find(c => c.id === parentId) ?? null
     if (!parent || parent.parent_id) return
@@ -399,6 +440,15 @@ export default function AdminCategoriesPage() {
                 return (
                   <motion.div
                     key={row.id}
+                    draggable
+                    onDragStart={() => setDraggingCategoryId(row.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (!draggingCategoryId) return
+                      void reorderCategories(draggingCategoryId, row.id)
+                      setDraggingCategoryId(null)
+                    }}
+                    onDragEnd={() => setDraggingCategoryId(null)}
                     layout
                     initial={isNested ? { height: 0, y: -10 } : { height: 'auto', y: 0 }}
                     animate={{ height: 'auto', y: 0 }}
@@ -406,7 +456,7 @@ export default function AdminCategoriesPage() {
                     transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                     className={cn(
                       'overflow-hidden',
-                      'hover:bg-bg-elevated transition-colors duration-200 ease-out group',
+                      'hover:bg-bg-elevated transition-colors duration-200 ease-out group cursor-grab active:cursor-grabbing',
                       'will-change-[height,transform]'
                     )}
                   >

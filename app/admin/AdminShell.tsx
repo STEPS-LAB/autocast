@@ -4,13 +4,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, Tag, ShoppingCart,
-  Users, Zap, ChevronRight,
+  Users, Wrench, Zap, ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV = [
   { href: '/admin', label: 'Дашборд', icon: LayoutDashboard, exact: true },
   { href: '/admin/products', label: 'Товари', icon: Package },
+  { href: '/admin/services', label: 'Послуги', icon: Wrench },
   { href: '/admin/categories', label: 'Категорії', icon: Tag },
   { href: '/admin/orders', label: 'Замовлення', icon: ShoppingCart },
   { href: '/admin/users', label: 'Користувачі', icon: Users },
