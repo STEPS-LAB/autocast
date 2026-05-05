@@ -75,12 +75,26 @@ export default function ContactPage() {
                 <p className="text-[0.95rem] text-text-secondary leading-relaxed">
                   Дзвоніть та записуйтесь щоб отримати якісний сервіс
                 </p>
-                <a
-                  href="tel:+380672391640"
-                  className="inline-block mt-2 text-[1.52rem] font-bold text-accent hover:opacity-90 transition-opacity"
-                >
-                  067 239 1640
-                </a>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <a
+                    href="tel:+380672391640"
+                    className="inline-block text-[1.52rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                  >
+                    +38 (067) 239 16 40
+                  </a>
+                  <a
+                    href="tel:+380672391632"
+                    className="inline-block text-[1.52rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                  >
+                    +38 (067) 239 16 32
+                  </a>
+                  <a
+                    href="tel:+380672391648"
+                    className="inline-block text-[1.52rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                  >
+                    +38 (067) 239 16 48
+                  </a>
+                </div>
               </div>
 
               <div>
