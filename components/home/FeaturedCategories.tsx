@@ -23,7 +23,7 @@ const item = {
 const CATEGORY_IMAGES: Record<string, string> = {
   avtozvuk: '/images/avtozvuk.webp',
   avtosvitlo: '/images/avtosvitlo.webp',
-  avtoelektronika: '/images/ae.jpeg',
+  avtoelektronika: '/images/ae.png',
   'zakhyst-vid-uhonu': '/images/signalka.jpg',
 }
 
