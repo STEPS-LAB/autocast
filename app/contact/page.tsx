@@ -88,7 +88,7 @@ export default function ContactPage() {
                 <p className="text-[0.95rem] text-text-secondary leading-relaxed">
                   Дзвоніть та записуйтесь щоб отримати якісний сервіс
                 </p>
-                <div className="mt-2 flex flex-col gap-1.5">
+                <div className="mt-2 flex flex-col items-start gap-1.5">
                   <a
                     href="tel:+380672391640"
                     className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
