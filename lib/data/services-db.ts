@@ -44,7 +44,7 @@ export interface ServiceDetail {
   relatedSlugs: string[]
 }
 
-const DEFAULT_SERVICE_IMAGE = '/images/services/p1.webp'
+const DEFAULT_SERVICE_IMAGE = '/images/placeholder-category.svg'
 const FALLBACK_ICON = Sparkles
 
 const ICON_BY_KEY: Record<string, LucideIcon> = {

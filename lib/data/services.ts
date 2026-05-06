@@ -69,7 +69,7 @@ export interface ServiceItem {
   intro: string
   metaDescription: string
   icon: LucideIcon
-  /** Шлях у `public/` (напр. `/images/services/p1.webp`) */
+  /** URL з БД або локальний fallback */
   image: string
   whatIncluded: ServiceWhatIncludedItem[]
   /** Короткий абзац перед списком «чому важливо» */
@@ -80,16 +80,13 @@ export interface ServiceItem {
   relatedSlugs: ServiceSlug[]
 }
 
-/** Збільшуй після заміни `p*.webp` під тим самим ім’ям (кеш `/_next/image` і браузера). */
-const IMG_REV = '3'
-
 const IMG = {
-  audio: `/images/services/p1.webp?rev=${IMG_REV}`,
-  headUnits: `/images/services/p2.webp?rev=${IMG_REV}`,
-  headlights: `/images/services/p3.webp?rev=${IMG_REV}`,
-  alarms: `/images/services/p4.webp?rev=${IMG_REV}`,
-  soundDeadening: `/images/services/p5.webp?rev=${IMG_REV}`,
-  lens: `/images/services/p6.webp?rev=${IMG_REV}`,
+  audio: '/images/placeholder-category.svg',
+  headUnits: '/images/placeholder-category.svg',
+  headlights: '/images/placeholder-category.svg',
+  alarms: '/images/placeholder-category.svg',
+  soundDeadening: '/images/placeholder-category.svg',
+  lens: '/images/placeholder-category.svg',
 } as const
 
 export const SERVICES: ServiceItem[] = [

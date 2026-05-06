@@ -4,7 +4,7 @@ import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FilePenLine, Pencil, Percent, Plus } from 'lucide-react'
+import { Pencil, Percent, Plus } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
 import { cn, formatPrice } from '@/lib/utils'
 import Badge from '@/components/ui/Badge'
@@ -465,7 +465,7 @@ export default function AdminProductsPage() {
               aria-label="Редагувати товар"
               title="Редагувати товар"
             >
-              <FilePenLine size={14} />
+              <Pencil size={14} />
             </button>
             <button
               onClick={() => handleDiscount(row)}

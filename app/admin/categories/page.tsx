@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { type ChangeEvent, useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import type { Category } from '@/types'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -18,7 +19,7 @@ export default function AdminCategoriesPage() {
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [editingCell, setEditingCell] = useState<{ id: string; key: 'name_ua' | 'sort_order' } | null>(null)
+  const [editingCell, setEditingCell] = useState<{ id: string; key: 'name_ua' } | null>(null)
   const [editValue, setEditValue] = useState('')
   const [parentEditCategoryId, setParentEditCategoryId] = useState<string | null>(null)
   const [parentEditValue, setParentEditValue] = useState('')
@@ -29,6 +30,11 @@ export default function AdminCategoriesPage() {
   const [addingError, setAddingError] = useState('')
   const [addingSaving, setAddingSaving] = useState(false)
   const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null)
+  const [photoEditCategoryId, setPhotoEditCategoryId] = useState<string | null>(null)
+  const [photoEditDataUrl, setPhotoEditDataUrl] = useState('')
+  const [photoEditFileName, setPhotoEditFileName] = useState('')
+  const [photoEditError, setPhotoEditError] = useState('')
+  const [photoSaving, setPhotoSaving] = useState(false)
 
   async function getSupabase() {
     const mod = await import('@/lib/supabase/client')
@@ -238,17 +244,15 @@ export default function AdminCategoriesPage() {
     return { rows: out, childrenCountById, nameById, descendantIdsById, byParent }
   }, [categories, expanded, addingParentId])
 
-  function startEdit(row: Category, key: 'name_ua' | 'sort_order') {
+  function startEdit(row: Category, key: 'name_ua') {
     setEditingCell({ id: row.id, key })
-    setEditValue(key === 'sort_order' ? String(row.sort_order) : row.name_ua)
+    setEditValue(row.name_ua)
   }
 
   async function saveEdit() {
     if (!editingCell) return
     const { id, key } = editingCell
-    const next = key === 'sort_order'
-      ? Math.max(0, Number(editValue || '0'))
-      : editValue
+    const next = editValue
     await handleUpdate(id, key, next)
     setEditingCell(null)
   }
@@ -335,6 +339,59 @@ export default function AdminCategoriesPage() {
     setAddingError('')
   }
 
+  async function onCategoryPhotoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setPhotoEditError('Оберіть файл зображення.')
+      return
+    }
+    setPhotoEditFileName(file.name)
+    const reader = new FileReader()
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => (typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('read')))
+      reader.onerror = () => reject(new Error('read'))
+      reader.readAsDataURL(file)
+    })
+    setPhotoEditDataUrl(dataUrl)
+    setPhotoEditError('')
+  }
+
+  function openPhotoEditModal(row: Category) {
+    setPhotoEditCategoryId(row.id)
+    setPhotoEditDataUrl(row.image_url ?? '')
+    setPhotoEditFileName('')
+    setPhotoEditError('')
+  }
+
+  async function saveCategoryPhoto() {
+    if (!photoEditCategoryId) return
+    setPhotoSaving(true)
+    setPhotoEditError('')
+    try {
+      let imageUrl: string | null = photoEditDataUrl.trim() || null
+      if (photoEditDataUrl.startsWith('data:image/')) {
+        const uploadResponse = await fetch('/api/admin/upload-category-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categoryId: photoEditCategoryId, dataUrl: photoEditDataUrl }),
+        })
+        const uploadResult = (await uploadResponse.json()) as { publicUrl?: string; error?: string }
+        if (!uploadResponse.ok || !uploadResult.publicUrl) {
+          throw new Error(uploadResult.error ?? 'Не вдалося завантажити зображення.')
+        }
+        imageUrl = uploadResult.publicUrl
+      }
+      await handleUpdate(photoEditCategoryId, 'image_url', imageUrl)
+      setPhotoEditCategoryId(null)
+    } catch (e) {
+      setPhotoEditError(e instanceof Error ? e.message : 'Не вдалося зберегти фото категорії.')
+    } finally {
+      setPhotoSaving(false)
+    }
+  }
+
   // No fade/opacity effects — only layout shifts + height animation on enter/exit.
 
   return (
@@ -351,13 +408,13 @@ export default function AdminCategoriesPage() {
 
       <div className="bg-bg-surface border border-border rounded-md overflow-hidden transition-shadow duration-300 hover:shadow-sm">
         <div className="overflow-x-auto">
-          <div className="min-w-[720px] text-sm">
-            <div className="grid grid-cols-[1fr_120px_120px] border-b border-border">
+          <div className="min-w-[740px] text-sm">
+            <div className="grid grid-cols-[120px_1fr_120px] border-b border-border">
               <div className="text-left px-4 py-3 text-xs font-bold text-text-primary uppercase tracking-wider whitespace-nowrap">
-                Назва
+                Фото
               </div>
               <div className="text-left px-4 py-3 text-xs font-bold text-text-primary uppercase tracking-wider whitespace-nowrap">
-                Порядок
+                Назва
               </div>
               <div className="px-4 py-3 text-xs font-bold text-text-primary uppercase tracking-wider text-right">
                 Дії
@@ -385,7 +442,8 @@ export default function AdminCategoriesPage() {
                       transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                       className="bg-bg-surface/40 overflow-hidden will-change-[height,transform]"
                     >
-                      <div className="grid grid-cols-[1fr_120px_120px]">
+                      <div className="grid grid-cols-[120px_1fr_120px]">
+                        <div className="px-4 py-3" />
                         <div className="px-4 py-3">
                           <div className="flex flex-col gap-1" style={{ paddingLeft: `${r.depth * 14}px` }}>
                           <div className="flex items-center gap-2">
@@ -424,14 +482,12 @@ export default function AdminCategoriesPage() {
                         </div>
                         </div>
                         <div className="px-4 py-3" />
-                        <div className="px-4 py-3" />
                       </div>
                     </motion.div>
                   )
                 }
 
                 const isEditingName = editingCell?.id === row.id && editingCell?.key === 'name_ua'
-                const isEditingSort = editingCell?.id === row.id && editingCell?.key === 'sort_order'
                 const childCount = childrenCountById.get(row.id) ?? 0
                 const hasChildren = childCount > 0
                 const isOpen = !!expanded[row.id]
@@ -460,8 +516,25 @@ export default function AdminCategoriesPage() {
                       'will-change-[height,transform]'
                     )}
                   >
-                    <div className="grid grid-cols-[1fr_120px_120px]">
-                    <div className="px-4 py-3">
+                    <div className="grid grid-cols-[120px_1fr_120px]">
+                    <div className="px-4 py-3 flex items-center">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openPhotoEditModal(row)
+                        }}
+                        className="relative size-12 overflow-hidden rounded border border-border bg-bg-elevated"
+                        title="Змінити фото"
+                      >
+                        {row.image_url ? (
+                          <Image src={row.image_url} alt={row.name_ua} fill className="object-cover" sizes="48px" />
+                        ) : (
+                          <div className="size-12 bg-bg-elevated" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="px-4 py-3 flex items-center">
                       {isEditingName ? (
                         <div className="flex items-center gap-1">
                           <input
@@ -533,51 +606,8 @@ export default function AdminCategoriesPage() {
                       )}
                     </div>
 
-                    <div className="px-4 py-3">
-                      {isEditingSort ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min={0}
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') void saveEdit(); if (e.key === 'Escape') cancelEdit() }}
-                            autoFocus
-                            className={cn(
-                              'h-7 bg-bg-elevated border border-accent rounded px-2 text-xs text-text-primary focus:outline-none',
-                              'w-16 text-center'
-                            )}
-                          />
-                          <button
-                            onClick={() => void saveEdit()}
-                            className="p-1 text-success hover:bg-success/10 rounded transition-colors"
-                          >
-                            <Check size={12} />
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="p-1 text-error hover:bg-error/10 rounded transition-colors"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 group/cell">
-                          <span className="text-sm text-text-primary">{row.sort_order}</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); startEdit(row, 'sort_order') }}
-                            className="opacity-0 group-hover/cell:opacity-100 p-0.5 text-text-muted hover:text-accent transition-all rounded"
-                            aria-label="Змінити порядок"
-                            title="Змінити порядок"
-                          >
-                            <Pencil size={11} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1 opacity-100">
+                    <div className="px-4 py-3 flex items-center justify-end">
+                      <div className="flex items-center justify-end gap-1 opacity-100 w-full">
                         {canAddSubcategory && (
                           <button
                             onClick={(e) => { e.stopPropagation(); startAddSubcategory(row.id) }}
@@ -689,6 +719,56 @@ export default function AdminCategoriesPage() {
             <Button onClick={createCategory}>
               Створити
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!photoEditCategoryId}
+        onClose={() => {
+          if (photoSaving) return
+          setPhotoEditCategoryId(null)
+          setPhotoEditError('')
+        }}
+        title="Фото категорії"
+        description="Завантажте нове зображення або видаліть поточне."
+        size="md"
+      >
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-xs text-text-muted">Зображення</span>
+            <div className="mt-1 h-10 w-full rounded border border-border bg-bg-elevated px-2 flex items-center gap-2">
+              <label htmlFor="category-image-upload" className="inline-flex h-7 items-center rounded border border-border px-2.5 text-xs text-text-primary bg-bg-surface hover:bg-bg-primary cursor-pointer shrink-0">Вибрати файл</label>
+              <span className="text-sm text-text-secondary truncate">{photoEditFileName || (photoEditDataUrl ? 'Поточне зображення збережено' : 'Файл не вибрано')}</span>
+              <input id="category-image-upload" type="file" accept="image/*" onChange={onCategoryPhotoFileChange} className="sr-only" />
+            </div>
+            {photoEditDataUrl && (
+              <div className="mt-2 relative size-14 rounded overflow-hidden border border-border bg-bg-elevated">
+                <Image src={photoEditDataUrl} alt="Превʼю фото категорії" fill className="object-cover" sizes="56px" />
+              </div>
+            )}
+          </label>
+          {photoEditError && <p className="text-xs text-error">{photoEditError}</p>}
+          <div className="flex justify-between gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setPhotoEditDataUrl('')
+                setPhotoEditFileName('')
+                setPhotoEditError('')
+              }}
+              disabled={photoSaving}
+            >
+              Видалити фото
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setPhotoEditCategoryId(null)} disabled={photoSaving}>
+                Скасувати
+              </Button>
+              <Button onClick={saveCategoryPhoto} loading={photoSaving}>
+                Зберегти
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>

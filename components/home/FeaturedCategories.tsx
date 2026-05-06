@@ -20,13 +20,6 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 }
 
-const CATEGORY_IMAGES: Record<string, string> = {
-  avtozvuk: '/images/avtozvuk.webp',
-  avtosvitlo: '/images/avtosvitlo.webp',
-  avtoelektronika: '/images/ae.png',
-  'zakhyst-vid-uhonu': '/images/signalka.jpg',
-}
-
 interface FeaturedCategoriesProps {
   categories: Category[]
 }
@@ -34,6 +27,12 @@ interface FeaturedCategoriesProps {
 export default function FeaturedCategories({ categories }: FeaturedCategoriesProps) {
   const topLevel = categories.filter((c) => !c.parent_id)
   const topLevelForHome = topLevel.slice(0, 4)
+  const categoryImage = (imageUrl: string | null) => {
+    if (!imageUrl) return '/images/placeholder-category.svg'
+    return imageUrl.includes('/storage/v1/object/public/category-images/')
+      ? imageUrl
+      : '/images/placeholder-category.svg'
+  }
   const displayNameUa = (cat: Category) =>
     cat.slug === 'zakhyst-vid-uhonu' ? 'Охоронні системи' : cat.name_ua
 
@@ -77,7 +76,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
                   <div className="mb-3 md:mb-4 rounded-lg shadow-[0_8px_26px_-10px_rgba(15,23,42,0.14)] transition-shadow duration-300 ease-out group-hover:shadow-[0_22px_48px_-12px_rgba(15,23,42,0.32)]">
                   <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-bg-surface border border-border">
                     <Image
-                      src={CATEGORY_IMAGES[cat.slug] ?? cat.image_url ?? '/images/placeholder-category.svg'}
+                      src={categoryImage(cat.image_url)}
                       alt={cat.name_ua}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"

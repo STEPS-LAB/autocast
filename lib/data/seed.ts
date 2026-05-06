@@ -6,7 +6,7 @@ export const CATEGORIES: Category[] = [
     slug: 'avtozvuk',
     name_ua: 'Автозвук',
     parent_id: null,
-    image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600',
+    image_url: null,
     sort_order: 1,
   },
   {
@@ -14,7 +14,7 @@ export const CATEGORIES: Category[] = [
     slug: 'avtosvitlo',
     name_ua: 'Автосвітло',
     parent_id: null,
-    image_url: 'https://images.unsplash.com/photo-1624815428661-40d6f6da22b7?w=600',
+    image_url: null,
     sort_order: 2,
   },
   {
@@ -22,7 +22,7 @@ export const CATEGORIES: Category[] = [
     slug: 'avtoelektronika',
     name_ua: 'Автоелектроніка',
     parent_id: null,
-    image_url: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600',
+    image_url: null,
     sort_order: 3,
   },
   {
@@ -30,7 +30,7 @@ export const CATEGORIES: Category[] = [
     slug: 'zakhyst-vid-uhonu',
     name_ua: 'Захист від угону',
     parent_id: null,
-    image_url: 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=600',
+    image_url: null,
     sort_order: 4,
   },
 ]
