@@ -46,14 +46,27 @@ function formatPhoneMask(digits: string) {
 
 export default function ContactPage() {
   const [sent, setSent] = useState(false)
-  const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<ContactInput>({
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ContactInput>({
     resolver: zodResolver(contactSchema),
   })
 
   async function onSubmit(data: ContactInput) {
-    await new Promise(r => setTimeout(r, 800))
-    void data
+    setSubmitError(null)
+    const response = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null) as { error?: string } | null
+      setSubmitError(payload?.error ?? 'Не вдалось надіслати повідомлення. Спробуйте ще раз.')
+      return
+    }
+
     setSent(true)
+    reset()
   }
 
   return (
@@ -78,19 +91,19 @@ export default function ContactPage() {
                 <div className="mt-2 flex flex-col gap-1.5">
                   <a
                     href="tel:+380672391640"
-                    className="inline-block text-[1.52rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                    className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                   >
                     +38 (067) 239 16 40
                   </a>
                   <a
                     href="tel:+380672391632"
-                    className="inline-block text-[1.52rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                    className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                   >
                     +38 (067) 239 16 32
                   </a>
                   <a
                     href="tel:+380672391648"
-                    className="inline-block text-[1.52rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                    className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                   >
                     +38 (067) 239 16 48
                   </a>
@@ -107,7 +120,7 @@ export default function ContactPage() {
                 </p>
                 <a
                   href="mailto:autocast.com.ua@gmail.com"
-                  className="inline-block mt-2 text-[1.27rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                  className="inline-block mt-2 text-[1.27rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                 >
                   Email: autocast.com.ua@gmail.com
                 </a>
@@ -122,7 +135,7 @@ export default function ContactPage() {
                   href={GOOGLE_MAPS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block mt-2 text-[1.27rem] font-bold text-accent hover:opacity-90 transition-opacity"
+                  className="inline-block mt-2 text-[1.27rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                 >
                   {ADDRESS}
                 </a>
@@ -134,7 +147,7 @@ export default function ContactPage() {
                 href="https://www.instagram.com/autocast.com.ua/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-[0.9rem] text-text-primary hover:text-accent transition-colors"
+                className="inline-flex items-center gap-2 text-[0.9rem] text-text-primary transition-all hover:-translate-y-0.5 hover:text-graphite-deep"
               >
                 <Instagram size={29} className="text-accent" />
                 Instagram
@@ -143,14 +156,14 @@ export default function ContactPage() {
                 href="https://autocast.com.ua/about-us/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-[0.9rem] text-text-primary hover:text-accent transition-colors"
+                className="inline-flex items-center gap-2 text-[0.9rem] text-text-primary transition-all hover:-translate-y-0.5 hover:text-graphite-deep"
               >
                 <Facebook size={29} className="text-accent" />
                 Facebook
               </a>
             </div>
 
-            <div className="mt-8 md:mt-auto p-4 bg-bg-surface border border-border rounded-md">
+            <div className="mt-12 md:mt-14 p-4 bg-bg-surface border border-border rounded-md">
               <p className="text-xs text-text-muted uppercase tracking-wider mb-2">Графік роботи</p>
               <div className="space-y-1 text-sm text-text-secondary">
                 <div className="flex justify-between">
@@ -179,7 +192,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-text-primary mb-1">Повідомлення відправлено</h3>
-                  <p className="text-sm text-text-secondary">Ми зв'яжемося з вами найближчим часом</p>
+                  <p className="text-sm text-text-secondary">Ми звʼяжемося з вами найближчим часом</p>
                 </div>
               </motion.div>
             ) : (
@@ -263,6 +276,9 @@ export default function ContactPage() {
                 <Button type="submit" fullWidth loading={isSubmitting}>
                   Надіслати повідомлення
                 </Button>
+                {submitError ? (
+                  <p className="text-sm text-error pt-1">{submitError}</p>
+                ) : null}
               </form>
             )}
           </div>

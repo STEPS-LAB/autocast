@@ -76,16 +76,18 @@ export default function Footer() {
               Контакти
             </h4>
             <ul className="flex flex-col gap-3">
-              <li className="flex items-center gap-2.5 text-sm text-text-inverse-muted">
-                <Phone size={15} className="text-accent shrink-0" />
+              <li className="text-sm text-text-inverse-muted">
                 <div className="flex flex-col gap-1">
-                  <a href="tel:+380672391640" className="hover:text-text-inverse transition-colors">
+                  <a href="tel:+380672391640" className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
+                    <Phone size={15} className="text-accent shrink-0" />
                     +38 (067) 239 16 40
                   </a>
-                  <a href="tel:+380672391632" className="hover:text-text-inverse transition-colors">
+                  <a href="tel:+380672391632" className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
+                    <Phone size={15} className="text-accent shrink-0" />
                     +38 (067) 239 16 32
                   </a>
-                  <a href="tel:+380672391648" className="hover:text-text-inverse transition-colors">
+                  <a href="tel:+380672391648" className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
+                    <Phone size={15} className="text-accent shrink-0" />
                     +38 (067) 239 16 48
                   </a>
                 </div>
