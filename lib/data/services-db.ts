@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { unstable_cache } from 'next/cache'
+import { unstable_cache, unstable_noStore as noStore } from 'next/cache'
 import { createStaticClient } from '@/lib/supabase/static'
 import { SERVICES as STATIC_SERVICES } from '@/lib/data/services'
 import type { ServiceListItem } from '@/types'
@@ -13,14 +13,13 @@ interface DbServiceRow {
   name_ua: string
   description_ua: string
   image_url: string | null
-  content: Record<string, unknown> | null
+  content: Record<string, unknown> | string | null
   sort_order: number | null
   is_active: boolean | null
   created_at: string
 }
 
 export interface ServiceContentStep {
-  title: string
   text: string
 }
 
@@ -64,14 +63,49 @@ function asStringArray(value: unknown): string[] {
   return value.filter(item => typeof item === 'string')
 }
 
+function asContentObject(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>
+      }
+    } catch {
+      return {}
+    }
+  }
+  return {}
+}
+
 function normalizeWhatIncluded(value: unknown): ServiceContentIncludedItem[] {
   if (!Array.isArray(value)) return []
   return value
     .map((item) => {
+      if (typeof item === 'string') {
+        const raw = item.trim()
+        if (!raw) return null
+        if (raw.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(raw) as Record<string, unknown>
+            const text = asString(parsed.text).trim()
+            if (!text) return null
+            const iconKey = asString(parsed.icon, 'sparkles')
+            const icon = ICON_BY_KEY[iconKey] ?? FALLBACK_ICON
+            return { text, icon }
+          } catch {
+            return { text: raw, icon: FALLBACK_ICON }
+          }
+        }
+        return { text: raw, icon: FALLBACK_ICON }
+      }
       if (!item || typeof item !== 'object') return null
-      const text = asString((item as Record<string, unknown>).text).trim()
+      const source = item as Record<string, unknown>
+      const text = asString(source.text).trim()
       if (!text) return null
-      const iconKey = asString((item as Record<string, unknown>).icon, 'sparkles')
+      const iconKey = asString(source.icon, 'sparkles')
       const icon = ICON_BY_KEY[iconKey] ?? FALLBACK_ICON
       return { text, icon }
     })
@@ -82,13 +116,51 @@ function normalizeHowSteps(value: unknown): ServiceContentStep[] {
   if (!Array.isArray(value)) return []
   return value
     .map((item) => {
+      if (typeof item === 'string') {
+        const raw = item.trim()
+        if (!raw) return null
+        try {
+          const parsed = JSON.parse(raw) as Record<string, unknown>
+          const text = asString(parsed.text).trim() || asString(parsed.title).trim()
+          if (!text) return null
+          return { text }
+        } catch {
+          return { text: raw }
+        }
+      }
       if (!item || typeof item !== 'object') return null
-      const title = asString((item as Record<string, unknown>).title).trim()
-      const text = asString((item as Record<string, unknown>).text).trim()
-      if (!title || !text) return null
-      return { title, text }
+      const source = item as Record<string, unknown>
+      const text = asString(source.text).trim() || asString(source.title).trim()
+      if (!text) return null
+      return { text }
     })
     .filter((item): item is ServiceContentStep => item !== null)
+}
+
+function normalizeFaqs(value: unknown): Array<{ q: string; a: string }> {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      if (typeof item === 'string') {
+        const raw = item.trim()
+        if (!raw) return null
+        try {
+          const parsed = JSON.parse(raw) as Record<string, unknown>
+          const q = asString(parsed.q).trim()
+          const a = asString(parsed.a).trim()
+          if (!q || !a) return null
+          return { q, a }
+        } catch {
+          return null
+        }
+      }
+      if (!item || typeof item !== 'object') return null
+      const q = asString((item as Record<string, unknown>).q).trim()
+      const a = asString((item as Record<string, unknown>).a).trim()
+      if (!q || !a) return null
+      return { q, a }
+    })
+    .filter((item): item is { q: string; a: string } => item !== null)
 }
 
 const STATIC_FAQS_BY_SLUG: Record<string, Array<{ q: string; a: string }>> = Object.fromEntries(
@@ -108,8 +180,11 @@ function rowToListItem(row: DbServiceRow): ServiceListItem {
 }
 
 function rowToDetail(row: DbServiceRow): ServiceDetail {
-  const content = (row.content ?? {}) as Record<string, unknown>
+  const content = asContentObject(row.content)
   const staticService = STATIC_SERVICE_BY_SLUG[row.slug]
+  const dynamicWhatIncluded = normalizeWhatIncluded(content.whatIncluded)
+  const dynamicHowSteps = normalizeHowSteps(content.howSteps)
+  const dynamicFaqs = normalizeFaqs(content.faqs)
   return {
     slug: row.slug,
     title: row.name_ua,
@@ -117,13 +192,19 @@ function rowToDetail(row: DbServiceRow): ServiceDetail {
     image: row.image_url || DEFAULT_SERVICE_IMAGE,
     intro: asString(content.intro, row.description_ua),
     metaDescription: asString(content.metaDescription, row.description_ua),
-    whatIncluded: staticService?.whatIncluded ?? normalizeWhatIncluded(content.whatIncluded),
-    whyIntro: staticService?.whyIntro ?? asString(content.whyIntro, row.description_ua),
-    whyMatters: staticService?.whyMatters ?? asStringArray(content.whyMatters),
-    howSteps: staticService?.howSteps ?? normalizeHowSteps(content.howSteps),
-    faqs: STATIC_FAQS_BY_SLUG[row.slug] ?? [],
+    whatIncluded: dynamicWhatIncluded.length > 0 ? dynamicWhatIncluded : (staticService?.whatIncluded ?? []),
+    whyIntro: asString(content.whyIntro, staticService?.whyIntro ?? row.description_ua),
+    whyMatters: normalizeWhyMatters(content.whyMatters, staticService?.whyMatters),
+    howSteps: dynamicHowSteps.length > 0 ? dynamicHowSteps : (staticService?.howSteps ?? []),
+    faqs: dynamicFaqs.length > 0 ? dynamicFaqs : (STATIC_FAQS_BY_SLUG[row.slug] ?? []),
     relatedSlugs: staticService?.relatedSlugs ?? asStringArray(content.relatedSlugs),
   }
+}
+
+function normalizeWhyMatters(value: unknown, fallback: string[] | undefined): string[] {
+  const fromContent = asStringArray(value).map((item) => item.trim()).filter(Boolean)
+  if (fromContent.length > 0) return fromContent
+  return fallback ?? []
 }
 
 async function fetchServicesFromDb(): Promise<ServiceListItem[]> {
@@ -134,7 +215,7 @@ async function fetchServicesFromDb(): Promise<ServiceListItem[]> {
       .select('id,slug,name_ua,description_ua,image_url,content,sort_order,is_active,created_at')
       .eq('is_active', true)
       .order('sort_order', { ascending: true, nullsFirst: false })
-      .order('created_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: true, nullsFirst: false })
 
     if (error || !data || data.length === 0) return []
 
@@ -156,6 +237,7 @@ export async function getServicesForListing(): Promise<ServiceListItem[]> {
 
 async function fetchServiceBySlugFromDb(slug: string): Promise<ServiceDetail | null> {
   try {
+    noStore()
     const supabase = createStaticClient()
     const { data, error } = await supabase
       .from('services')
@@ -178,6 +260,7 @@ export async function getServiceBySlug(slug: string): Promise<ServiceDetail | nu
 export async function getRelatedServices(relatedSlugs: string[]): Promise<ServiceListItem[]> {
   if (relatedSlugs.length === 0) return []
   try {
+    noStore()
     const supabase = createStaticClient()
     const { data, error } = await supabase
       .from('services')
@@ -191,4 +274,31 @@ export async function getRelatedServices(relatedSlugs: string[]): Promise<Servic
   } catch {
     return []
   }
+}
+
+export async function getNextServices(currentSlug: string, count = 3): Promise<ServiceListItem[]> {
+  if (count <= 0) return []
+  noStore()
+  const supabase = createStaticClient()
+  const { data, error } = await supabase
+    .from('services')
+    .select('id,slug,name_ua,description_ua,image_url,content,sort_order,is_active,created_at')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true, nullsFirst: false })
+
+  if (error || !data || data.length === 0) return []
+  const services = (data as DbServiceRow[]).map(rowToListItem)
+  if (services.length <= 1) return []
+  const currentIndex = services.findIndex((service) => service.slug === currentSlug)
+  if (currentIndex < 0) return services.slice(0, Math.min(count, services.length))
+
+  const maxItems = Math.min(count, services.length - 1)
+  const result: ServiceListItem[] = []
+  for (let offset = 1; offset <= maxItems; offset += 1) {
+    const nextIndex = (currentIndex + offset) % services.length
+    const nextService = services[nextIndex]
+    if (nextService) result.push(nextService)
+  }
+  return result
 }

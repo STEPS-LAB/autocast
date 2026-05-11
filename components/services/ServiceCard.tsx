@@ -103,7 +103,7 @@ export default function ServiceCard({
   return (
     <motion.article
       className="h-full"
-      initial={{ opacity: 0, y: 14 }}
+      initial={false}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay: index * 0.06 }}

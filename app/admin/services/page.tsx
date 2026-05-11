@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { LayoutGroup, motion } from 'framer-motion'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -39,7 +39,7 @@ export default function AdminServicesPage() {
         .from('services')
         .select('id,slug,name_ua,description_ua,image_url,created_at,updated_at,sort_order,is_active')
         .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true })
       if (!isMounted) return
       setServices((data as ServiceRow[]) ?? [])
       setLoading(false)
@@ -178,6 +178,16 @@ export default function AdminServicesPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
+                      <Link
+                        href={`/services/${encodeURIComponent(service.slug)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+                        aria-label="Відкрити послугу на сайті"
+                        title="Відкрити на сайті"
+                      >
+                        <ExternalLink size={14} />
+                      </Link>
                       <button
                         onClick={() => router.push(`/admin/services/${encodeURIComponent(service.id)}`)}
                         className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"

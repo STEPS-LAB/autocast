@@ -8,14 +8,15 @@ import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
 import ServiceFaqAccordion from '@/components/services/ServiceFaqAccordion'
 import { CornerAccentLines, DiagonalStripes } from '@/components/services/ServiceSectionDecor'
-import { getRelatedServices, getServiceBySlug, getServicesForListing } from '@/lib/data/services-db'
-import { getServiceBySlug as getStaticServiceBySlug } from '@/lib/data/services'
+import { getNextServices, getServiceBySlug, getServicesForListing } from '@/lib/data/services-db'
 import { getSiteUrl } from '@/lib/supabase/env'
 import { cn } from '@/lib/utils'
 
 interface Props {
   params: Promise<{ slug: string }>
 }
+
+export const dynamic = 'force-dynamic'
 
 export async function generateStaticParams() {
   const services = await getServicesForListing()
@@ -47,9 +48,8 @@ export default async function ServiceDetailPage({ params }: Props) {
   const { slug } = await params
   const service = await getServiceBySlug(slug)
   if (!service) notFound()
-  const sectionService = getStaticServiceBySlug(service.slug) ?? getStaticServiceBySlug(slug) ?? null
 
-  const related = await getRelatedServices(service.relatedSlugs)
+  const related = await getNextServices(service.slug, 3)
 
   return (
     <PageTransition>
@@ -134,7 +134,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             </div>
 
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {(sectionService?.whatIncluded ?? []).map(item => {
+              {service.whatIncluded.map(item => {
                 return (
                 <li key={item.text}>
                   <div
@@ -184,9 +184,9 @@ export default async function ServiceDetailPage({ params }: Props) {
                 className="pointer-events-none absolute left-0 right-0 top-[2.25rem] hidden h-px bg-gradient-to-r from-border via-accent/25 to-border lg:block"
                 aria-hidden
               />
-              <ol className="relative grid gap-5 md:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-              {(sectionService?.howSteps ?? []).map((step, i) => (
-                <li key={step.title} className="relative">
+              <ol className="relative grid gap-5 md:grid-cols-2 lg:grid-cols-5 lg:gap-4">
+              {service.howSteps.map((step, i) => (
+                <li key={`step-${i}-${step.text}`} className="relative min-w-0">
                   <div
                     className={cn(
                       'group relative h-full overflow-hidden rounded-xl border border-border/80 bg-bg-surface/90 p-5 shadow-sm backdrop-blur-sm',
@@ -203,9 +203,6 @@ export default async function ServiceDetailPage({ params }: Props) {
                     >
                       {i + 1}
                     </span>
-                    <h3 className="relative z-[1] mb-2 text-base font-semibold text-text-primary transition-colors group-hover:text-accent">
-                      {step.title}
-                    </h3>
                     <p className="relative z-[1] text-sm leading-relaxed text-text-secondary">{step.text}</p>
                     <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-accent/[0.07] blur-3xl transition-opacity duration-300 group-hover:opacity-100 opacity-60" />
                   </div>
@@ -226,48 +223,9 @@ export default async function ServiceDetailPage({ params }: Props) {
           </div>
 
           <div className="container-xl relative">
-            <div className="grid gap-10 lg:grid-cols-[1fr_minmax(0,26rem)] lg:items-start lg:gap-14">
-              <div>
-                <h2 className="text-headline text-text-primary mb-4">Чому це важливо</h2>
-                <p className="text-text-secondary leading-relaxed mb-8 max-w-prose">{sectionService?.whyIntro ?? ''}</p>
-                <ul className="space-y-3">
-                  {(sectionService?.whyMatters ?? []).map(item => (
-                    <li key={item}>
-                      <div
-                        className={cn(
-                          'group flex gap-4 rounded-xl border border-transparent bg-bg-surface/60 px-4 py-3 transition-all duration-300',
-                          'hover:border-border hover:bg-bg-surface hover:shadow-md'
-                        )}
-                      >
-                        <span
-                          className="mt-1.5 size-2 shrink-0 rounded-full bg-accent shadow-[0_0_12px_rgb(255_193_7/0.45)] transition-transform duration-300 group-hover:scale-125"
-                          aria-hidden
-                        />
-                        <span className="text-sm text-text-secondary leading-relaxed transition-colors group-hover:text-text-primary">
-                          {item}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <aside
-                className={cn(
-                  'relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-graphite-deep via-graphite-deep to-graphite p-6 text-text-inverse shadow-[0_24px_60px_-24px_rgb(0_0_0/0.35)]',
-                  'lg:self-end transition-shadow duration-300 hover:shadow-[0_28px_64px_-20px_rgb(0_0_0/0.42)]'
-                )}
-              >
-                <div className="pointer-events-none absolute -right-12 top-0 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
-                <p className="relative text-sm font-medium leading-relaxed text-text-inverse-muted">
-                  У майстерні Autocast монтаж виконується з дотриманням заводської логіки проводки та безпеки
-                  ланцюгів живлення — це основа довговічної роботи системи.
-                </p>
-                <div className="relative mt-6 flex items-center gap-2 border-t border-white/10 pt-6">
-                  <span className="h-8 w-1 rounded-full bg-accent" aria-hidden />
-                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-accent">Autocast</span>
-                </div>
-              </aside>
+            <div className="max-w-3xl">
+              <h2 className="text-headline text-text-primary mb-4">Чому це важливо</h2>
+              <p className="text-text-secondary leading-relaxed whitespace-pre-line">{service.whyIntro}</p>
             </div>
           </div>
         </section>
