@@ -274,7 +274,6 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Редагувати послугу</h1>
-          <p className="text-sm text-text-muted">Slug генерується автоматично з назви.</p>
         </div>
         <Link href="/admin/services" className="text-sm text-text-secondary hover:text-text-primary">← До списку послуг</Link>
       </div>
