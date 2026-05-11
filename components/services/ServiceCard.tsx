@@ -1,10 +1,8 @@
-'use client'
-
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { ServiceListItem } from '@/types'
+import type { CSSProperties } from 'react'
 
 interface ServiceCardProps {
   service: ServiceListItem
@@ -27,6 +25,10 @@ export default function ServiceCard({
   const { title, shortDescription, image } = service
   const isDark = variant === 'dark'
   const isLarge = size === 'large'
+
+  const motionStyle = {
+    '--service-card-delay': `${index * 60}ms`,
+  } as CSSProperties
 
   const inner = (
     <div className="flex h-full min-h-0 flex-col">
@@ -85,13 +87,7 @@ export default function ServiceCard({
   )
 
   return (
-    <motion.article
-      className="h-full"
-      initial={false}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.06 }}
-    >
+    <article className="h-full service-card-reveal" style={motionStyle}>
       <Link
         href={`/services/${service.slug}`}
         className={cn(
@@ -116,6 +112,6 @@ export default function ServiceCard({
           {inner}
         </div>
       </Link>
-    </motion.article>
+    </article>
   )
 }

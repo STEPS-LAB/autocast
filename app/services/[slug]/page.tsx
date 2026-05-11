@@ -213,21 +213,55 @@ export default async function ServiceDetailPage({ params }: Props) {
           </div>
         </section>
 
-        {/* Чому це важливо */}
-        <section className="relative overflow-hidden py-16 md:py-20">
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 text-text-muted/15">
-            <DiagonalStripes className="h-full w-full" />
-          </div>
-          <div className="pointer-events-none absolute bottom-8 right-8 text-accent/20 md:right-16">
+        {/* Чому це важливо: з фото — md+ grid, друга колонка тягнеться на всю висоту рядка; мобільний порядок: текст, зображення */}
+        <section
+          className={cn(
+            'relative isolate w-full overflow-hidden bg-[var(--page-canvas-base)]',
+            service.whyImage
+              ? 'flex flex-col gap-8 px-[clamp(1rem,4vw,3rem)] md:grid md:min-h-0 md:grid-cols-[minmax(0,1fr)_40%] md:items-stretch md:gap-0 md:px-0'
+              : 'py-16 md:py-20'
+          )}
+        >
+          {!service.whyImage && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-0 w-1/3 text-text-muted/15">
+              <DiagonalStripes className="h-full w-full" />
+            </div>
+          )}
+          <div className="pointer-events-none absolute bottom-8 right-8 z-[2] text-accent/20 md:right-16">
             <CornerAccentLines className="h-28 w-28 rotate-180" />
           </div>
 
-          <div className="container-xl relative">
-            <div className="max-w-3xl">
+          <div
+            className={cn(
+              'relative min-w-0',
+              service.whyImage ? 'container-xl py-16 md:py-20' : 'container-xl'
+            )}
+          >
+            <div className="relative z-10 w-full max-w-3xl">
               <h2 className="text-headline text-text-primary mb-4">Чому це важливо</h2>
               <p className="text-text-secondary leading-relaxed whitespace-pre-line">{service.whyIntro}</p>
             </div>
           </div>
+
+          {service.whyImage && (
+            <div
+              className={cn(
+                'relative z-[1] min-h-[14rem] w-full shrink-0 overflow-hidden',
+                'md:pointer-events-none md:h-full md:min-h-0'
+              )}
+            >
+              <div className="absolute inset-0 min-h-[14rem] md:min-h-0 service-why-photo-column-mask">
+                <Image
+                  src={service.whyImage}
+                  alt=""
+                  fill
+                  className="object-cover object-center"
+                  sizes="(max-width: 767px) 100vw, 40vw"
+                  aria-hidden
+                />
+              </div>
+            </div>
+          )}
         </section>
 
         {/* FAQ */}

@@ -20,6 +20,7 @@ interface ServiceFormState {
   name_ua: string
   description_ua: string
   image_url: string
+  whyImageUrl: string
   is_active: boolean
   whatIncluded: string[]
   howSteps: Array<{ text: string }>
@@ -32,6 +33,7 @@ const EMPTY_FORM: ServiceFormState = {
   name_ua: '',
   description_ua: '',
   image_url: '',
+  whyImageUrl: '',
   is_active: true,
   whatIncluded: [],
   howSteps: [],
@@ -46,8 +48,10 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
-  const [selectedFileName, setSelectedFileName] = useState('')
-  const [imageDataUrl, setImageDataUrl] = useState('')
+  const [mainSelectedFileName, setMainSelectedFileName] = useState('')
+  const [mainImageDataUrl, setMainImageDataUrl] = useState('')
+  const [whySelectedFileName, setWhySelectedFileName] = useState('')
+  const [whyImageDataUrl, setWhyImageDataUrl] = useState('')
 
   async function getSupabase() {
     const mod = await import('@/lib/supabase/client')
@@ -85,12 +89,14 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
     const faqs = form.faqs
       .map((faq) => ({ q: faq.q.trim(), a: faq.a.trim() }))
       .filter((faq) => faq.q && faq.a)
+    const whyImage = form.whyImageUrl.trim()
 
     return {
       metaDescription: buildSeoDescription(description),
       whatIncluded,
       howSteps,
       whyIntro,
+      whyImage,
       faqs,
     }
   }
@@ -168,6 +174,7 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
               ? content.whyMatters.filter((item): item is string => typeof item === 'string').join('\n')
               : ''
           )
+      const whyImageUrl = typeof content.whyImage === 'string' ? content.whyImage : ''
       const faqs = Array.isArray(content.faqs)
         ? content.faqs
             .map((item) => {
@@ -189,6 +196,7 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
         whatIncluded,
         howSteps,
         whyIntro,
+        whyImageUrl,
         faqs,
       })
       setLoading(false)
@@ -211,31 +219,47 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
     return `${base}-${generateId().slice(0, 6)}`
   }
 
-  async function uploadImageIfNeeded(): Promise<string | null> {
-    if (!imageDataUrl) return form.image_url.trim() || null
+  async function uploadImageIfNeeded(dataUrl: string, existingUrl: string): Promise<string | null> {
+    if (!dataUrl) return existingUrl.trim() || null
     const uploadResponse = await fetch('/api/admin/upload-service-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serviceId, dataUrl: imageDataUrl }),
+      body: JSON.stringify({ serviceId, dataUrl }),
     })
     const uploadResult = (await uploadResponse.json()) as { publicUrl?: string; error?: string }
     if (!uploadResponse.ok || !uploadResult.publicUrl) throw new Error(uploadResult.error ?? 'Не вдалося завантажити зображення.')
     return uploadResult.publicUrl
   }
 
-  async function onFileChange(event: ChangeEvent<HTMLInputElement>) {
+  async function onMainFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
     if (!file.type.startsWith('image/')) return setFormError('Оберіть файл зображення.')
-    setSelectedFileName(file.name)
+    setMainSelectedFileName(file.name)
     const reader = new FileReader()
     const dataUrl = await new Promise<string>((resolve, reject) => {
       reader.onload = () => (typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('read')))
       reader.onerror = () => reject(new Error('read'))
       reader.readAsDataURL(file)
     })
-    setImageDataUrl(dataUrl)
+    setMainImageDataUrl(dataUrl)
+    setFormError('')
+  }
+
+  async function onWhyFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) return setFormError('Оберіть файл зображення.')
+    setWhySelectedFileName(file.name)
+    const reader = new FileReader()
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => (typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('read')))
+      reader.onerror = () => reject(new Error('read'))
+      reader.readAsDataURL(file)
+    })
+    setWhyImageDataUrl(dataUrl)
     setFormError('')
   }
 
@@ -247,7 +271,8 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
     setFormError('')
     try {
       const supabase = await getSupabase()
-      const imageUrl = await uploadImageIfNeeded()
+      const imageUrl = await uploadImageIfNeeded(mainImageDataUrl, form.image_url)
+      const whyImageUrl = await uploadImageIfNeeded(whyImageDataUrl, form.whyImageUrl)
       const content = buildContentFromForm(description)
       const { error } = await supabase
         .from('services')
@@ -257,7 +282,10 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
           description_ua: description,
           image_url: imageUrl,
           is_active: form.is_active,
-          content,
+          content: {
+            ...content,
+            whyImage: whyImageUrl ?? '',
+          },
         })
         .eq('id', serviceId)
       if (error) throw error
@@ -285,13 +313,13 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
             <span className="text-xs text-text-muted">Зображення</span>
             <div className="mt-1 h-10 w-full rounded border border-border bg-bg-elevated px-2 flex items-center gap-2">
               <label htmlFor="service-image-upload" className="inline-flex h-7 items-center rounded border border-border px-2.5 text-xs text-text-primary bg-bg-surface hover:bg-bg-primary cursor-pointer shrink-0">Вибрати файл</label>
-              <span className="text-sm text-text-secondary truncate">{selectedFileName || (form.image_url ? 'Поточне зображення збережено' : 'Файл не вибрано')}</span>
-              <input id="service-image-upload" type="file" accept="image/*" onChange={onFileChange} className="sr-only" />
+              <span className="text-sm text-text-secondary truncate">{mainSelectedFileName || (form.image_url ? 'Поточне зображення збережено' : 'Файл не вибрано')}</span>
+              <input id="service-image-upload" type="file" accept="image/*" onChange={onMainFileChange} className="sr-only" />
             </div>
-            {(imageDataUrl || form.image_url) && (
+            {(mainImageDataUrl || form.image_url) && (
               <div className="mt-2 relative size-14 rounded overflow-hidden border border-border bg-bg-elevated">
                 <Image
-                  src={imageDataUrl || form.image_url}
+                  src={mainImageDataUrl || form.image_url}
                   alt="Превʼю зображення послуги"
                   fill
                   className="object-cover"
@@ -388,6 +416,25 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
               onChange={(e) => setForm(prev => ({ ...prev, whyIntro: e.target.value }))}
               className="w-full min-h-28 rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary resize-y"
             />
+            <label className="block">
+              <span className="text-xs text-text-muted">Зображення секції</span>
+              <div className="mt-1 h-10 w-full rounded border border-border bg-bg-elevated px-2 flex items-center gap-2">
+                <label htmlFor="service-why-image-upload" className="inline-flex h-7 items-center rounded border border-border px-2.5 text-xs text-text-primary bg-bg-surface hover:bg-bg-primary cursor-pointer shrink-0">Вибрати файл</label>
+                <span className="text-sm text-text-secondary truncate">{whySelectedFileName || (form.whyImageUrl ? 'Поточне зображення збережено' : 'Файл не вибрано')}</span>
+                <input id="service-why-image-upload" type="file" accept="image/*" onChange={onWhyFileChange} className="sr-only" />
+              </div>
+              {(whyImageDataUrl || form.whyImageUrl) && (
+                <div className="mt-2 relative h-16 w-28 rounded overflow-hidden border border-border bg-bg-elevated">
+                  <Image
+                    src={whyImageDataUrl || form.whyImageUrl}
+                    alt="Превʼю зображення секції Чому це важливо"
+                    fill
+                    className="object-cover"
+                    sizes="112px"
+                  />
+                </div>
+              )}
+            </label>
           </section>
           <section className="space-y-2 rounded border border-border bg-bg-surface p-3">
             <div className="flex items-center justify-between gap-3">

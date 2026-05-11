@@ -37,6 +37,7 @@ export interface ServiceDetail {
   metaDescription: string
   whatIncluded: ServiceContentIncludedItem[]
   whyIntro: string
+  whyImage: string | null
   whyMatters: string[]
   howSteps: ServiceContentStep[]
   faqs: Array<{ q: string; a: string }>
@@ -56,6 +57,12 @@ const ICON_BY_KEY: Record<string, LucideIcon> = {
 
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback
+}
+
+function asOptionalString(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
 }
 
 function asStringArray(value: unknown): string[] {
@@ -194,6 +201,7 @@ function rowToDetail(row: DbServiceRow): ServiceDetail {
     metaDescription: asString(content.metaDescription, row.description_ua),
     whatIncluded: dynamicWhatIncluded.length > 0 ? dynamicWhatIncluded : (staticService?.whatIncluded ?? []),
     whyIntro: asString(content.whyIntro, staticService?.whyIntro ?? row.description_ua),
+    whyImage: asOptionalString(content.whyImage),
     whyMatters: normalizeWhyMatters(content.whyMatters, staticService?.whyMatters),
     howSteps: dynamicHowSteps.length > 0 ? dynamicHowSteps : (staticService?.howSteps ?? []),
     faqs: dynamicFaqs.length > 0 ? dynamicFaqs : (STATIC_FAQS_BY_SLUG[row.slug] ?? []),
