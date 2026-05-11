@@ -47,6 +47,7 @@ export default function ServicesMenu({ publicDarkBar, services }: ServicesMenuPr
   }, [])
 
   const isActive = pathname.startsWith('/services')
+  const previewServices = services.slice(0, 6)
 
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current) {
@@ -185,7 +186,7 @@ export default function ServicesMenu({ publicDarkBar, services }: ServicesMenuPr
               >
                 <div className="overflow-hidden rounded-lg px-2.5 pt-2.5 pb-1.5 md:px-3 md:pt-3 md:pb-2">
                   <div className="grid grid-cols-3 grid-rows-2 gap-2 sm:gap-2.5">
-                    {services.map(service => {
+                    {previewServices.map(service => {
                       return (
                         <Link
                           key={service.slug}

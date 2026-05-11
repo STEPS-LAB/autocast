@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ServiceListItem } from '@/types'
 
@@ -14,8 +13,6 @@ interface ServiceCardProps {
   index?: number
   /** Без кільця/аутлайну при фокусі (наприклад, картки в темній секції на головній) */
   hideFocusOutline?: boolean
-  /** Без тонкої рамки навколо плашки з іконкою (світла тема) */
-  hideIconBadgeBorder?: boolean
   imageSizes?: string
 }
 
@@ -25,10 +22,8 @@ export default function ServiceCard({
   size = 'default',
   index = 0,
   hideFocusOutline = false,
-  hideIconBadgeBorder = false,
   imageSizes = '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw',
 }: ServiceCardProps) {
-  const Icon = Wrench
   const { title, shortDescription, image } = service
   const isDark = variant === 'dark'
   const isLarge = size === 'large'
@@ -57,17 +52,6 @@ export default function ServiceCard({
           )}
         />
         <div className="absolute inset-0 bg-accent/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        <div
-          className={cn(
-            'pointer-events-none absolute inline-flex items-center justify-center rounded-lg bg-graphite-deep/70 backdrop-blur-sm shadow-[0_4px_14px_-4px_rgba(0,0,0,0.45)]',
-            'outline-none ring-0 [&_svg]:outline-none [&_svg]:focus:outline-none',
-            isLarge ? 'right-3 top-3 size-11 md:right-4 md:top-4 md:size-12' : 'right-3 top-3 size-10',
-            !isDark && !hideIconBadgeBorder && 'border border-white/20'
-          )}
-          aria-hidden
-        >
-          <Icon size={isLarge ? 20 : 18} className="text-accent outline-none" aria-hidden />
-        </div>
       </div>
       <div
         className={cn(

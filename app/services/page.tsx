@@ -40,7 +40,6 @@ export default async function ServicesPage() {
                 service={service}
                 variant="light"
                 index={index}
-                hideIconBadgeBorder
               />
             ))}
           </div>

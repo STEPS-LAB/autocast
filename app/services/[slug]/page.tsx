@@ -253,7 +253,6 @@ export default async function ServiceDetailPage({ params }: Props) {
                   service={s}
                   variant="light"
                   index={index}
-                  hideIconBadgeBorder
                 />
               ))}
             </div>
