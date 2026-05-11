@@ -84,6 +84,18 @@ export default function AdminServiceNewPage() {
     return `${base}-${generateId().slice(0, 6)}`
   }
 
+  async function getNextSortOrder() {
+    const supabase = await getSupabase()
+    const { data } = await supabase
+      .from('services')
+      .select('sort_order')
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const currentMax = typeof data?.sort_order === 'number' ? data.sort_order : 0
+    return currentMax + 1
+  }
+
   async function uploadImageIfNeeded(serviceId: string): Promise<string | null> {
     if (!imageDataUrl) return form.image_url.trim() || null
     const uploadResponse = await fetch('/api/admin/upload-service-image', {
@@ -127,6 +139,7 @@ export default function AdminServiceNewPage() {
     try {
       const supabase = await getSupabase()
       const slug = await ensureUniqueSlug(name)
+      const sortOrder = await getNextSortOrder()
       const content = buildContentFromForm(description)
       const { data, error } = await supabase
         .from('services')
@@ -135,6 +148,7 @@ export default function AdminServiceNewPage() {
           name_ua: name,
           description_ua: description,
           is_active: form.is_active,
+          sort_order: sortOrder,
           content,
         })
         .select('id')
