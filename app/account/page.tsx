@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { User, Package, LogOut, Settings, ShoppingBag, Shield } from 'lucide-react'
+import { User, Package, LogOut, ShoppingBag, Shield } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import PageTransition from '@/components/layout/PageTransition'
@@ -32,6 +32,8 @@ type OrderDetails = Order & {
     product?: { id: string; slug: string; name_ua: string } | { id: string; slug: string; name_ua: string }[] | null
   }>
 }
+
+type AccountTab = 'profile' | 'orders'
 
 function formatPhoneUa(value: unknown) {
   const raw = String(value ?? '').trim()
@@ -66,8 +68,16 @@ function AccountPageContent() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const [selectedOrder, setSelectedOrder] = useState<OrderDetails | null>(null)
   const [selectedOrderLoading, setSelectedOrderLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<AccountTab>('profile')
   const [loading, setLoading] = useState(true)
   const accessDenied = searchParams.get('error') === 'admin_access_denied'
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'orders' || tab === 'profile') {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     async function loadUser() {
@@ -172,14 +182,13 @@ function AccountPageContent() {
           {/* Sidebar nav */}
           <nav className="space-y-1">
             {[
-              { icon: User, label: 'Профіль', active: true },
-              { icon: Package, label: 'Замовлення', active: false },
-              { icon: Settings, label: 'Налаштування', active: false },
+              { icon: User, label: 'Профіль', tab: 'profile' as const },
+              { icon: Package, label: 'Замовлення', tab: 'orders' as const },
               ...(profile?.role === 'admin'
                 ? [{ icon: Shield, label: 'Адмін-панель', active: false, href: '/admin' }]
                 : []),
               { icon: LogOut, label: 'Вийти з акаунту', active: false, action: 'signout' as const },
-            ].map(({ icon: Icon, label, active, href, action }) => (
+            ].map(({ icon: Icon, label, tab, href, action }) => (
               href ? (
                 <Link
                   key={label}
@@ -201,8 +210,10 @@ function AccountPageContent() {
               ) : (
                 <button
                   key={label}
+                  type="button"
+                  onClick={() => tab && setActiveTab(tab)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded text-sm transition-colors ${
-                    active
+                    tab === activeTab
                       ? 'bg-accent/30 text-black'
                       : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
                   }`}
@@ -216,89 +227,91 @@ function AccountPageContent() {
 
           {/* Content */}
           <div className="sm:col-span-2 space-y-6">
-            {/* Profile card */}
-            <div className="bg-bg-surface border border-border rounded-md p-5">
-              <div className="flex items-center gap-4 mb-5">
-                <div className="size-14 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
-                  <User size={24} className="text-accent" />
+            {activeTab === 'profile' && (
+              <div className="bg-bg-surface border border-border rounded-md p-5">
+                <div className="flex items-center gap-4 mb-5">
+                  <div className="size-14 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+                    <User size={24} className="text-accent" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-text-primary">{user?.email}</p>
+                    <p className="text-xs text-text-muted">
+                      Клієнт з {user?.created_at ? formatDate(user.created_at) : '—'}
+                    </p>
+                    {profile?.role === 'admin' && (
+                      <span className="text-xs bg-accent/15 text-accent px-2 py-0.5 rounded mt-1 inline-block">
+                        Адміністратор
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-text-primary">{user?.email}</p>
-                  <p className="text-xs text-text-muted">
-                    Клієнт з {user?.created_at ? formatDate(user.created_at) : '—'}
-                  </p>
-                  {profile?.role === 'admin' && (
-                    <span className="text-xs bg-accent/15 text-accent px-2 py-0.5 rounded mt-1 inline-block">
-                      Адміністратор
-                    </span>
+
+                <div className="space-y-3 border-t border-border pt-4">
+                  <div>
+                    <p className="text-xs text-text-muted mb-1">Email</p>
+                    <p className="text-sm text-text-primary">{user?.email}</p>
+                  </div>
+                  {profile?.phone && (
+                    <div>
+                      <p className="text-xs text-text-muted mb-1">Телефон</p>
+                      <p className="text-sm text-text-primary">{profile.phone}</p>
+                    </div>
                   )}
                 </div>
               </div>
+            )}
 
-              <div className="space-y-3 border-t border-border pt-4">
-                <div>
-                  <p className="text-xs text-text-muted mb-1">Email</p>
-                  <p className="text-sm text-text-primary">{user?.email}</p>
-                </div>
-                {profile?.phone && (
-                  <div>
-                    <p className="text-xs text-text-muted mb-1">Телефон</p>
-                    <p className="text-sm text-text-primary">{profile.phone}</p>
+            {activeTab === 'orders' && (
+              <div className="bg-bg-surface border border-border rounded-md p-5">
+                <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                  <Package size={16} className="text-accent" />
+                  Мої замовлення
+                </h3>
+                {ordersLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <div className="size-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="flex flex-col items-center py-6 text-center gap-3">
+                    <ShoppingBag size={28} className="text-text-muted" />
+                    <p className="text-sm text-text-muted">Замовлень поки немає</p>
+                    <Link href="/shop">
+                      <Button variant="secondary" size="sm">Перейти в магазин</Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {orders.map(o => (
+                      <button
+                        type="button"
+                        key={o.id}
+                        onClick={() => void openOrder(o.id)}
+                        className="w-full text-left border border-border rounded-md p-4 bg-bg-primary/40 hover:bg-bg-elevated transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-text-primary">
+                              Замовлення #{o.id.slice(0, 8).toUpperCase()}
+                            </p>
+                            <p className="text-xs text-text-muted mt-0.5">
+                              {formatDate(o.created_at)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-text-primary price">
+                              {formatPrice(Number(o.total))}
+                            </p>
+                            <p className="text-xs text-text-muted">
+                              {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Orders placeholder */}
-            <div className="bg-bg-surface border border-border rounded-md p-5">
-              <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
-                <Package size={16} className="text-accent" />
-                Мої замовлення
-              </h3>
-              {ordersLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="size-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : orders.length === 0 ? (
-                <div className="flex flex-col items-center py-6 text-center gap-3">
-                  <ShoppingBag size={28} className="text-text-muted" />
-                  <p className="text-sm text-text-muted">Замовлень поки немає</p>
-                  <Link href="/shop">
-                    <Button variant="secondary" size="sm">Перейти в магазин</Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {orders.map(o => (
-                    <button
-                      type="button"
-                      key={o.id}
-                      onClick={() => void openOrder(o.id)}
-                      className="w-full text-left border border-border rounded-md p-4 bg-bg-primary/40 hover:bg-bg-elevated transition-colors"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-text-primary">
-                            Замовлення #{o.id.slice(0, 8).toUpperCase()}
-                          </p>
-                          <p className="text-xs text-text-muted mt-0.5">
-                            {formatDate(o.created_at)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-text-primary price">
-                            {formatPrice(Number(o.total))}
-                          </p>
-                          <p className="text-xs text-text-muted">
-                            {ORDER_STATUS_LABELS[o.status] ?? o.status}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
 
           </div>
         </div>
