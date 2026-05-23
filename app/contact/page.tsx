@@ -174,7 +174,7 @@ export default function ContactPage() {
                   <span>Пн–Пт</span><span className="text-text-primary">9:00-18:00</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Сб</span><span className="text-text-primary">10:00-14:00</span>
+                  <span>Сб</span><span className="text-text-primary">10:00-14:00 (Працює лише магазин)</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Нд</span><span className="text-text-muted">Вихідний</span>
