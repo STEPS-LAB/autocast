@@ -32,7 +32,7 @@ export default function Header() {
   const [hasMounted, setHasMounted] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-  const [mobileServicesOpen, setMobileServicesOpen] = useState(true)
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false)
   const [navServices, setNavServices] = useState<ServiceListItem[]>(
     STATIC_SERVICES.map(item => ({
       slug: item.slug,
