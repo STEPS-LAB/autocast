@@ -13,6 +13,7 @@ import PageTransition from '@/components/layout/PageTransition'
 
 const ADDRESS = 'вулиця Вітрука, 12в, Житомир'
 const GOOGLE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ADDRESS)}`
+const GOOGLE_MAPS_EMBED_URL = `https://maps.google.com/maps?q=${encodeURIComponent(ADDRESS)}&output=embed`
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Введіть імʼя'),
@@ -167,10 +168,10 @@ export default function ContactPage() {
               <p className="text-xs text-text-muted uppercase tracking-wider mb-2">Графік роботи</p>
               <div className="space-y-1 text-sm text-text-secondary">
                 <div className="flex justify-between">
-                  <span>Пн–Пт</span><span className="text-text-primary">9:00-19:00</span>
+                  <span>Пн–Пт</span><span className="text-text-primary">9:00-18:00</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Сб</span><span className="text-text-primary">9:00-17:00</span>
+                  <span>Сб</span><span className="text-text-primary">10:00-14:00</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Нд</span><span className="text-text-muted">Вихідний</span>
@@ -281,6 +282,25 @@ export default function ContactPage() {
                 ) : null}
               </form>
             )}
+          </div>
+        </div>
+
+        <div className="mt-14">
+          <div className="flex items-center gap-3 mb-4">
+            <MapPin size={22} className="text-text-muted" />
+            <h2 className="text-[1.1rem] font-semibold text-text-primary">Як нас знайти</h2>
+          </div>
+          <div className="rounded-md overflow-hidden border border-border h-80 md:h-[22rem]">
+            <iframe
+              src={GOOGLE_MAPS_EMBED_URL}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Autocast на карті"
+            />
           </div>
         </div>
       </div>
