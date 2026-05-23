@@ -4,12 +4,15 @@ import { useForm } from 'react-hook-form'
 import { Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Phone, Mail, MapPin, CheckCircle2, Instagram, Facebook } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
+
+const GoogleMapEmbed = dynamic(() => import('@/components/contact/GoogleMapEmbed'), { ssr: false })
 
 const ADDRESS = 'вулиця Вітрука, 12в, Житомир'
 const GOOGLE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ADDRESS)}`
@@ -46,11 +49,8 @@ function formatPhoneMask(digits: string) {
 }
 
 export default function ContactPage() {
-  const [mounted, setMounted] = useState(false)
   const [sent, setSent] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-
-  useEffect(() => { setMounted(true) }, [])
   const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ContactInput>({
     resolver: zodResolver(contactSchema),
   })
@@ -288,26 +288,7 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <div className="mt-14">
-          <div className="flex items-center gap-3 mb-4">
-            <MapPin size={22} className="text-text-muted" />
-            <h2 className="text-[1.1rem] font-semibold text-text-primary">Як нас знайти</h2>
-          </div>
-          <div className="rounded-md overflow-hidden border border-border h-80 md:h-[22rem]">
-            {mounted && (
-              <iframe
-                src={GOOGLE_MAPS_EMBED_URL}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Autocast на карті"
-              />
-            )}
-          </div>
-        </div>
+        <GoogleMapEmbed embedUrl={GOOGLE_MAPS_EMBED_URL} />
       </div>
     </PageTransition>
   )
