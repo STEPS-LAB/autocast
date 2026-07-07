@@ -64,6 +64,28 @@ export function generateId(): string {
   return Math.random().toString(36).slice(2, 11)
 }
 
+/** Smooth in-page anchor scroll without enabling global `scroll-behavior: smooth`. */
+export function smoothScrollToAnchor(
+  event: { preventDefault: () => void },
+  href: string,
+) {
+  event.preventDefault()
+
+  const id = href.startsWith('#') ? href.slice(1) : href
+  if (!id) return
+
+  const target = document.getElementById(id)
+  if (!target) return
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  target.scrollIntoView({
+    behavior: reduceMotion ? 'auto' : 'smooth',
+    block: 'start',
+  })
+
+  window.history.pushState(null, '', `#${id}`)
+}
+
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number

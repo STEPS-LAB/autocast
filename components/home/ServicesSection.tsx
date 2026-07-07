@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
 import type { ServiceListItem } from '@/types'
 import { linkTitleAllServices, linkTitleContactCta } from '@/lib/seo/accessibility'
+import { smoothScrollToAnchor } from '@/lib/utils'
 
 interface ServicesSectionProps {
   services: ServiceListItem[]
@@ -69,7 +70,12 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
               Напишіть або зателефонуйте — підкажемо найкраще рішення для Вашого автомобіля.
             </p>
           </div>
-          <a href="#contact" title={linkTitleContactCta()} className="block w-full md:w-auto md:shrink-0">
+          <a
+            href="#contact"
+            title={linkTitleContactCta()}
+            onClick={(e) => smoothScrollToAnchor(e, '#contact')}
+            className="block w-full md:w-auto md:shrink-0"
+          >
             <Button
               size="lg"
               className="micro-pop gap-2 px-8 transition-transform duration-500 hover:scale-105"

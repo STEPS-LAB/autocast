@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { cn, smoothScrollToAnchor } from '@/lib/utils'
 
 interface SymptomPosition {
   top?: string
@@ -120,6 +120,7 @@ function MasterAnswer({ item }: { item: SymptomItem }) {
       {item.bodyBefore}
       <a
         href="#contact"
+        onClick={(e) => smoothScrollToAnchor(e, '#contact')}
         className="text-[#FFBB00] underline font-semibold mt-2 cursor-pointer inline hover:text-white transition-colors duration-500"
       >
         {item.ctaLabel}
