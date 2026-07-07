@@ -84,13 +84,14 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scrollbar-gutter: stable;
 }
 
 body {
+  position: relative;
   /* Базовий колір «полотна» для секцій, які мають збігатися з фоном (напр. fade фото на /services/[slug]) */
   --page-canvas-base: var(--color-bg-primary);
   background-color: var(--color-bg-primary);
@@ -99,17 +100,10 @@ body {
     radial-gradient(1000px 720px at 92% 0%, rgb(47 54 64 / 0.10), transparent 55%),
     radial-gradient(1100px 820px at 52% 112%, rgb(148 163 184 / 0.18), transparent 62%),
     linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 42%, #F1F4F9 100%);
-  /* `fixed` causes heavy repaints on mobile Safari; keep it on fine-pointer desktops only. */
   background-attachment: scroll;
   color: var(--color-text-primary);
   font-family: var(--font-sans, system-ui, sans-serif);
   min-height: 100dvh;
-}
-
-@media (min-width: 1024px) and (pointer: fine) {
-  body {
-    background-attachment: fixed;
-  }
 }
 
 /* Inner pages (non-home): cool airy canvas — depth from translucent layers, not flat gray */
@@ -126,12 +120,6 @@ body.page-bg-subtle-dark {
 body.page-bg-subtle-dark::after {
   opacity: 0.46;
   background: radial-gradient(1200px 900px at 50% 100%, rgb(30 35 41 / 0.10), transparent 62%);
-}
-
-@media (min-width: 1024px) and (pointer: fine) {
-  body.page-bg-subtle-dark {
-    background-attachment: fixed;
-  }
 }
 
 /*
@@ -168,10 +156,11 @@ body.page-bg-subtle-dark::after {
 /* Bottom vignette only — avoids a bright wash at the top of the viewport */
 body::after {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
+  min-height: 100dvh;
   pointer-events: none;
-  z-index: 9998;
+  z-index: 0;
   background: radial-gradient(1200px 900px at 50% 100%, rgb(30 35 41 / 0.12), transparent 60%);
   opacity: 0.5;
 }

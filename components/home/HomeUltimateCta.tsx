@@ -22,7 +22,7 @@ const leadSchema = z.object({
 type LeadInput = z.infer<typeof leadSchema>
 
 const ctaInputClass =
-  'h-11 rounded-lg bg-[#22252A] border-white/10 text-white font-medium focus:border-[#FFBB00] focus:ring-1 focus:ring-[#FFBB00] focus:outline-none'
+  'h-11 rounded-lg bg-bg-input border-border text-text-primary font-medium placeholder:text-text-muted focus:border-accent focus:ring-1 focus:ring-accent/30 focus:outline-none antialiased'
 
 export default function HomeUltimateCta() {
   const [sent, setSent] = useState(false)
@@ -82,29 +82,26 @@ export default function HomeUltimateCta() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-[#1A1D21] p-6 md:p-8 shadow-[0_24px_64px_-28px_rgb(0_0_0/0.35)]">
+          <div className="rounded-xl border border-border bg-bg-surface p-6 md:p-8 shadow-[0_24px_64px_-28px_rgb(15_23_42/0.12)] antialiased">
             {sent ? (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center text-center gap-4 py-8 antialiased"
+                className="flex flex-col items-center text-center gap-4 py-8"
               >
                 <div className="size-14 rounded-full bg-success/15 border border-success/30 flex items-center justify-center">
                   <CheckCircle2 size={28} className="text-success" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Дякуємо за довіру</h3>
-                  <p className="text-sm text-white/70">
+                  <h3 className="text-lg font-semibold text-text-primary mb-1">Дякуємо за довіру</h3>
+                  <p className="text-sm text-text-secondary">
                     Майстер Autocast звʼяжеться з Вами найближчим часом.
                   </p>
                 </div>
               </motion.div>
             ) : (
-              <form
-                onSubmit={handleSubmit(onSubmit)}
-                className="antialiased space-y-4 [&_label]:text-white/80 [&_label]:font-medium"
-              >
-                <p className="text-sm font-medium text-white mb-2">Залиште контакти для швидкого звʼязку</p>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <p className="text-sm font-medium text-text-primary mb-2">Залиште контакти для швидкого звʼязку</p>
                 <Input
                   label="Ваше імʼя"
                   placeholder="Іван"
@@ -151,7 +148,7 @@ export default function HomeUltimateCta() {
                 {submitError ? (
                   <p className="text-sm text-error">{submitError}</p>
                 ) : (
-                  <p className="text-xs text-white/50 text-center">
+                  <p className="text-xs text-text-muted text-center">
                     Натискаючи кнопку, Ви погоджуєтесь на обробку контактних даних для зворотного звʼязку.
                   </p>
                 )}

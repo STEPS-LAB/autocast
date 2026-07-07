@@ -21,21 +21,36 @@ export default function MobileNav() {
   const [inHeroSection, setInHeroSection] = useState(pathname === '/')
 
   useEffect(() => {
+    if (pathname !== '/') {
+      setInHeroSection(false)
+      return
+    }
+
+    let rafId = 0
+    let lastVisible = window.scrollY < Math.max(window.innerHeight - 140, 360)
+
     const updateHeroVisibility = () => {
-      if (pathname !== '/') {
-        setInHeroSection(false)
-        return
-      }
       const heroThreshold = Math.max(window.innerHeight - 140, 360)
-      setInHeroSection(window.scrollY < heroThreshold)
+      const nextVisible = window.scrollY < heroThreshold
+      if (nextVisible !== lastVisible) {
+        lastVisible = nextVisible
+        setInHeroSection(nextVisible)
+      }
+      rafId = 0
+    }
+
+    const onScroll = () => {
+      if (rafId !== 0) return
+      rafId = window.requestAnimationFrame(updateHeroVisibility)
     }
 
     updateHeroVisibility()
-    window.addEventListener('scroll', updateHeroVisibility, { passive: true })
+    window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', updateHeroVisibility)
     return () => {
-      window.removeEventListener('scroll', updateHeroVisibility)
+      window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', updateHeroVisibility)
+      if (rafId !== 0) window.cancelAnimationFrame(rafId)
     }
   }, [pathname])
 

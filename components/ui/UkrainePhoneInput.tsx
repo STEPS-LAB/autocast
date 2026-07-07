@@ -1,9 +1,8 @@
 'use client'
 
-import { forwardRef, useCallback } from 'react'
+import { forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
-const PHONE_MASK_EMPTY = '+38 (___) - ___ - __ - __'
 const MAX_UA_PHONE_DIGITS = 9
 
 /** Extract 9 national digits (without leading 0) from any phone string. */
@@ -14,51 +13,18 @@ export function extractUkrainePhoneDigits(value: string): string {
   return withoutLeadingZero.slice(0, MAX_UA_PHONE_DIGITS)
 }
 
-function padSegment(value: string, length: number): string {
-  return value + '_'.repeat(Math.max(0, length - value.length))
-}
-
-/** Visual mask: +38 (0XX) - XXX - XX - XX with underscores for empty slots. */
-export function formatUkrainePhoneMask(digits: string): string {
+/** Single-layer mask: +38 (0XX) - XXX - XX - XX */
+export function formatPhoneInputValue(digits: string): string {
   const d = digits.slice(0, MAX_UA_PHONE_DIGITS)
-  const g1 = d.length > 0 ? padSegment(`0${d.slice(0, 2)}`, 3) : '___'
-  const g2 = padSegment(d.slice(2, 5), 3)
-  const g3 = padSegment(d.slice(5, 7), 2)
-  const g4 = padSegment(d.slice(7, 9), 2)
-  return `+38 (${g1}) - ${g2} - ${g3} - ${g4}`
+  const op = d.slice(0, 2).padEnd(2, '_')
+  const a = d.slice(2, 5).padEnd(3, '_')
+  const b = d.slice(5, 7).padEnd(2, '_')
+  const c = d.slice(7, 9).padEnd(2, '_')
+  return `+38 (0${op}) - ${a} - ${b} - ${c}`
 }
 
 export function isUkrainePhoneComplete(digits: string): boolean {
   return digits.length === MAX_UA_PHONE_DIGITS && /^\d{9}$/.test(digits)
-}
-
-const NAVIGATION_KEYS = new Set([
-  'Backspace',
-  'Delete',
-  'ArrowLeft',
-  'ArrowRight',
-  'ArrowUp',
-  'ArrowDown',
-  'Tab',
-  'Home',
-  'End',
-])
-
-function MaskDisplay({ digits }: { digits: string }) {
-  const mask = digits.length > 0 ? formatUkrainePhoneMask(digits) : PHONE_MASK_EMPTY
-
-  return (
-    <span aria-hidden className="pointer-events-none select-none text-sm font-medium">
-      {mask.split('').map((char, index) => (
-        <span
-          key={`${char}-${index}`}
-          className={char === '_' ? 'text-white/40 font-normal' : 'text-white'}
-        >
-          {char}
-        </span>
-      ))}
-    </span>
-  )
 }
 
 interface UkrainePhoneInputProps {
@@ -74,32 +40,40 @@ interface UkrainePhoneInputProps {
 const UkrainePhoneInput = forwardRef<HTMLInputElement, UkrainePhoneInputProps>(
   ({ id, label, value, onChange, onBlur, error, className }, ref) => {
     const digits = extractUkrainePhoneDigits(value)
+    const displayValue = formatPhoneInputValue(digits)
     const isComplete = isUkrainePhoneComplete(digits)
 
-    const handleChange = useCallback(
-      (raw: string) => {
-        const next = extractUkrainePhoneDigits(raw)
-        if (next.length <= MAX_UA_PHONE_DIGITS) onChange(next)
-      },
-      [onChange],
-    )
+    function setDigits(next: string) {
+      onChange(next.slice(0, MAX_UA_PHONE_DIGITS))
+    }
 
-    const handleKeyDown = useCallback(
-      (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (isComplete && !NAVIGATION_KEYS.has(event.key) && !event.ctrlKey && !event.metaKey) {
+    function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+      if (event.key >= '0' && event.key <= '9') {
+        if (isComplete) {
           event.preventDefault()
+          return
         }
-      },
-      [isComplete],
-    )
-
-    const handlePaste = useCallback(
-      (event: React.ClipboardEvent<HTMLInputElement>) => {
         event.preventDefault()
-        handleChange(event.clipboardData.getData('text'))
-      },
-      [handleChange],
-    )
+        setDigits(digits + event.key)
+        return
+      }
+
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault()
+        if (digits.length > 0) setDigits(digits.slice(0, -1))
+      }
+    }
+
+    function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+      const next = extractUkrainePhoneDigits(event.target.value)
+      if (next.length <= MAX_UA_PHONE_DIGITS) onChange(next)
+    }
+
+    function handlePaste(event: React.ClipboardEvent<HTMLInputElement>) {
+      event.preventDefault()
+      const next = extractUkrainePhoneDigits(event.clipboardData.getData('text'))
+      setDigits(next)
+    }
 
     return (
       <div className="flex flex-col gap-1.5">
@@ -108,33 +82,28 @@ const UkrainePhoneInput = forwardRef<HTMLInputElement, UkrainePhoneInputProps>(
             {label}
           </label>
         )}
-        <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3">
-            <MaskDisplay digits={digits} />
-          </div>
-          <input
-            ref={ref}
-            id={id}
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel"
-            value={digits.length > 0 ? formatUkrainePhoneMask(digits) : ''}
-            onChange={e => handleChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onBlur={onBlur}
-            aria-invalid={error ? true : undefined}
-            aria-label={label ?? 'Телефон'}
-            className={cn(
-              'w-full h-11 rounded-lg border px-3 text-sm font-medium transition-colors duration-150',
-              'text-transparent caret-white',
-              'focus:outline-none focus:border-[#FFBB00] focus:ring-1 focus:ring-[#FFBB00]',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              error && 'border-error focus:border-error focus:ring-error',
-              className,
-            )}
-          />
-        </div>
+        <input
+          ref={ref}
+          id={id}
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel"
+          value={displayValue}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onBlur={onBlur}
+          aria-invalid={error ? true : undefined}
+          aria-label={label ?? 'Телефон'}
+          className={cn(
+            'w-full h-11 rounded-lg border px-3 text-sm font-medium antialiased transition-colors duration-150',
+            'text-text-primary placeholder:text-text-muted',
+            'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            error && 'border-error focus:border-error focus:ring-error/30',
+            className,
+          )}
+        />
         {error && <p className="text-xs text-error">{error}</p>}
       </div>
     )

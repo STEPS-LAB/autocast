@@ -34,7 +34,6 @@ export default function RootLayout({
   return (
     <html
       lang="uk"
-      data-scroll-behavior="smooth"
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
       <body className="min-h-dvh flex flex-col">

@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { imageAltHero, imageTitleHero, linkTitleHeroServices, linkTitleHeroShop } from '@/lib/seo/accessibility'
@@ -57,32 +56,15 @@ export default function HeroSection() {
       <div className="container-xl relative z-10 py-24">
         <div className="relative w-full">
           <div className="max-w-3xl">
-            <motion.h1
-              key={HERO_SLIDE.id}
-              initial={{ opacity: 1, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45 }}
-              className="text-display text-text-inverse mb-6"
-            >
+            <h1 className="text-display text-text-inverse mb-6">
               <span className="text-accent">Автозвук</span>, світло, електроніка.
-            </motion.h1>
+            </h1>
 
-            <motion.p
-              key={`${HERO_SLIDE.id}-desc`}
-              initial={{ opacity: 1, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.05 }}
-              className="text-lg text-white/88 leading-relaxed mb-10 max-w-xl"
-            >
+            <p className="text-lg text-white/88 leading-relaxed mb-10 max-w-xl">
               {HERO_SLIDE.description}
-            </motion.p>
+            </p>
 
-            <motion.div
-              initial={{ opacity: 1, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-wrap gap-3"
-            >
+            <div className="flex flex-wrap gap-3">
               <Link href={HERO_SLIDE.href} title={linkTitleHeroServices()}>
                 <Button size="lg" className="gap-2 micro-pop">
                   {HERO_SLIDE.cta}
@@ -94,34 +76,26 @@ export default function HeroSection() {
                   Знайти деталь
                 </Button>
               </Link>
-            </motion.div>
+            </div>
           </div>
 
           <div className="mt-28 lg:mt-44 flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-8 lg:gap-12">
-            <motion.a
+            <a
               href="#contact"
-              initial={{ opacity: 1, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.45 }}
               className="order-2 lg:order-1 inline-flex w-full md:w-auto md:min-w-[29rem] whitespace-nowrap shrink-0 self-stretch items-center justify-center gap-2 rounded-md px-6 md:px-8 text-sm sm:text-base bg-accent text-black font-bold shadow-[0_12px_40px_-10px_rgb(255_193_7/0.55)] hover:bg-accent-hover hover:scale-[1.02] transition-all duration-500"
             >
               Записатись на безкоштовну консультацію майстра
               <ArrowRight size={18} className="shrink-0" />
-            </motion.a>
+            </a>
 
-            <motion.div
-              initial={{ opacity: 1, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="order-1 lg:order-2 grid grid-cols-3 gap-4 lg:flex lg:flex-nowrap lg:items-center lg:gap-10 lg:text-right w-full max-w-xl lg:max-w-none lg:w-auto lg:translate-x-4 mx-auto lg:mx-0"
-            >
+            <div className="order-1 lg:order-2 grid grid-cols-3 gap-4 lg:flex lg:flex-nowrap lg:items-center lg:gap-10 lg:text-right w-full max-w-xl lg:max-w-none lg:w-auto lg:translate-x-4 mx-auto lg:mx-0">
               {STATS.map(({ label, value }) => (
                 <div key={label} className="text-center">
                   <p className="text-impact text-text-inverse">{value}</p>
                   <p className="text-[11px] leading-tight text-text-inverse-muted mt-0.5">{label}</p>
                 </div>
               ))}
-            </motion.div>
+            </div>
           </div>
         </div>
       </div>
