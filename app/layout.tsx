@@ -4,7 +4,6 @@ import './globals.css'
 import AppLayoutClient from '@/components/layout/AppLayoutClient'
 import RootClientBoundary from '@/components/error/RootClientBoundary'
 import { buildRootMetadata } from '@/lib/seo/metadata'
-import { CRITICAL_CSS } from '@/lib/critical-css'
 
 const inter = Inter({
   subsets: ['latin', 'cyrillic'],
@@ -37,10 +36,6 @@ export default function RootLayout({
       lang="uk"
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
-      <head>
-        {/* 1. Hero / shell — paints before framework CSS (see experimental.inlineCss). */}
-        <style id="critical-css" dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }} />
-      </head>
       <body className="min-h-dvh flex flex-col">
         <RootClientBoundary>
           <AppLayoutClient>{children}</AppLayoutClient>
