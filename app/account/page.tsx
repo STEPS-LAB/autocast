@@ -185,17 +185,8 @@ function AccountPageContent() {
               { icon: User, label: 'Профіль', tab: 'profile' as const },
               { icon: Package, label: 'Замовлення', tab: 'orders' as const },
               { icon: LogOut, label: 'Вийти з акаунту', active: false, action: 'signout' as const },
-            ].map(({ icon: Icon, label, tab, href, action }) => (
-              href ? (
-                <Link
-                  key={label}
-                  href={href}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded text-sm transition-colors text-text-secondary hover:text-text-primary hover:bg-bg-elevated"
-                >
-                  <Icon size={16} />
-                  {label}
-                </Link>
-              ) : action === 'signout' ? (
+            ].map(({ icon: Icon, label, tab, action }) => (
+              action === 'signout' ? (
                 <button
                   key={label}
                   onClick={handleSignOut}
