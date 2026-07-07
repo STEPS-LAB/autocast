@@ -113,6 +113,15 @@ body {
   li {
     @apply text-[16px] md:text-[17px] leading-relaxed;
   }
+
+  /* Accent labels/highlights: inherit contextual scale (text-xs, text-display, etc.) */
+  span.text-accent,
+  a.text-accent,
+  p.text-accent,
+  li.text-accent {
+    font-size: inherit;
+    line-height: inherit;
+  }
 }
 
 /* Inner pages (non-home): cool airy canvas — depth from translucent layers, not flat gray */
