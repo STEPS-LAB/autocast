@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import AppLayoutClient from '@/components/layout/AppLayoutClient'
 import RootClientBoundary from '@/components/error/RootClientBoundary'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const inter = Inter({
   subsets: ['latin', 'cyrillic'],
@@ -60,6 +61,7 @@ export default function RootLayout({
         <RootClientBoundary>
           <AppLayoutClient>{children}</AppLayoutClient>
         </RootClientBoundary>
+        <SpeedInsights />
       </body>
     </html>
   )
