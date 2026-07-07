@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   experimental: {
+    // Inlines CSS into <style> tags instead of render-blocking <link> chunks (production builds).
+    // https://nextjs.org/docs/app/api-reference/config/next-config-js/inlineCss
+    inlineCss: true,
     // framer-motion не додаємо: optimizePackageImports може зламати AnimatePresence / exit.
     optimizePackageImports: ['lucide-react'],
   },

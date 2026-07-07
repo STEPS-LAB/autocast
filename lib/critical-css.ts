@@ -1,6 +1,8 @@
 /**
- * Above-the-fold CSS inlined in <head> so the hero H1 and shell render before
- * Tailwind / font CSS chunks finish downloading (PageSpeed render-blocking).
+ * Minimal above-the-fold CSS inlined before framework styles.
+ * Pairs with `experimental.inlineCss` in next.config.ts (production only):
+ * Next.js replaces blocking `<link rel="stylesheet">` chunks with inline `<style>` tags.
+ *
  * Keep in sync with hero, header shell, and design tokens in globals.css.
  */
 export const CRITICAL_CSS = `:root{
@@ -57,21 +59,3 @@ span.text-accent,a.text-accent,p.text-accent,li.text-accent{font-size:inherit;li
 @media(min-width:1024px){
 .lg\\:min-w-\\[11\\.7rem\\]{min-width:11.7rem}.lg\\:mt-44{margin-top:11rem}
 .lg\\:flex-row{flex-direction:row}.lg\\:items-stretch{align-items:stretch}}`
-
-/** Runs before paint; defers stylesheet links so they don't block first render. */
-export const DEFER_STYLES_BOOTSTRAP = `(function(){
-function deferStylesheet(link){
-if(!link||link.rel!=='stylesheet'||link.dataset.acDeferred)return;
-link.dataset.acDeferred='1';
-var media=link.media||'all';
-link.media='print';
-link.onload=function(){link.media=media;link.onload=null;};
-}
-function scan(){document.querySelectorAll('link[rel="stylesheet"]').forEach(deferStylesheet);}
-scan();
-if(typeof MutationObserver!=='undefined'){
-new MutationObserver(function(m){m.forEach(function(r){
-r.addedNodes.forEach(function(n){if(n.nodeType===1&&n.tagName==='LINK')deferStylesheet(n);});
-});}).observe(document.documentElement,{childList:true,subtree:true});
-}
-})();`
