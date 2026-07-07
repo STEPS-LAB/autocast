@@ -64,7 +64,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Якась дичина... Якщо для розмови з пасажиром доводиться вмикати режим крику, Ваше авто більше схоже на консервну банку. ',
     ctaLabel: 'Замовити преміум-шумоізоляцію',
     bodyAfter: ' та нарешті насолодитися тишею.',
-    position: { top: '45%', left: '1%' },
+    position: { top: '40%', left: '1%' },
   },
   {
     id: 'door-anxiety',
@@ -83,7 +83,7 @@ const SYMPTOMS: SymptomItem[] = [
     ctaLabel: 'Замінити камеру',
     bodyAfter:
       ' на чітку HD-оптику з динамічною розміткою, поки не зачепили чийсь бампер.',
-    position: { bottom: '26%', left: '15%' },
+    position: { top: '62%', left: '14%' },
   },
   {
     id: 'dim-headlights',
@@ -101,7 +101,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Слухайте, це не новий трек у стилі lo-fi... Це Ваші динаміки благають про пощаду та заміну. ',
     ctaLabel: 'Підібрати акустику',
     bodyAfter: ', яка розкачає салон під Ваші музичні вподобання.',
-    position: { bottom: '5%', left: '5%' },
+    position: { bottom: '2%', left: '3%' },
   },
   {
     id: 'warranty-fear',
