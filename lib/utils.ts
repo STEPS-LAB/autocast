@@ -78,10 +78,23 @@ export function smoothScrollToAnchor(
   if (!target) return
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  target.scrollIntoView({
-    behavior: reduceMotion ? 'auto' : 'smooth',
-    block: 'start',
-  })
+  const isMobile = window.matchMedia('(max-width: 767px)').matches
+  const mobileTopOffset = 80
+
+  if (id === 'contact' && isMobile) {
+    const formAnchor =
+      target.querySelector<HTMLElement>('[data-contact-form]') ?? target
+    const top = formAnchor.getBoundingClientRect().top + window.scrollY - mobileTopOffset
+    window.scrollTo({
+      top: Math.max(0, top),
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    })
+  } else {
+    target.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    })
+  }
 
   window.history.pushState(null, '', `#${id}`)
 }

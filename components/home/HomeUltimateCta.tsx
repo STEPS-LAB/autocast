@@ -58,7 +58,7 @@ export default function HomeUltimateCta() {
   return (
     <section
       id="contact"
-      className="scroll-mt-28 relative overflow-hidden bg-bg-primary border-t border-border py-20 md:py-32 lg:py-40"
+      className="scroll-mt-20 md:scroll-mt-28 relative overflow-hidden bg-bg-primary border-t border-border py-20 md:py-32 lg:py-40"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_0%,rgb(255_193_7/0.08),transparent_60%)]" aria-hidden />
 
@@ -82,7 +82,10 @@ export default function HomeUltimateCta() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-border bg-bg-surface p-6 md:p-8 shadow-[0_24px_64px_-28px_rgb(15_23_42/0.12)] antialiased">
+          <div
+            data-contact-form
+            className="rounded-xl border border-border bg-bg-surface p-6 md:p-8 shadow-[0_24px_64px_-28px_rgb(15_23_42/0.12)] antialiased max-md:scroll-mt-20"
+          >
             {sent ? (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
