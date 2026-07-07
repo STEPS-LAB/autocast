@@ -28,7 +28,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Халепа! Всередині фар утворилося справжнє болото. Акваріум — це чудово, але рибкам краще жити вдома, а не у Вашій оптиці. ',
     ctaLabel: 'Звʼяжіться з майстром',
     bodyAfter: ', щоб повернути фарам заводську герметичність.',
-    position: { top: '10%', left: '5%' },
+    position: { top: '5%', left: '2%' },
   },
   {
     id: 'flat-sound',
@@ -37,7 +37,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Ну це жесть... Здається, Ваші улюблені виконавці просто втомилися співати у таких умовах і оголосили страйк. ',
     ctaLabel: 'Отримати прорахунок сцени',
     bodyAfter: ', щоб повернути музиці обʼєм та соковитий басс.',
-    position: { top: '8%', right: '5%' },
+    position: { top: '4%', right: '2%' },
   },
   {
     id: 'frozen-screen',
@@ -46,7 +46,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Катастрофа! Ваша мультимедіа просто впадає в сплячку, сумує за теплом і відмовляється думати. ',
     ctaLabel: 'Підібрати сучасну Android-систему',
     bodyAfter: ' з CarPlay, яка не боїться українських морозів.',
-    position: { top: '35%', left: '2%' },
+    position: { top: '24%', left: '18%' },
   },
   {
     id: 'high-beams',
@@ -55,7 +55,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Спокійно, вони не вітаються! Ваше світло просто нещадно випалює їм очі через збиті налаштування або лінзи, що «втомилися». ',
     ctaLabel: 'Записатись на стенд',
     bodyAfter: ', щоб відрегулювати чітку світлотіньову межу.',
-    position: { top: '40%', right: '2%' },
+    position: { top: '22%', right: '18%' },
   },
   {
     id: 'road-noise',
@@ -64,7 +64,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Якась дичина... Якщо для розмови з пасажиром доводиться вмикати режим крику, Ваше авто більше схоже на консервну банку. ',
     ctaLabel: 'Замовити преміум-шумоізоляцію',
     bodyAfter: ' та нарешті насолодитися тишею.',
-    position: { top: '60%', left: '7%' },
+    position: { top: '45%', left: '1%' },
   },
   {
     id: 'door-anxiety',
@@ -73,7 +73,7 @@ const SYMPTOMS: SymptomItem[] = [
     ctaLabel: 'Дізнатися вартість',
     bodyAfter:
       ' встановлення надійної діалогової сигналізації з автозапуском з Вашого телефону.',
-    position: { top: '65%', right: '8%' },
+    position: { top: '42%', right: '1%' },
   },
   {
     id: 'blurry-camera',
@@ -83,7 +83,7 @@ const SYMPTOMS: SymptomItem[] = [
     ctaLabel: 'Замінити камеру',
     bodyAfter:
       ' на чітку HD-оптику з динамічною розміткою, поки не зачепили чийсь бампер.',
-    position: { top: '22%', left: '28%' },
+    position: { bottom: '26%', left: '15%' },
   },
   {
     id: 'dim-headlights',
@@ -92,7 +92,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Повний морок! Нічні поїздки перетворилися на квест «вгадай, де яма на дорозі»? ',
     ctaLabel: 'Проконсультуватися щодо Bi-LED лінз',
     bodyAfter: ', які назавжди перетворять Вашу ніч на білий день.',
-    position: { top: '20%', right: '26%' },
+    position: { bottom: '24%', right: '15%' },
   },
   {
     id: 'speaker-crackle',
@@ -101,7 +101,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Слухайте, це не новий трек у стилі lo-fi... Це Ваші динаміки благають про пощаду та заміну. ',
     ctaLabel: 'Підібрати акустику',
     bodyAfter: ', яка розкачає салон під Ваші музичні вподобання.',
-    position: { bottom: '5%', left: '20%' },
+    position: { bottom: '5%', left: '5%' },
   },
   {
     id: 'warranty-fear',
@@ -110,7 +110,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Класична лякалка! Ми працюємо професійно, чисто та сертифіковано, тому Ваша гарантія залишиться абсолютно недоторканою. ',
     ctaLabel: 'Обговорити проект з інженером',
     bodyAfter: ' і спати спокійно.',
-    position: { bottom: '5%', right: '20%' },
+    position: { bottom: '4%', right: '5%' },
   },
 ]
 
@@ -132,7 +132,7 @@ function MasterAnswer({ item }: { item: SymptomItem }) {
 function DesktopFlipCard({ item }: { item: SymptomItem }) {
   return (
     <div
-      className="group min-w-[340px] max-w-[400px] h-[160px] [perspective:1000px] absolute z-20"
+      className="group w-[calc(50vw-20px)] max-w-[360px] lg:max-w-[380px] h-[160px] [perspective:1000px] absolute z-20"
       style={item.position}
     >
       <div className="relative w-full h-full duration-500 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
@@ -221,10 +221,10 @@ export default function CarSymptomsCluster() {
 
       {/* Desktop — absolute organic canvas with 3D hover flip */}
       <div className="hidden md:block w-full px-4 md:px-12 lg:px-20">
-        <div className="relative w-full min-h-[750px] overflow-visible mx-auto max-w-[1400px]">
+        <div className="relative w-full min-h-[950px] lg:min-h-[1050px] overflow-visible py-20 mx-auto max-w-[1400px]">
           {/* Central logo */}
           <div
-            className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 select-none text-center"
+            className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 select-none text-center"
             aria-hidden
           >
             <p className="font-brand text-[clamp(3rem,6vw,5rem)] font-bold leading-none tracking-tight text-white/92">
