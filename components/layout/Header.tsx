@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, User, Menu, X, Search, Heart, ChevronDown } from 'lucide-react'
+import { ShoppingCart, Menu, X, Search, Heart, ChevronDown } from 'lucide-react'
 import { useCartStore, selectCartCount } from '@/lib/store/cart'
 import { useWishlistStore, selectWishlistCount } from '@/lib/store/wishlist'
 import { cn } from '@/lib/utils'
@@ -13,7 +13,7 @@ import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/compone
 import ServicesMenu from '@/components/layout/ServicesMenu'
 import SiteLogo from '@/components/layout/SiteLogo'
 import { SERVICES as STATIC_SERVICES } from '@/lib/data/services'
-import { linkTitleAccount, linkTitleNav, linkTitleService } from '@/lib/seo/accessibility'
+import { linkTitleNav, linkTitleService } from '@/lib/seo/accessibility'
 import type { ServiceListItem } from '@/types'
 
 const NAV_LINKS = [
@@ -273,20 +273,6 @@ export default function Header() {
                 </AnimatePresence>
               </button>
 
-              <Link
-                href="/account"
-                title={linkTitleAccount()}
-                className={cn(
-                  'hidden md:inline-flex p-2 rounded transition-colors',
-                  publicDarkBar
-                    ? 'text-white/78 hover:text-white hover:bg-white/12'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                )}
-                aria-label="Акаунт"
-              >
-                <User size={20} />
-              </Link>
-
               {/* Mobile menu toggle */}
               <button
                 className={cn(
@@ -385,20 +371,6 @@ export default function Header() {
             </button>
 
             <nav className="flex flex-col gap-1">
-              <Link
-                href="/account"
-                title={linkTitleAccount()}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'px-3 py-3 rounded text-base font-medium transition-colors',
-                  pathname.startsWith('/account')
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                )}
-              >
-                Акаунт
-              </Link>
-
               {NAV_LINKS.map(link => {
                 const isActive =
                   link.href === '/'

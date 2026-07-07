@@ -11,8 +11,6 @@ import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
 import type { Brand, Category, ProductCard } from '@/types'
-import Link from 'next/link'
-import Button from '@/components/ui/Button'
 
 interface ShopContentProps {
   products: ProductCard[]
@@ -191,15 +189,8 @@ export default function ShopContent({ products, categories, brands }: ShopConten
               <div className="rounded-md border border-border bg-bg-surface p-8 text-center">
                 <h3 className="text-base font-semibold text-text-primary mb-1">Каталог порожній</h3>
                 <p className="text-sm text-text-muted">
-                  У базі немає товарів або запит не повернув дані. Перевірте таблицю products і RLS у Supabase, або виконайте синхронізацію в адмін-панелі.
+                  У базі немає товарів або запит не повернув дані. Перевірте таблицю products і RLS у Supabase.
                 </p>
-                <div className="mt-4 flex justify-center">
-                  <Link href="/admin">
-                    <Button size="sm" variant="secondary">
-                      Відкрити адмінку
-                    </Button>
-                  </Link>
-                </div>
               </div>
             ) : (
               <ProductGrid products={filtered} />

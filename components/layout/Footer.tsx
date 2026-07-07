@@ -3,7 +3,6 @@ import { Phone, Mail, MapPin, Instagram, Facebook } from 'lucide-react'
 import SiteLogo from '@/components/layout/SiteLogo'
 import {
   linkTitleAbout,
-  linkTitleAccount,
   linkTitleAddress,
   linkTitleCategory,
   linkTitleContact,
@@ -28,7 +27,6 @@ const INFO_LINKS = [
   { href: '/about', label: 'Про нас', title: linkTitleAbout() },
   { href: '/services', label: 'Послуги', title: linkTitleServices() },
   { href: '/contact', label: 'Контакти', title: linkTitleContact() },
-  { href: '/account', label: 'Мій акаунт', title: linkTitleAccount() },
 ]
 
 export default function Footer() {

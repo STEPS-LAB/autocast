@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Home, ShoppingBag, Wrench, Phone, User } from 'lucide-react'
+import { Home, ShoppingBag, Wrench, Phone } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { linkTitleNav } from '@/lib/seo/accessibility'
 
@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { href: '/shop', label: 'Магазин', icon: ShoppingBag },
   { href: '/services', label: 'Послуги', icon: Wrench },
   { href: '/contact', label: 'Контакти', icon: Phone },
-  { href: '/account', label: 'Акаунт', icon: User },
 ]
 
 export default function MobileNav() {

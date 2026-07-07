@@ -32,7 +32,16 @@ export default function SiteLogo({ className, variant = 'header', darkBar = fals
             )
         )}
       >
-        auto<span className="text-accent">cast</span>
+        auto
+        <span
+          className={cn(
+            'text-accent',
+            variant === 'footer' && 'text-2xl leading-tight',
+            variant === 'header' && 'text-[26px] leading-none'
+          )}
+        >
+          cast
+        </span>
       </span>
     </Link>
   )

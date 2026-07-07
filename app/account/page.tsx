@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { User, Package, LogOut, ShoppingBag, Shield } from 'lucide-react'
+import { User, Package, LogOut, ShoppingBag } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import PageTransition from '@/components/layout/PageTransition'
@@ -184,9 +184,6 @@ function AccountPageContent() {
             {[
               { icon: User, label: 'Профіль', tab: 'profile' as const },
               { icon: Package, label: 'Замовлення', tab: 'orders' as const },
-              ...(profile?.role === 'admin'
-                ? [{ icon: Shield, label: 'Адмін-панель', active: false, href: '/admin' }]
-                : []),
               { icon: LogOut, label: 'Вийти з акаунту', active: false, action: 'signout' as const },
             ].map(({ icon: Icon, label, tab, href, action }) => (
               href ? (

@@ -19,7 +19,6 @@ import PageTransition from '@/components/layout/PageTransition'
 import {
   imageAltProduct,
   imageTitleProduct,
-  linkTitleAccount,
   linkTitleCart,
   linkTitleShop,
 } from '@/lib/seo/accessibility'
@@ -730,9 +729,6 @@ export default function CheckoutPage() {
                 <div className="flex gap-3 mt-4">
                   <Link href="/shop" title={linkTitleShop()}>
                     <Button variant="secondary" size="lg">Продовжити покупки</Button>
-                  </Link>
-                  <Link href="/account" title={linkTitleAccount()}>
-                    <Button size="lg">Мої замовлення</Button>
                   </Link>
                 </div>
               </motion.div>

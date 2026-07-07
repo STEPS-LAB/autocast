@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -20,8 +20,17 @@ const loginSchema = z.object({
 
 type LoginInput = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+function resolvePostLoginPath(role: string | undefined, next: string | null): string {
+  if (role === 'admin') return '/admin'
+  if (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/login')) {
+    return next.split('?')[0]
+  }
+  return '/account'
+}
+
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -38,7 +47,7 @@ export default function LoginPage() {
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
       const email = data.email.trim().toLowerCase()
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password: data.password,
       })
@@ -56,8 +65,20 @@ export default function LoginPage() {
         }
         return
       }
-      router.push('/account')
-      router.refresh()
+
+      const userId = authData.user?.id
+      let role: string | undefined
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .maybeSingle()
+        role = profile?.role
+      }
+
+      const destination = resolvePostLoginPath(role, searchParams.get('next'))
+      router.replace(destination)
     } catch {
       setError('Щось пішло не так. Спробуйте ще раз.')
     } finally {
@@ -86,7 +107,6 @@ export default function LoginPage() {
               </Link>
             </p>
 
-            {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Input
                 label="Email"
@@ -125,5 +145,19 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </PageTransition>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[80vh] flex items-center justify-center">
+          <div className="size-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }

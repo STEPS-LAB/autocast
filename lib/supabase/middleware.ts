@@ -20,7 +20,13 @@ export async function updateSession(request: NextRequest) {
   const isAuthPath = authPaths.some(p => request.nextUrl.pathname.startsWith(p))
   if (user && isAuthPath) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    const next = url.searchParams.get('next')
+    const destination =
+      next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/login')
+        ? next.split('?')[0]
+        : '/account'
+    url.pathname = destination
+    url.search = ''
     return NextResponse.redirect(url)
   }
 
