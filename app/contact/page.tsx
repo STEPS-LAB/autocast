@@ -103,21 +103,21 @@ export default function ContactPage() {
                   <a
                     href="tel:+380672391640"
                     title={linkTitlePhone('+38 (067) 239 16 40')}
-                    className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
+                    className="inline-block text-[1.52rem] font-bold text-text-primary transition-colors duration-200 hover:text-[#FFBB00]"
                   >
                     +38 (067) 239 16 40
                   </a>
                   <a
                     href="tel:+380672391632"
                     title={linkTitlePhone('+38 (067) 239 16 32')}
-                    className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
+                    className="inline-block text-[1.52rem] font-bold text-text-primary transition-colors duration-200 hover:text-[#FFBB00]"
                   >
                     +38 (067) 239 16 32
                   </a>
                   <a
                     href="tel:+380672391648"
                     title={linkTitlePhone('+38 (067) 239 16 48')}
-                    className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
+                    className="inline-block text-[1.52rem] font-bold text-text-primary transition-colors duration-200 hover:text-[#FFBB00]"
                   >
                     +38 (067) 239 16 48
                   </a>
@@ -135,7 +135,7 @@ export default function ContactPage() {
                 <a
                   href="mailto:autocast.com.ua@gmail.com"
                   title={linkTitleEmail()}
-                  className="inline-block mt-2 text-[1.27rem] font-bold text-accent transition-colors hover:text-graphite-deep"
+                  className="inline-block mt-2 text-[1.27rem] font-bold text-text-primary transition-colors duration-200 hover:text-[#FFBB00]"
                 >
                   Email: autocast.com.ua@gmail.com
                 </a>
@@ -151,7 +151,7 @@ export default function ContactPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   title={linkTitleAddress()}
-                  className="inline-block mt-2 text-[1.27rem] font-bold text-accent transition-colors hover:text-graphite-deep"
+                  className="inline-block mt-2 text-[1.27rem] font-bold text-text-primary transition-colors duration-200 hover:text-[#FFBB00]"
                 >
                   {ADDRESS}
                 </a>
