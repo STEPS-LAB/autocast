@@ -135,13 +135,13 @@ export default async function ServiceDetailPage({ params }: Props) {
                   {buildServiceTitle(service.title)}
                 </h1>
                 <p className="mb-8 text-lg leading-relaxed text-white/82">{service.intro}</p>
-                <div className="flex flex-wrap gap-3">
-                  <Link href="/contact" title={linkTitleContactCta()}>
+                <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
+                  <Link href="/contact" title={linkTitleContactCta()} className="block w-full md:w-auto">
                     <Button size="lg" className="micro-pop">
                       Звʼязатися
                     </Button>
                   </Link>
-                  <Link href="/shop" title={linkTitleShop()}>
+                  <Link href="/shop" title={linkTitleShop()} className="block w-full md:w-auto">
                     <Button
                       size="lg"
                       variant="secondary"
@@ -351,11 +351,11 @@ export default async function ServiceDetailPage({ params }: Props) {
                     Залиште заявку або зателефонуйте — підкажемо оптимальну комплектацію та терміни без зайвих робіт.
                   </p>
                 </div>
-                <div className="flex shrink-0 flex-wrap gap-3">
-                  <Link href="/contact" title={linkTitleContactCta()}>
+                <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
+                  <Link href="/contact" title={linkTitleContactCta()} className="block w-full md:w-auto">
                     <Button className="micro-pop">Звʼязатися</Button>
                   </Link>
-                  <Link href="/services" title={linkTitleBreadcrumb('Послуги')}>
+                  <Link href="/services" title={linkTitleBreadcrumb('Послуги')} className="block w-full md:w-auto">
                     <Button
                       variant="secondary"
                       className="micro-pop border-text-inverse-muted/35 bg-white/8 text-text-inverse hover:border-text-inverse-muted/50 hover:bg-white/12"

@@ -24,11 +24,11 @@ export default function Error({
           Сталася помилка під час завантаження сторінки. Спробуйте оновити або повернутися на головну.
         </p>
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Button type="button" onClick={() => reset()}>
+        <div className="mt-5 flex flex-col md:flex-row md:flex-wrap gap-3">
+          <Button type="button" onClick={() => reset()} className="max-md:w-full">
             Спробувати ще раз
           </Button>
-          <Link href="/">
+          <Link href="/" className="block w-full md:w-auto">
             <Button type="button" variant="secondary">
               На головну
             </Button>

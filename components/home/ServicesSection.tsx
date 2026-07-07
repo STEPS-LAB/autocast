@@ -23,7 +23,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45 }}
-          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12 md:mb-16"
+          className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12 md:mb-16"
         >
           <div className="max-w-2xl">
             <h2 className="text-headline text-text-inverse mb-3">Послуги</h2>
@@ -31,7 +31,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
               Autocast — це не лише магазин, а й майстерня. Робимо чисто, акуратно та з увагою до деталей.
             </p>
           </div>
-          <Link href="/services" title={linkTitleAllServices()} className="shrink-0">
+          <Link href="/services" title={linkTitleAllServices()} className="block w-full md:w-auto md:shrink-0">
             <Button
               variant="secondary"
               className="micro-pop border-text-inverse-muted/35 bg-white/8 text-text-inverse hover:border-text-inverse-muted/50 hover:bg-white/12"
@@ -57,7 +57,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
 
         <div
           className={[
-            'mt-14 md:mt-16 lg:mt-20 flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between rounded-2xl p-8 md:p-10 lg:p-12',
+            'mt-14 md:mt-16 lg:mt-20 flex flex-col md:flex-row gap-6 md:items-center md:justify-between rounded-2xl p-8 md:p-10 lg:p-12',
             'bg-gradient-to-br from-white/[0.14] via-white/[0.08] to-white/[0.04]',
             'shadow-[0_24px_56px_-24px_rgb(255_193_7/0.22),inset_0_1px_0_0_rgba(255,255,255,0.12)]',
             'ring-1 ring-inset ring-accent/20',
@@ -69,7 +69,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
               Напишіть або зателефонуйте — підкажемо найкраще рішення для Вашого автомобіля.
             </p>
           </div>
-          <a href="#contact" title={linkTitleContactCta()} className="shrink-0">
+          <a href="#contact" title={linkTitleContactCta()} className="block w-full md:w-auto md:shrink-0">
             <Button
               size="lg"
               className="micro-pop gap-2 px-8 transition-transform duration-500 hover:scale-105"

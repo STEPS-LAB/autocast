@@ -279,7 +279,9 @@ export default function CheckoutPage() {
             <h1 className="text-2xl font-bold text-text-primary mb-2">Кошик порожній</h1>
             <p className="text-text-secondary">Додайте товари перед оформленням</p>
           </div>
-          <Link href="/shop" title={linkTitleShop()}><Button size="lg">В магазин</Button></Link>
+          <Link href="/shop" title={linkTitleShop()} className="block w-full max-w-sm md:w-auto">
+            <Button size="lg">В магазин</Button>
+          </Link>
         </div>
       </PageTransition>
     )
@@ -379,7 +381,7 @@ export default function CheckoutPage() {
                   </div>
                   <OrderSummary total={total} count={count} shippingQuote={shippingQuote} />
                 </div>
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex max-md:flex-col md:justify-end">
                   <Button size="lg" onClick={() => goTo(2)} className="gap-2">
                     Далі <ArrowRight size={18} />
                   </Button>
@@ -675,7 +677,7 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
-                  <div className="mt-6 flex justify-between">
+                  <div className="mt-6 flex flex-col-reverse md:flex-row md:justify-between gap-3">
                     <Button variant="ghost" size="lg" type="button" onClick={() => goTo(1)} className="gap-2">
                       <ArrowLeft size={18} /> Назад
                     </Button>
@@ -726,8 +728,8 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                <div className="flex gap-3 mt-4">
-                  <Link href="/shop" title={linkTitleShop()}>
+                <div className="flex flex-col md:flex-row gap-3 mt-4">
+                  <Link href="/shop" title={linkTitleShop()} className="block w-full md:w-auto">
                     <Button variant="secondary" size="lg">Продовжити покупки</Button>
                   </Link>
                 </div>

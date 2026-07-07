@@ -64,14 +64,14 @@ export default function HeroSection() {
               {HERO_SLIDE.description}
             </p>
 
-            <div className="flex flex-wrap gap-3">
-              <Link href={HERO_SLIDE.href} title={linkTitleHeroServices()}>
+            <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
+              <Link href={HERO_SLIDE.href} title={linkTitleHeroServices()} className="block w-full md:w-auto">
                 <Button size="lg" className="gap-2 micro-pop">
                   {HERO_SLIDE.cta}
                   <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link href="/shop" title={linkTitleHeroShop()} className="lg:min-w-[11.7rem]">
+              <Link href="/shop" title={linkTitleHeroShop()} className="block w-full md:w-auto lg:min-w-[11.7rem]">
                 <Button size="lg" variant="secondary" fullWidth className="micro-pop">
                   Знайти деталь
                 </Button>
@@ -82,7 +82,7 @@ export default function HeroSection() {
           <div className="mt-28 lg:mt-44 flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-8 lg:gap-12">
             <a
               href="#contact"
-              className="order-2 lg:order-1 inline-flex w-full md:w-auto md:min-w-[29rem] whitespace-nowrap shrink-0 self-stretch items-center justify-center gap-2 rounded-md px-6 md:px-8 text-sm sm:text-base bg-accent text-black font-bold shadow-[0_12px_40px_-10px_rgb(255_193_7/0.55)] hover:bg-accent-hover hover:scale-[1.02] transition-all duration-500"
+              className="order-2 lg:order-1 flex w-full md:inline-flex md:w-auto md:min-w-[29rem] shrink-0 self-stretch items-center justify-center gap-2 rounded-md px-5 md:px-8 py-4 md:py-0 md:min-h-12 text-[15px] md:text-base leading-snug text-center whitespace-normal md:whitespace-nowrap bg-accent text-black font-bold shadow-[0_12px_40px_-10px_rgb(255_193_7/0.55)] hover:bg-accent-hover hover:scale-[1.02] transition-all duration-500"
             >
               Записатись на безкоштовну консультацію майстра
               <ArrowRight size={18} className="shrink-0" />

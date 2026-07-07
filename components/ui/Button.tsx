@@ -58,7 +58,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
           variants[variant],
           sizes[size],
-          fullWidth && 'w-full',
+          fullWidth ? 'w-full' : size !== 'sm' && 'max-md:w-full md:w-auto',
           className
         )}
         {...props}

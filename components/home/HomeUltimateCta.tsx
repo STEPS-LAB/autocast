@@ -140,7 +140,7 @@ export default function HomeUltimateCta() {
                   fullWidth
                   size="lg"
                   loading={isSubmitting}
-                  className="gap-2 mt-2 transition-transform duration-500 hover:scale-[1.02]"
+                  className="gap-2 mt-2 transition-transform duration-500 hover:scale-[1.02] max-md:h-auto max-md:min-h-[3.5rem] max-md:py-4 max-md:px-5 max-md:text-[15px] max-md:leading-snug max-md:whitespace-normal"
                 >
                   Отримати розрахунок за 5 хвилин
                   <ArrowRight size={18} />

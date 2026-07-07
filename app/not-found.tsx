@@ -10,11 +10,11 @@ export default function NotFound() {
         <p className="mt-2 text-sm text-text-secondary">
           Можливо, посилання застаріло або сторінку було видалено.
         </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/" title={linkTitleHome()}>
+        <div className="mt-5 flex flex-col md:flex-row md:flex-wrap gap-3">
+          <Link href="/" title={linkTitleHome()} className="block w-full md:w-auto">
             <Button type="button">На головну</Button>
           </Link>
-          <Link href="/shop" title={linkTitleShop()}>
+          <Link href="/shop" title={linkTitleShop()} className="block w-full md:w-auto">
             <Button type="button" variant="secondary">В магазин</Button>
           </Link>
         </div>

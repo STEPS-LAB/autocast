@@ -32,7 +32,7 @@ export default function CartPage() {
             <h1 className="text-2xl font-bold text-text-primary mb-2">Кошик порожній</h1>
             <p className="text-text-secondary">Додайте товари, щоб оформити замовлення</p>
           </div>
-          <Link href="/shop" title={linkTitleShop()}>
+          <Link href="/shop" title={linkTitleShop()} className="block w-full max-w-sm md:w-auto">
             <Button size="lg" className="gap-2">
               Перейти в магазин <ArrowRight size={18} />
             </Button>

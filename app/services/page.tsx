@@ -79,11 +79,11 @@ export default async function ServicesPage() {
                   Напишіть нам — підкажемо комплектацію, терміни та варіанти.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/contact" title={linkTitleContactCta()}>
+              <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
+                <Link href="/contact" title={linkTitleContactCta()} className="block w-full md:w-auto">
                   <Button className="micro-pop">Звʼязатися</Button>
                 </Link>
-                <Link href="/shop" title={linkTitleShop()}>
+                <Link href="/shop" title={linkTitleShop()} className="block w-full md:w-auto">
                   <Button variant="secondary" className="micro-pop">
                     Перейти в магазин <ArrowRight size={16} />
                   </Button>
