@@ -23,7 +23,7 @@ type LoginInput = z.infer<typeof loginSchema>
 function resolvePostLoginPath(role: string | undefined, next: string | null): string {
   if (role === 'admin') return '/admin'
   if (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/login')) {
-    return next.split('?')[0]
+    return next.split('?')[0] ?? next
   }
   return '/account'
 }

@@ -23,7 +23,7 @@ export async function updateSession(request: NextRequest) {
     const next = url.searchParams.get('next')
     const destination =
       next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/login')
-        ? next.split('?')[0]
+        ? next.split('?')[0] ?? next
         : '/account'
     url.pathname = destination
     url.search = ''
