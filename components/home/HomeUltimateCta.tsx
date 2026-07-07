@@ -8,43 +8,28 @@ import { z } from 'zod'
 import { motion } from 'framer-motion'
 import { CheckCircle2, ArrowRight } from 'lucide-react'
 import Input from '@/components/ui/Input'
+import UkrainePhoneInput, { isUkrainePhoneComplete } from '@/components/ui/UkrainePhoneInput'
 import Button from '@/components/ui/Button'
 
 const leadSchema = z.object({
   name: z.string().min(2, 'Введіть імʼя'),
   phone: z
     .string()
-    .min(9, 'Введіть номер телефону')
-    .refine(value => /^\d{9}$/.test(value), 'Некоректний номер'),
+    .refine(value => isUkrainePhoneComplete(value), 'Введіть повний номер телефону'),
   email: z.string().email('Некоректний email').optional().or(z.literal('')),
 })
 
 type LeadInput = z.infer<typeof leadSchema>
 
-function extractPhoneDigits(value: string) {
-  const onlyDigits = value.replace(/\D/g, '')
-  const withoutCountry = onlyDigits.startsWith('380') ? onlyDigits.slice(3) : onlyDigits
-  const withoutLeadingZero = withoutCountry.startsWith('0') ? withoutCountry.slice(1) : withoutCountry
-  return withoutLeadingZero.slice(0, 9)
-}
-
-function formatPhoneMask(digits: string) {
-  if (!digits) return '+38(0'
-  let result = '+38(0'
-  if (digits.length > 0) result += digits.slice(0, 2)
-  if (digits.length >= 2) result += ')'
-  if (digits.length > 2) result += `-${digits.slice(2, 5)}`
-  if (digits.length > 5) result += `-${digits.slice(5, 7)}`
-  if (digits.length > 7) result += `-${digits.slice(7, 9)}`
-  return result
-}
+const ctaInputClass =
+  'h-11 rounded-lg bg-[#22252A] border-white/10 text-white font-medium focus:border-[#FFBB00] focus:ring-1 focus:ring-[#FFBB00] focus:outline-none'
 
 export default function HomeUltimateCta() {
   const [sent, setSent] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<LeadInput>({
     resolver: zodResolver(leadSchema),
-    defaultValues: { email: '' },
+    defaultValues: { email: '', phone: '' },
   })
 
   async function onSubmit(data: LeadInput) {
@@ -97,30 +82,34 @@ export default function HomeUltimateCta() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-bg-surface/90 p-6 md:p-8 shadow-[0_24px_64px_-28px_rgb(15_23_42/0.18)] backdrop-blur-sm">
+          <div className="rounded-xl border border-white/10 bg-[#1A1D21] p-6 md:p-8 shadow-[0_24px_64px_-28px_rgb(0_0_0/0.35)]">
             {sent ? (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center text-center gap-4 py-8"
+                className="flex flex-col items-center text-center gap-4 py-8 antialiased"
               >
                 <div className="size-14 rounded-full bg-success/15 border border-success/30 flex items-center justify-center">
                   <CheckCircle2 size={28} className="text-success" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-text-primary mb-1">Дякуємо за довіру</h3>
-                  <p className="text-sm text-text-secondary">
+                  <h3 className="text-lg font-semibold text-white mb-1">Дякуємо за довіру</h3>
+                  <p className="text-sm text-white/70">
                     Майстер Autocast звʼяжеться з Вами найближчим часом.
                   </p>
                 </div>
               </motion.div>
             ) : (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <p className="text-sm font-medium text-text-primary mb-2">Залиште контакти для швидкого звʼязку</p>
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="antialiased space-y-4 [&_label]:text-white/80 [&_label]:font-medium"
+              >
+                <p className="text-sm font-medium text-white mb-2">Залиште контакти для швидкого звʼязку</p>
                 <Input
                   label="Ваше імʼя"
                   placeholder="Іван"
                   error={errors.name?.message}
+                  className={ctaInputClass}
                   {...register('name', {
                     onChange: e => {
                       e.target.value = e.target.value.replace(/\d/g, '')
@@ -131,16 +120,13 @@ export default function HomeUltimateCta() {
                   name="phone"
                   control={control}
                   render={({ field }) => (
-                    <Input
+                    <UkrainePhoneInput
                       label="Телефон"
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="+38(0__)-___-__-__"
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
                       error={errors.phone?.message}
-                      value={formatPhoneMask(field.value ?? '')}
-                      onChange={e => {
-                        field.onChange(extractPhoneDigits(e.target.value))
-                      }}
+                      className={ctaInputClass}
                     />
                   )}
                 />
@@ -149,6 +135,7 @@ export default function HomeUltimateCta() {
                   type="email"
                   placeholder="ivan@example.com"
                   error={errors.email?.message}
+                  className={ctaInputClass}
                   {...register('email')}
                 />
                 <Button
@@ -164,7 +151,7 @@ export default function HomeUltimateCta() {
                 {submitError ? (
                   <p className="text-sm text-error">{submitError}</p>
                 ) : (
-                  <p className="text-xs text-text-muted text-center">
+                  <p className="text-xs text-white/50 text-center">
                     Натискаючи кнопку, Ви погоджуєтесь на обробку контактних даних для зворотного звʼязку.
                   </p>
                 )}

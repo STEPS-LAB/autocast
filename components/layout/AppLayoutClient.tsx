@@ -11,6 +11,9 @@ import WishlistDrawer from '@/components/wishlist/WishlistDrawer'
 import AIAssistant from '@/components/ai/AIAssistant'
 import { cn } from '@/lib/utils'
 
+/** Set to `true` to show the floating AI assistant widget. */
+const SHOW_AI_ASSISTANT = false
+
 export default function AppLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isAdminPath = pathname.startsWith('/admin')
@@ -38,7 +41,7 @@ export default function AppLayoutClient({ children }: { children: React.ReactNod
       <MobileNav />
       <CartDrawer />
       <WishlistDrawer />
-      {!isAdminPath && <AIAssistant />}
+      {SHOW_AI_ASSISTANT && !isAdminPath && <AIAssistant />}
     </>
   )
 }

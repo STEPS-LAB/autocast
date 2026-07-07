@@ -46,7 +46,7 @@ const SYMPTOMS: SymptomItem[] = [
       'Катастрофа! Ваша мультимедіа просто впадає в сплячку, сумує за теплом і відмовляється думати. ',
     ctaLabel: 'Підібрати сучасну Android-систему',
     bodyAfter: ' з CarPlay, яка не боїться українських морозів.',
-    position: { top: '20%', left: '16%' },
+    position: { top: '23%', left: '16%' },
   },
   {
     id: 'high-beams',

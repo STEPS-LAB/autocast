@@ -35,6 +35,22 @@ export function slugify(str: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+/** SEO service URL slugs: lowercase letters, digits, hyphens only. */
+export const SERVICE_SLUG_REGEX = /^[a-z0-9-]+$/
+
+export function validateServiceSlug(slug: string): string | null {
+  const normalized = slug.trim().toLowerCase()
+  if (!normalized) return null
+  if (!SERVICE_SLUG_REGEX.test(normalized)) {
+    return 'Слаг може містити лише малі латинські літери, цифри та дефіси.'
+  }
+  return null
+}
+
+export function normalizeServiceSlugInput(slug: string): string {
+  return slug.trim().toLowerCase()
+}
+
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str
   return str.slice(0, length) + '…'

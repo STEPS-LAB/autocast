@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
-import { generateId, slugify } from '@/lib/utils'
+import { generateId, normalizeServiceSlugInput, slugify, validateServiceSlug } from '@/lib/utils'
 
 interface ServiceFormState {
+  slug: string
   name_ua: string
   description_ua: string
   image_url: string
@@ -20,6 +21,7 @@ interface ServiceFormState {
 }
 
 const EMPTY_FORM: ServiceFormState = {
+  slug: '',
   name_ua: '',
   description_ua: '',
   image_url: '',
@@ -76,18 +78,28 @@ export default function AdminServiceNewPage() {
     }
   }
 
-  async function ensureUniqueSlug(baseName: string) {
+  async function ensureUniqueSlug(baseSlug: string) {
     const supabase = await getSupabase()
-    const base = slugify(baseName) || `service-${generateId()}`
-    let candidate = base
+    let candidate = baseSlug
     let idx = 1
     while (idx < 100) {
       const { data } = await supabase.from('services').select('id').eq('slug', candidate).maybeSingle()
       if (!data) return candidate
       idx += 1
-      candidate = `${base}-${idx}`
+      candidate = `${baseSlug}-${idx}`
     }
-    return `${base}-${generateId().slice(0, 6)}`
+    return `${baseSlug}-${generateId().slice(0, 6)}`
+  }
+
+  async function resolveSlugForSave(manualSlug: string, title: string) {
+    const normalized = normalizeServiceSlugInput(manualSlug)
+    if (normalized) {
+      const validationError = validateServiceSlug(normalized)
+      if (validationError) throw new Error(validationError)
+      return ensureUniqueSlug(normalized)
+    }
+    const autoBase = slugify(title) || `service-${generateId()}`
+    return ensureUniqueSlug(autoBase)
   }
 
   async function getNextSortOrder() {
@@ -163,7 +175,7 @@ export default function AdminServiceNewPage() {
     setFormError('')
     try {
       const supabase = await getSupabase()
-      const slug = await ensureUniqueSlug(name)
+      const slug = await resolveSlugForSave(form.slug, name)
       const sortOrder = await getNextSortOrder()
       const content = buildContentFromForm(description)
       const { data, error } = await supabase
@@ -204,7 +216,7 @@ export default function AdminServiceNewPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Нова послуга</h1>
-          <p className="text-sm text-text-muted">Slug генерується автоматично з назви.</p>
+          <p className="text-sm text-text-muted">Слаг можна задати вручну або залишити порожнім для автогенерації.</p>
         </div>
         <Link href="/admin/services" className="text-sm text-text-secondary hover:text-text-primary">← До списку послуг</Link>
       </div>
@@ -230,6 +242,19 @@ export default function AdminServiceNewPage() {
           )}
         </label>
         <label className="block"><span className="text-xs text-text-muted">Назва</span><input type="text" value={form.name_ua} onChange={(e) => setForm(prev => ({ ...prev, name_ua: e.target.value }))} className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary" /></label>
+        <label className="block">
+          <span className="text-xs text-text-muted">Слаг посилання (SEO URL Slug)</span>
+          <input
+            type="text"
+            value={form.slug}
+            onChange={(e) => setForm(prev => ({ ...prev, slug: normalizeServiceSlugInput(e.target.value) }))}
+            placeholder="napriklad-avtozvuk-zhytomyr"
+            className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary font-mono"
+          />
+          <span className="mt-1 block text-[11px] text-text-muted">
+            Лише малі латинські літери, цифри та дефіси. Якщо порожньо — згенерується з назви.
+          </span>
+        </label>
         <label className="block"><span className="text-xs text-text-muted">Опис</span><textarea value={form.description_ua} onChange={(e) => setForm(prev => ({ ...prev, description_ua: e.target.value }))} className="mt-1 w-full min-h-24 rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary resize-y" /></label>
         <section className="space-y-2 rounded border border-border bg-bg-surface p-3">
           <div className="flex items-center justify-between gap-3">

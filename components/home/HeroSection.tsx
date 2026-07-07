@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { imageAltHero, imageTitleHero, linkTitleHeroServices, linkTitleHeroShop } from '@/lib/seo/accessibility'
@@ -22,82 +21,32 @@ const HERO_SLIDE = {
     'Професійні послуги з автозвуку та електроніки — з якісними товарами під ключ.',
   cta: 'Переглянути послуги',
   href: '/services',
-  image:
-    '/images/hero.webp',
+  image: '/images/hero.webp',
 }
 
+const heroOverlayBg = [
+  'radial-gradient(ellipse 70% 54% at 34% 36%, rgb(255 193 7 / 0.11), transparent 54%)',
+  'radial-gradient(ellipse 118% 108% at 6% 52%, rgb(30 35 41 / 0.6) 0%, rgb(30 35 41 / 0.32) 40%, rgb(30 35 41 / 0.08) 56%, transparent 72%)',
+  'radial-gradient(ellipse 95% 100% at 96% 28%, rgb(30 35 41 / 0.26) 0%, rgb(30 35 41 / 0.06) 45%, transparent 62%)',
+  'linear-gradient(to bottom, rgb(30 35 41 / 0.12) 0%, transparent 22%, transparent 78%, rgb(30 35 41 / 0.14) 100%)',
+].join(',')
+
 export default function HeroSection() {
-  const ref = useRef<HTMLElement>(null)
-  const reduceMotion = useReducedMotion()
-  const [isCoarseOrSmall, setIsCoarseOrSmall] = useState(false)
-
-  useEffect(() => {
-    const mql = window.matchMedia('(pointer: coarse), (max-width: 1024px)')
-    const update = () => setIsCoarseOrSmall(mql.matches)
-    update()
-    // Safari < 14 uses addListener/removeListener
-    if (typeof mql.addEventListener === 'function') {
-      mql.addEventListener('change', update)
-      return () => mql.removeEventListener('change', update)
-    }
-    const legacyMql = mql as MediaQueryList & {
-      addListener?: (listener: () => void) => void
-      removeListener?: (listener: () => void) => void
-    }
-    legacyMql.addListener?.(update)
-    return () => legacyMql.removeListener?.(update)
-  }, [])
-
-  const disableScrollEffects = useMemo(
-    () => reduceMotion || isCoarseOrSmall,
-    [reduceMotion, isCoarseOrSmall],
-  )
-
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start start', 'end start'],
-  })
-  const bgY = useTransform(scrollYProgress, [0, 1], ['0%', '22%'])
-  const textY = useTransform(scrollYProgress, [0, 1], ['0%', '15%'])
-
-  /**
-   * Full-bleed overlays (not parallax): layered radials so the photo “opens” toward center-right
-   * instead of a flat plate — still graphite-only, no light band at the bottom.
-   */
-  const heroOverlayBg = [
-    'radial-gradient(ellipse 70% 54% at 34% 36%, rgb(255 193 7 / 0.11), transparent 54%)',
-    'radial-gradient(ellipse 118% 108% at 6% 52%, rgb(30 35 41 / 0.6) 0%, rgb(30 35 41 / 0.32) 40%, rgb(30 35 41 / 0.08) 56%, transparent 72%)',
-    'radial-gradient(ellipse 95% 100% at 96% 28%, rgb(30 35 41 / 0.26) 0%, rgb(30 35 41 / 0.06) 45%, transparent 62%)',
-    'linear-gradient(to bottom, rgb(30 35 41 / 0.12) 0%, transparent 22%, transparent 78%, rgb(30 35 41 / 0.14) 100%)',
-  ].join(',')
-
   return (
-    <section
-      ref={ref}
-      className={[
-        'relative -mt-[70px] pt-[70px] min-h-screen flex items-center overflow-hidden',
-        disableScrollEffects ? '' : 'noise-overlay',
-      ].join(' ')}
-    >
-      {/* Parallax: only the photo — taller layer avoids empty strips when `y` shifts */}
-      <motion.div
-        style={{ y: disableScrollEffects ? 0 : bgY, willChange: 'transform' }}
-        className="absolute inset-0 -z-20 overflow-hidden pointer-events-none"
-      >
-        <div className="absolute left-0 right-0 top-[-12%] h-[124%] w-full">
-          <Image
-            src={HERO_SLIDE.image}
-            alt={imageAltHero()}
-            title={imageTitleHero()}
-            fill
-            priority
-            fetchPriority="high"
-            sizes="100vw"
-            quality={75}
-            className="object-cover"
-          />
-        </div>
-      </motion.div>
+    <section className="relative -mt-[70px] pt-[70px] min-h-screen flex items-center overflow-hidden">
+      <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
+        <Image
+          src={HERO_SLIDE.image}
+          alt={imageAltHero()}
+          title={imageTitleHero()}
+          fill
+          priority
+          fetchPriority="high"
+          sizes="100vw"
+          quality={75}
+          className="object-cover"
+        />
+      </div>
 
       <div
         className="absolute inset-0 -z-10 pointer-events-none"
@@ -106,10 +55,7 @@ export default function HeroSection() {
       />
 
       <div className="container-xl relative z-10 py-24">
-        <motion.div
-          style={{ y: disableScrollEffects ? 0 : textY, willChange: 'transform' }}
-          className="relative w-full"
-        >
+        <div className="relative w-full">
           <div className="max-w-3xl">
             <motion.h1
               key={HERO_SLIDE.id}
@@ -177,9 +123,7 @@ export default function HeroSection() {
               ))}
             </motion.div>
           </div>
-
-        </motion.div>
-
+        </div>
       </div>
     </section>
   )

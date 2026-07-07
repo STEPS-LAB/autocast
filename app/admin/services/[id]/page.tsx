@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Button from '@/components/ui/Button'
 import type { Service } from '@/types'
-import { generateId, slugify } from '@/lib/utils'
+import { generateId, normalizeServiceSlugInput, slugify, validateServiceSlug } from '@/lib/utils'
 
 type ServiceRow = Service & {
   id: string
@@ -205,18 +205,28 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
     return () => { isMounted = false }
   }, [params])
 
-  async function ensureUniqueSlug(baseName: string, currentId: string) {
+  async function ensureUniqueSlug(baseSlug: string, currentId: string) {
     const supabase = await getSupabase()
-    const base = slugify(baseName) || `service-${generateId()}`
-    let candidate = base
+    let candidate = baseSlug
     let idx = 1
     while (idx < 100) {
       const { data } = await supabase.from('services').select('id').eq('slug', candidate).maybeSingle()
       if (!data || data.id === currentId) return candidate
       idx += 1
-      candidate = `${base}-${idx}`
+      candidate = `${baseSlug}-${idx}`
     }
-    return `${base}-${generateId().slice(0, 6)}`
+    return `${baseSlug}-${generateId().slice(0, 6)}`
+  }
+
+  async function resolveSlugForSave(manualSlug: string, title: string, currentId: string) {
+    const normalized = normalizeServiceSlugInput(manualSlug)
+    if (normalized) {
+      const validationError = validateServiceSlug(normalized)
+      if (validationError) throw new Error(validationError)
+      return ensureUniqueSlug(normalized, currentId)
+    }
+    const autoBase = slugify(title) || `service-${generateId()}`
+    return ensureUniqueSlug(autoBase, currentId)
   }
 
   async function uploadImageIfNeeded(dataUrl: string, existingUrl: string): Promise<string | null> {
@@ -273,11 +283,12 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
       const supabase = await getSupabase()
       const imageUrl = await uploadImageIfNeeded(mainImageDataUrl, form.image_url)
       const whyImageUrl = await uploadImageIfNeeded(whyImageDataUrl, form.whyImageUrl)
+      const slug = await resolveSlugForSave(form.slug, name, serviceId)
       const content = buildContentFromForm(description)
       const { error } = await supabase
         .from('services')
         .update({
-          slug: form.slug,
+          slug,
           name_ua: name,
           description_ua: description,
           image_url: imageUrl,
@@ -329,6 +340,19 @@ export default function AdminServiceEditPage({ params }: { params: Promise<{ id:
             )}
           </label>
           <label className="block"><span className="text-xs text-text-muted">Назва</span><input type="text" value={form.name_ua} onChange={(e) => setForm(prev => ({ ...prev, name_ua: e.target.value }))} className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary" /></label>
+          <label className="block">
+            <span className="text-xs text-text-muted">Слаг посилання (SEO URL Slug)</span>
+            <input
+              type="text"
+              value={form.slug}
+              onChange={(e) => setForm(prev => ({ ...prev, slug: normalizeServiceSlugInput(e.target.value) }))}
+              placeholder="napriklad-avtozvuk-zhytomyr"
+              className="mt-1 w-full h-10 rounded border border-border bg-bg-elevated px-3 text-sm text-text-primary font-mono"
+            />
+            <span className="mt-1 block text-[11px] text-text-muted">
+              Лише малі латинські літери, цифри та дефіси. Якщо порожньо — згенерується з назви.
+            </span>
+          </label>
           <label className="block"><span className="text-xs text-text-muted">Опис</span><textarea value={form.description_ua} onChange={(e) => setForm(prev => ({ ...prev, description_ua: e.target.value }))} className="mt-1 w-full min-h-24 rounded border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary resize-y" /></label>
           <section className="space-y-2 rounded border border-border bg-bg-surface p-3">
             <div className="flex items-center justify-between gap-3">

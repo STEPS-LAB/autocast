@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronRight, Wrench } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import PageTransition from '@/components/layout/PageTransition'
 import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
@@ -169,7 +169,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             </div>
 
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {service.whatIncluded.map(item => {
+              {service.whatIncluded.map((item, index) => {
                 return (
                 <li key={item.text}>
                   <div
@@ -181,12 +181,14 @@ export default async function ServiceDetailPage({ params }: Props) {
                   >
                     <span
                       className={cn(
-                        'mb-3 inline-flex size-8 items-center justify-center rounded-lg bg-accent/12 text-accent',
-                        'ring-1 ring-accent/20 motion-safe:transition-[transform,background-color] motion-safe:duration-300',
+                        'mb-3 inline-flex size-8 items-center justify-center rounded-full bg-accent/12 text-accent',
+                        'text-sm font-bold tabular-nums ring-1 ring-accent/20',
+                        'motion-safe:transition-[transform,background-color] motion-safe:duration-300',
                         'group-hover:scale-110 group-hover:bg-accent/18'
                       )}
+                      aria-hidden
                     >
-                      <Wrench size={14} strokeWidth={2.25} aria-hidden />
+                      {index + 1}
                     </span>
                     <p className="text-sm leading-relaxed text-text-secondary transition-colors duration-200 group-hover:text-text-primary">
                       {item.text}
@@ -248,12 +250,12 @@ export default async function ServiceDetailPage({ params }: Props) {
           </div>
         </section>
 
-        {/* Чому це важливо: з фото — md+ grid, друга колонка тягнеться на всю висоту рядка; мобільний порядок: текст, зображення */}
+        {/* Чому це важливо — єдина повноширинна сітка для всіх сторінок */}
         <section
           className={cn(
             'relative isolate w-full overflow-hidden bg-[var(--page-canvas-base)]',
             service.whyImage
-              ? 'flex flex-col gap-8 px-[clamp(1rem,4vw,3rem)] md:grid md:min-h-0 md:grid-cols-[minmax(0,1fr)_40%] md:items-stretch md:gap-0 md:px-0'
+              ? 'flex flex-col gap-8 md:grid md:min-h-0 md:grid-cols-[minmax(0,1fr)_40%] md:items-stretch md:gap-0'
               : 'py-16 md:py-20'
           )}
         >
@@ -268,14 +270,14 @@ export default async function ServiceDetailPage({ params }: Props) {
 
           <div
             className={cn(
-              'relative min-w-0',
-              service.whyImage ? 'container-xl py-16 md:py-20' : 'container-xl'
+              'relative z-10 min-w-0 w-full',
+              service.whyImage
+                ? 'py-16 md:py-20 px-[clamp(1rem,4vw,3rem)] md:pl-[clamp(1.5rem,5vw,4rem)] md:pr-10'
+                : 'px-[clamp(1rem,4vw,3rem)]'
             )}
           >
-            <div className="relative z-10 w-full max-w-3xl">
-              <h2 className="text-headline text-text-primary mb-4">Чому це важливо</h2>
-              <p className="text-text-secondary leading-relaxed whitespace-pre-line">{service.whyIntro}</p>
-            </div>
+            <h2 className="text-headline text-text-primary mb-4">Чому це важливо</h2>
+            <p className="w-full text-text-secondary leading-relaxed whitespace-pre-line">{service.whyIntro}</p>
           </div>
 
           {service.whyImage && (
