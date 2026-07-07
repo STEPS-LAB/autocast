@@ -57,19 +57,27 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
 
         <div
           className={[
-            'mt-10 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between rounded-xl p-6',
-            'bg-gradient-to-br from-white/[0.12] via-white/[0.07] to-white/[0.04]',
-            'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]',
-            'ring-1 ring-inset ring-white/[0.07]',
+            'mt-12 md:mt-14 flex flex-col sm:flex-row gap-5 sm:items-center sm:justify-between rounded-2xl p-8 md:p-10 lg:p-12',
+            'bg-gradient-to-br from-white/[0.14] via-white/[0.08] to-white/[0.04]',
+            'shadow-[0_24px_56px_-24px_rgb(255_193_7/0.22),inset_0_1px_0_0_rgba(255,255,255,0.12)]',
+            'ring-1 ring-inset ring-accent/20',
           ].join(' ')}
         >
-          <div>
-            <p className="text-sm font-semibold text-text-inverse">Потрібна консультація?</p>
-            <p className="text-sm text-text-inverse-muted">Напишіть або зателефонуйте — підкажемо найкраще рішення.</p>
+          <div className="max-w-xl">
+            <p className="text-lg md:text-xl font-bold text-text-inverse mb-2">Потрібна консультація?</p>
+            <p className="text-base md:text-lg text-text-inverse-muted leading-relaxed">
+              Напишіть або зателефонуйте — підкажемо найкраще рішення для Вашого автомобіля.
+            </p>
           </div>
-          <Link href="/contact" title={linkTitleContactCta()} className="shrink-0">
-            <Button className="micro-pop">Звʼязатися</Button>
-          </Link>
+          <a href="#contact" title={linkTitleContactCta()} className="shrink-0">
+            <Button
+              size="lg"
+              className="micro-pop gap-2 px-8 transition-transform duration-300 hover:scale-105"
+            >
+              Звʼязатися
+              <ArrowRight size={18} />
+            </Button>
+          </a>
         </div>
       </div>
     </section>

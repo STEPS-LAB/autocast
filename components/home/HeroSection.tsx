@@ -135,19 +135,28 @@ export default function HeroSection() {
               initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-wrap gap-3 mb-12"
+              className="flex flex-col gap-3 mb-12"
             >
-              <Link href={HERO_SLIDE.href} title={linkTitleHeroServices()}>
-                <Button size="lg" className="gap-2 micro-pop">
-                  {HERO_SLIDE.cta}
-                  <ArrowRight size={18} />
-                </Button>
-              </Link>
-              <Link href="/shop" title={linkTitleHeroShop()} className="lg:min-w-[11.7rem]">
-                <Button size="lg" variant="secondary" fullWidth className="micro-pop">
-                  Знайти деталь
-                </Button>
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <Link href={HERO_SLIDE.href} title={linkTitleHeroServices()}>
+                  <Button size="lg" className="gap-2 micro-pop">
+                    {HERO_SLIDE.cta}
+                    <ArrowRight size={18} />
+                  </Button>
+                </Link>
+                <Link href="/shop" title={linkTitleHeroShop()} className="lg:min-w-[11.7rem]">
+                  <Button size="lg" variant="secondary" fullWidth className="micro-pop">
+                    Знайти деталь
+                  </Button>
+                </Link>
+              </div>
+              <a
+                href="#contact"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-md font-medium h-12 px-7 text-base border border-accent/45 bg-accent/10 text-accent hover:bg-accent hover:text-graphite-deep hover:border-accent hover:scale-[1.02] transition-all duration-300"
+              >
+                Записатись на безкоштовну консультацію майстра
+                <ArrowRight size={18} />
+              </a>
             </motion.div>
           </div>
 

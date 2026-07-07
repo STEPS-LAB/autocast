@@ -3,6 +3,8 @@ import FeaturedCategories from '@/components/home/FeaturedCategories'
 import TrustHighlights from '@/components/home/TrustHighlights'
 import HomeReviews from '@/components/home/HomeReviews'
 import ServicesSection from '@/components/home/ServicesSection'
+import CarSymptomsCluster from '@/components/home/CarSymptomsCluster'
+import HomeUltimateCta from '@/components/home/HomeUltimateCta'
 import PageTransition from '@/components/layout/PageTransition'
 import { getCategories } from '@/lib/data/catalog-db'
 import { getServicesForListing } from '@/lib/data/services-db'
@@ -41,7 +43,9 @@ export default async function HomePage() {
       <FeaturedCategories categories={categories} />
       <ServicesSection services={services} />
       <TrustHighlights />
+      <CarSymptomsCluster />
       <HomeReviews />
+      <HomeUltimateCta />
     </PageTransition>
   )
 }
