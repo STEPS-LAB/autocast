@@ -9,6 +9,11 @@ import { ShoppingCart, Heart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { useWishlistStore, selectIsWished } from '@/lib/store/wishlist'
 import { formatPrice, getDiscountPercent, cn } from '@/lib/utils'
+import {
+  imageAltProduct,
+  imageTitleProduct,
+  linkTitleProduct,
+} from '@/lib/seo/accessibility'
 import Badge from '@/components/ui/Badge'
 import type { ProductCard as ProductCardType } from '@/types'
 import { applyDiscountToProduct } from '@/lib/discounts'
@@ -74,6 +79,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Image */}
       <Link
         href={`/product/${displayProduct.slug}`}
+        title={linkTitleProduct(displayProduct.name_ua)}
         onClick={displayProduct.stock === 0 ? (e) => e.preventDefault() : undefined}
         className={cn(
           'relative block aspect-square overflow-hidden bg-bg-elevated',
@@ -83,7 +89,8 @@ export default function ProductCard({ product }: ProductCardProps) {
         {displayProduct.images[0] && !imgError ? (
           <Image
             src={displayProduct.images[0]}
-            alt={displayProduct.name_ua}
+            alt={imageAltProduct(displayProduct.name_ua, displayProduct.category?.name_ua)}
+            title={imageTitleProduct(displayProduct.name_ua)}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -145,6 +152,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         <Link
           href={`/product/${displayProduct.slug}`}
+          title={linkTitleProduct(displayProduct.name_ua)}
           onClick={displayProduct.stock === 0 ? (e) => e.preventDefault() : undefined}
           className={cn(
             'text-sm font-medium text-text-primary line-clamp-2 leading-snug',

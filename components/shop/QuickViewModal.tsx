@@ -11,6 +11,11 @@ import { formatPrice, getDiscountPercent } from '@/lib/utils'
 import type { ProductCard } from '@/types'
 import { applyDiscountToProduct } from '@/lib/discounts'
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
+import {
+  imageAltProduct,
+  imageTitleProduct,
+  linkTitleProduct,
+} from '@/lib/seo/accessibility'
 
 interface QuickViewModalProps {
   product: ProductCard | null
@@ -42,7 +47,8 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
           {discountedProduct.images[0] && (
             <Image
               src={discountedProduct.images[0]}
-              alt={discountedProduct.name_ua}
+              alt={imageAltProduct(discountedProduct.name_ua, discountedProduct.category?.name_ua)}
+              title={imageTitleProduct(discountedProduct.name_ua)}
               fill
               className="object-cover"
               sizes="(max-width: 640px) 100vw, 256px"
@@ -108,6 +114,7 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
             </Button>
             <Link
               href={`/product/${discountedProduct.slug}`}
+              title={linkTitleProduct(discountedProduct.name_ua)}
               onClick={onClose}
               className="flex items-center justify-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors py-2"
             >

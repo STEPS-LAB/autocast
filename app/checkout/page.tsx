@@ -16,6 +16,13 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import CheckoutStepper from '@/components/checkout/CheckoutStepper'
 import PageTransition from '@/components/layout/PageTransition'
+import {
+  imageAltProduct,
+  imageTitleProduct,
+  linkTitleAccount,
+  linkTitleCart,
+  linkTitleShop,
+} from '@/lib/seo/accessibility'
 
 import npLogo from '@/public/images/np.png'
 import ukrLogo from '@/public/images/ukr.png'
@@ -74,7 +81,8 @@ function DeliveryLogo({ method }: { method: ShippingInfoInput['delivery_method']
       <span className="ml-auto shrink-0 inline-flex items-center justify-center">
         <Image
           src={npLogo}
-          alt="Нова Пошта"
+          alt="Логотип Нової Пошти — доставка Autocast"
+          title="Доставка Новою Поштою"
           height={40}
           className="h-[40px] w-auto object-contain"
         />
@@ -86,7 +94,8 @@ function DeliveryLogo({ method }: { method: ShippingInfoInput['delivery_method']
       <span className="ml-auto shrink-0 inline-flex items-center justify-center">
         <Image
           src={ukrLogo}
-          alt="Укрпошта"
+          alt="Логотип Укрпошти — доставка Autocast"
+          title="Доставка Укрпоштою"
           height={36}
           className="h-[36px] w-auto object-contain"
         />
@@ -103,13 +112,15 @@ function PaymentLogos({ method }: { method: ShippingInfoInput['payment_method'] 
     <span className="ml-auto shrink-0 inline-flex items-center gap-2">
       <Image
         src={visaLogo}
-        alt="Visa"
+        alt="Оплата карткою Visa"
+        title="Visa"
         height={29}
         className="h-[29px] w-auto object-contain"
       />
       <Image
         src={mkLogo}
-        alt="Mastercard"
+        alt="Оплата карткою Mastercard"
+        title="Mastercard"
         height={36}
         className="h-[36px] w-auto object-contain"
       />
@@ -269,7 +280,7 @@ export default function CheckoutPage() {
             <h1 className="text-2xl font-bold text-text-primary mb-2">Кошик порожній</h1>
             <p className="text-text-secondary">Додайте товари перед оформленням</p>
           </div>
-          <Link href="/shop"><Button size="lg">В магазин</Button></Link>
+          <Link href="/shop" title={linkTitleShop()}><Button size="lg">В магазин</Button></Link>
         </div>
       </PageTransition>
     )
@@ -316,7 +327,7 @@ export default function CheckoutPage() {
     <PageTransition>
       <div className="container-xl py-10 max-w-4xl">
         <div className="mb-8">
-          <Link href="/cart" className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-4">
+          <Link href="/cart" title={linkTitleCart()} className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-4">
             <ArrowLeft size={14} /> Повернутися до кошика
           </Link>
           <h1 className="text-headline text-text-primary">Оформлення замовлення</h1>
@@ -347,7 +358,14 @@ export default function CheckoutPage() {
                       >
                         <div className="relative size-14 rounded bg-bg-elevated overflow-hidden shrink-0 border border-border">
                           {item.product.images[0] && (
-                            <Image src={item.product.images[0]} alt={item.product.name_ua} fill className="object-cover" sizes="56px" />
+                            <Image
+                              src={item.product.images[0]}
+                              alt={imageAltProduct(item.product.name_ua, item.product.category?.name_ua)}
+                              title={imageTitleProduct(item.product.name_ua)}
+                              fill
+                              className="object-cover"
+                              sizes="56px"
+                            />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -710,10 +728,10 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="flex gap-3 mt-4">
-                  <Link href="/shop">
+                  <Link href="/shop" title={linkTitleShop()}>
                     <Button variant="secondary" size="lg">Продовжити покупки</Button>
                   </Link>
-                  <Link href="/account">
+                  <Link href="/account" title={linkTitleAccount()}>
                     <Button size="lg">Мої замовлення</Button>
                   </Link>
                 </div>

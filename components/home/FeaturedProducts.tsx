@@ -8,6 +8,12 @@ import ProductCard from '@/components/shop/ProductCard'
 import { getFeaturedProducts } from '@/lib/data/seed'
 import { formatPrice } from '@/lib/utils'
 import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
+import {
+  imageAltProduct,
+  imageTitleProduct,
+  linkTitleAllProducts,
+  linkTitleProduct,
+} from '@/lib/seo/accessibility'
 
 export default function FeaturedProducts() {
   const products = useDiscountedProductCards(getFeaturedProducts()).slice(0, 8)
@@ -39,13 +45,15 @@ export default function FeaturedProducts() {
               <Link
                 key={`offer-${product.id}`}
                 href={`/product/${product.slug}`}
+                title={linkTitleProduct(product.name_ua)}
                 className="group rounded border border-border bg-bg-surface p-2.5 micro-lift"
               >
                 <div className="relative aspect-[16/10] rounded overflow-hidden mb-2">
                   {product.images[0] && (
                     <Image
                       src={product.images[0]}
-                      alt={product.name_ua}
+                      alt={imageAltProduct(product.name_ua, product.category?.name_ua)}
+                      title={imageTitleProduct(product.name_ua)}
                       fill
                       sizes="(max-width: 1024px) 50vw, 25vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -86,6 +94,7 @@ export default function FeaturedProducts() {
           </div>
           <Link
             href="/shop"
+            title={linkTitleAllProducts()}
             className="hidden sm:flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
           >
             Всі товари <ArrowRight size={14} />
@@ -114,6 +123,7 @@ export default function FeaturedProducts() {
         >
           <Link
             href="/shop"
+            title={linkTitleAllProducts()}
             className="inline-flex items-center gap-2 px-6 py-3 border border-border rounded text-sm text-text-secondary hover:text-text-primary hover:border-border-light transition-colors micro-pop"
           >
             Переглянути весь каталог <ArrowRight size={14} />

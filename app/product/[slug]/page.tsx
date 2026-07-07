@@ -26,6 +26,11 @@ import {
 } from '@/lib/seo/fallbacks'
 import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
 import { getSiteUrl } from '@/lib/supabase/env'
+import {
+  linkTitleBreadcrumb,
+  linkTitleCategory,
+  linkTitleProduct,
+} from '@/lib/seo/accessibility'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -134,14 +139,15 @@ export default async function ProductPage({ params }: Props) {
       <div className="container-xl py-8 min-w-0 max-w-full">
         {/* Breadcrumbs */}
         <nav className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-muted mb-8">
-          <Link href="/" className="hover:text-text-primary transition-colors">Головна</Link>
+          <Link href="/" title={linkTitleBreadcrumb('Головна')} className="hover:text-text-primary transition-colors">Головна</Link>
           <ChevronRight size={12} />
-          <Link href="/shop" className="hover:text-text-primary transition-colors">Магазин</Link>
+          <Link href="/shop" title={linkTitleBreadcrumb('Магазин')} className="hover:text-text-primary transition-colors">Магазин</Link>
           {category && (
             <>
               <ChevronRight size={12} />
               <Link
                 href={`/shop?category=${category.slug}`}
+                title={linkTitleCategory(category.name_ua)}
                 className="hover:text-text-primary transition-colors"
               >
                 {category.name_ua}
@@ -149,7 +155,10 @@ export default async function ProductPage({ params }: Props) {
             </>
           )}
           <ChevronRight size={12} />
-          <span className="text-text-secondary min-w-0 max-w-full sm:max-w-[min(100%,280px)] truncate">
+          <span
+            className="text-text-secondary min-w-0 max-w-full sm:max-w-[min(100%,280px)] truncate"
+            title={linkTitleProduct(product.name_ua)}
+          >
             {product.name_ua}
           </span>
         </nav>

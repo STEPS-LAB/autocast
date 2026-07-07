@@ -1,6 +1,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import {
+  imageAltService,
+  imageTitleService,
+  linkTitleService,
+} from '@/lib/seo/accessibility'
 import type { ServiceListItem } from '@/types'
 import type { CSSProperties } from 'react'
 
@@ -40,7 +45,8 @@ export default function ServiceCard({
       >
         <Image
           src={image}
-          alt={title}
+          alt={imageAltService(title)}
+          title={imageTitleService(title)}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           sizes={imageSizes}
@@ -90,6 +96,7 @@ export default function ServiceCard({
     <article className="h-full service-card-reveal" style={motionStyle}>
       <Link
         href={`/services/${service.slug}`}
+        title={linkTitleService(title)}
         className={cn(
           'service-card-link group block h-full origin-center rounded-md outline-none [-webkit-tap-highlight-color:transparent] [&_svg]:outline-none',
           'transition-transform duration-150 ease-out active:scale-[0.98]',

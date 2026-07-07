@@ -11,6 +11,13 @@ import { motion } from 'framer-motion'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
+import {
+  linkTitleAddress,
+  linkTitleEmail,
+  linkTitleFacebook,
+  linkTitleInstagram,
+  linkTitlePhone,
+} from '@/lib/seo/accessibility'
 
 const GoogleMapEmbed = dynamic(() => import('@/components/contact/GoogleMapEmbed'), { ssr: false })
 
@@ -95,18 +102,21 @@ export default function ContactPage() {
                 <div className="mt-2 flex flex-col items-start gap-1.5">
                   <a
                     href="tel:+380672391640"
+                    title={linkTitlePhone('+38 (067) 239 16 40')}
                     className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                   >
                     +38 (067) 239 16 40
                   </a>
                   <a
                     href="tel:+380672391632"
+                    title={linkTitlePhone('+38 (067) 239 16 32')}
                     className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                   >
                     +38 (067) 239 16 32
                   </a>
                   <a
                     href="tel:+380672391648"
+                    title={linkTitlePhone('+38 (067) 239 16 48')}
                     className="inline-block text-[1.52rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                   >
                     +38 (067) 239 16 48
@@ -124,6 +134,7 @@ export default function ContactPage() {
                 </p>
                 <a
                   href="mailto:autocast.com.ua@gmail.com"
+                  title={linkTitleEmail()}
                   className="inline-block mt-2 text-[1.27rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                 >
                   Email: autocast.com.ua@gmail.com
@@ -139,6 +150,7 @@ export default function ContactPage() {
                   href={GOOGLE_MAPS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title={linkTitleAddress()}
                   className="inline-block mt-2 text-[1.27rem] font-bold text-accent transition-colors hover:text-graphite-deep"
                 >
                   {ADDRESS}
@@ -151,6 +163,7 @@ export default function ContactPage() {
                 href="https://www.instagram.com/autocast.com.ua/"
                 target="_blank"
                 rel="noopener noreferrer"
+                title={linkTitleInstagram()}
                 className="inline-flex items-center gap-2 text-[0.9rem] text-text-primary transition-all hover:-translate-y-0.5 hover:text-graphite-deep"
               >
                 <Instagram size={29} className="text-accent" />
@@ -160,6 +173,7 @@ export default function ContactPage() {
                 href="https://autocast.com.ua/about-us/"
                 target="_blank"
                 rel="noopener noreferrer"
+                title={linkTitleFacebook()}
                 className="inline-flex items-center gap-2 text-[0.9rem] text-text-primary transition-all hover:-translate-y-0.5 hover:text-graphite-deep"
               >
                 <Facebook size={29} className="text-accent" />

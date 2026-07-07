@@ -1,22 +1,34 @@
 import Link from 'next/link'
 import { Phone, Mail, MapPin, Instagram, Facebook } from 'lucide-react'
 import SiteLogo from '@/components/layout/SiteLogo'
+import {
+  linkTitleAbout,
+  linkTitleAccount,
+  linkTitleAddress,
+  linkTitleCategory,
+  linkTitleContact,
+  linkTitleEmail,
+  linkTitleFacebook,
+  linkTitleInstagram,
+  linkTitlePhone,
+  linkTitleServices,
+} from '@/lib/seo/accessibility'
 
 const ADDRESS = 'м. Житомир, вулиця Вітрука, 12в'
 const GOOGLE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ADDRESS)}`
 
 const SHOP_LINKS = [
-  { href: '/shop/avtozvuk', label: 'Автозвук' },
-  { href: '/shop/avtosvitlo', label: 'Автосвітло' },
-  { href: '/shop/avtoelektronika', label: 'Автоелектроніка' },
-  { href: '/shop/zakhyst-vid-uhonu', label: 'Захист від угону' },
+  { href: '/shop/avtozvuk', label: 'Автозвук', title: linkTitleCategory('Автозвук') },
+  { href: '/shop/avtosvitlo', label: 'Автосвітло', title: linkTitleCategory('Автосвітло') },
+  { href: '/shop/avtoelektronika', label: 'Автоелектроніка', title: linkTitleCategory('Автоелектроніка') },
+  { href: '/shop/zakhyst-vid-uhonu', label: 'Захист від угону', title: linkTitleCategory('Захист від угону') },
 ]
 
 const INFO_LINKS = [
-  { href: '/about', label: 'Про нас' },
-  { href: '/services', label: 'Послуги' },
-  { href: '/contact', label: 'Контакти' },
-  { href: '/account', label: 'Мій акаунт' },
+  { href: '/about', label: 'Про нас', title: linkTitleAbout() },
+  { href: '/services', label: 'Послуги', title: linkTitleServices() },
+  { href: '/contact', label: 'Контакти', title: linkTitleContact() },
+  { href: '/account', label: 'Мій акаунт', title: linkTitleAccount() },
 ]
 
 export default function Footer() {
@@ -42,6 +54,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    title={link.title}
                     className="text-sm text-text-inverse-muted hover:text-text-inverse transition-colors"
                   >
                     {link.label}
@@ -61,6 +74,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    title={link.title}
                     className="text-sm text-text-inverse-muted hover:text-text-inverse transition-colors"
                   >
                     {link.label}
@@ -78,15 +92,15 @@ export default function Footer() {
             <ul className="flex flex-col gap-3">
               <li className="text-sm text-text-inverse-muted">
                 <div className="flex flex-col gap-1">
-                  <a href="tel:+380672391640" className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
+                  <a href="tel:+380672391640" title={linkTitlePhone('+38 (067) 239 16 40')} className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
                     <Phone size={15} className="text-accent shrink-0" />
                     +38 (067) 239 16 40
                   </a>
-                  <a href="tel:+380672391632" className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
+                  <a href="tel:+380672391632" title={linkTitlePhone('+38 (067) 239 16 32')} className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
                     <Phone size={15} className="text-accent shrink-0" />
                     +38 (067) 239 16 32
                   </a>
-                  <a href="tel:+380672391648" className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
+                  <a href="tel:+380672391648" title={linkTitlePhone('+38 (067) 239 16 48')} className="inline-flex items-center gap-2 hover:text-text-inverse transition-colors">
                     <Phone size={15} className="text-accent shrink-0" />
                     +38 (067) 239 16 48
                   </a>
@@ -94,7 +108,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2.5 text-sm text-text-inverse-muted">
                 <Mail size={15} className="text-accent shrink-0" />
-                <a href="mailto:autocast.com.ua@gmail.com" className="hover:text-text-inverse transition-colors">
+                <a href="mailto:autocast.com.ua@gmail.com" title={linkTitleEmail()} className="hover:text-text-inverse transition-colors">
                   autocast.com.ua@gmail.com
                 </a>
               </li>
@@ -104,6 +118,7 @@ export default function Footer() {
                   href={GOOGLE_MAPS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title={linkTitleAddress()}
                   className="hover:text-text-inverse transition-colors"
                 >
                   {ADDRESS}
@@ -115,6 +130,7 @@ export default function Footer() {
                 href="https://www.instagram.com/autocast.com.ua/"
                 target="_blank"
                 rel="noopener noreferrer"
+                title={linkTitleInstagram()}
                 className="inline-flex items-center gap-1.5 text-sm text-text-inverse-muted hover:text-text-inverse transition-colors"
               >
                 <Instagram size={15} className="text-accent" />
@@ -124,6 +140,7 @@ export default function Footer() {
                 href="https://autocast.com.ua/about-us/"
                 target="_blank"
                 rel="noopener noreferrer"
+                title={linkTitleFacebook()}
                 className="inline-flex items-center gap-1.5 text-sm text-text-inverse-muted hover:text-text-inverse transition-colors"
               >
                 <Facebook size={15} className="text-accent" />

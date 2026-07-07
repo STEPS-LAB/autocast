@@ -13,15 +13,15 @@
   "categories": ["automotive", "shopping"],
   "icons": [
     {
-      "src": "/images/mk.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/images/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/images/placeholder-category.svg",
+      "src": "/images/favicon.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]

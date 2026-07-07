@@ -10,6 +10,12 @@ import { useCartStore } from '@/lib/store/cart'
 import { cn, formatPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/components/layout/DocumentBodyPortal'
+import {
+  imageAltProduct,
+  imageTitleProduct,
+  linkTitleProduct,
+  linkTitleShop,
+} from '@/lib/seo/accessibility'
 
 function unlockBodyScrollIfNoDrawer() {
   const cartOpen = useCartStore.getState().isOpen
@@ -122,7 +128,7 @@ export default function WishlistDrawer() {
                     </p>
                   </div>
                   <Button variant="secondary" size="sm" onClick={close} className="mt-2">
-                    <Link href="/shop">Перейти в магазин</Link>
+                    <Link href="/shop" title={linkTitleShop()}>Перейти в магазин</Link>
                   </Button>
                 </div>
               ) : (
@@ -139,13 +145,15 @@ export default function WishlistDrawer() {
                       >
                         <Link
                           href={`/product/${product.slug}`}
+                          title={linkTitleProduct(product.name_ua)}
                           onClick={close}
                           className="relative size-16 rounded bg-bg-elevated shrink-0 overflow-hidden border border-border"
                         >
                           {product.images[0] && (
                             <Image
                               src={product.images[0]}
-                              alt={product.name_ua}
+                              alt={imageAltProduct(product.name_ua, product.category?.name_ua)}
+                              title={imageTitleProduct(product.name_ua)}
                               fill
                               className="object-cover"
                               sizes="64px"
@@ -159,6 +167,7 @@ export default function WishlistDrawer() {
                           )}
                           <Link
                             href={`/product/${product.slug}`}
+                            title={linkTitleProduct(product.name_ua)}
                             onClick={close}
                             className="text-sm text-text-primary hover:text-accent transition-colors line-clamp-2 leading-snug"
                           >
@@ -209,7 +218,7 @@ export default function WishlistDrawer() {
                 <Button variant="ghost" size="sm" onClick={clear} className="border border-border">
                   Очистити
                 </Button>
-                <Link href="/shop" onClick={close} className="flex-1">
+                <Link href="/shop" title={linkTitleShop()} onClick={close} className="flex-1">
                   <Button fullWidth size="sm" variant="secondary">
                     Продовжити покупки
                   </Button>

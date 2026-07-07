@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Button from '@/components/ui/Button'
+import { linkTitleHome, linkTitleShop } from '@/lib/seo/accessibility'
 
 export default function NotFound() {
   return (
@@ -10,10 +11,10 @@ export default function NotFound() {
           Можливо, посилання застаріло або сторінку було видалено.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/">
+          <Link href="/" title={linkTitleHome()}>
             <Button type="button">На головну</Button>
           </Link>
-          <Link href="/shop">
+          <Link href="/shop" title={linkTitleShop()}>
             <Button type="button" variant="secondary">В магазин</Button>
           </Link>
         </div>

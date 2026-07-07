@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Home, ShoppingBag, Wrench, Phone, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { linkTitleNav } from '@/lib/seo/accessibility'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Головна', icon: Home },
@@ -56,6 +57,7 @@ export default function MobileNav() {
                 <Link
                   key={href}
                   href={href}
+                  title={linkTitleNav(label)}
                   className={cn(
                     'flex flex-col items-center gap-1 px-3 py-1.5 rounded transition-colors',
                     isActive

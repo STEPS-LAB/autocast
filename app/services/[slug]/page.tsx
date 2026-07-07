@@ -16,6 +16,15 @@ import {
   serviceDescriptionFallback,
   serviceTitleFallback,
 } from '@/lib/seo/fallbacks'
+import {
+  imageAltService,
+  imageAltServiceWhy,
+  imageTitleService,
+  imageTitleServiceWhy,
+  linkTitleBreadcrumb,
+  linkTitleContactCta,
+  linkTitleShop,
+} from '@/lib/seo/accessibility'
 import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
 import { getSiteUrl } from '@/lib/supabase/env'
 import { cn } from '@/lib/utils'
@@ -84,7 +93,8 @@ export default async function ServiceDetailPage({ params }: Props) {
         <section className="relative flex min-h-[min(85vh,45rem)] flex-col overflow-hidden">
           <Image
             src={service.image}
-            alt={`${service.title} — Autocast, Житомир`}
+            alt={imageAltService(service.title)}
+            title={imageTitleService(service.title)}
             fill
             priority
             className="object-cover object-center"
@@ -107,11 +117,11 @@ export default async function ServiceDetailPage({ params }: Props) {
           <div className="relative z-10 flex flex-1 flex-col">
             <div className="container-xl pt-24 pb-6 md:pt-28">
               <nav className="flex flex-wrap items-center gap-1 text-sm text-white/65">
-                <Link href="/" className="transition-colors hover:text-accent">
+                <Link href="/" title={linkTitleBreadcrumb('Головна')} className="transition-colors hover:text-accent">
                   Головна
                 </Link>
                 <ChevronRight size={14} className="shrink-0 opacity-70" aria-hidden />
-                <Link href="/services" className="transition-colors hover:text-accent">
+                <Link href="/services" title={linkTitleBreadcrumb('Послуги')} className="transition-colors hover:text-accent">
                   Послуги
                 </Link>
                 <ChevronRight size={14} className="shrink-0 opacity-70" aria-hidden />
@@ -126,12 +136,12 @@ export default async function ServiceDetailPage({ params }: Props) {
                 </h1>
                 <p className="mb-8 text-lg leading-relaxed text-white/82">{service.intro}</p>
                 <div className="flex flex-wrap gap-3">
-                  <Link href="/contact">
+                  <Link href="/contact" title={linkTitleContactCta()}>
                     <Button size="lg" className="micro-pop">
                       Звʼязатися
                     </Button>
                   </Link>
-                  <Link href="/shop">
+                  <Link href="/shop" title={linkTitleShop()}>
                     <Button
                       size="lg"
                       variant="secondary"
@@ -278,7 +288,8 @@ export default async function ServiceDetailPage({ params }: Props) {
               <div className="absolute inset-0 min-h-[14rem] md:min-h-0 service-why-photo-column-mask">
                 <Image
                   src={service.whyImage}
-                  alt={`Чому важлива послуга «${service.title}» — Autocast`}
+                  alt={imageAltServiceWhy(service.title)}
+                  title={imageTitleServiceWhy(service.title)}
                   fill
                   className="object-cover object-center"
                   sizes="(max-width: 767px) 100vw, 40vw"
@@ -339,10 +350,10 @@ export default async function ServiceDetailPage({ params }: Props) {
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-3">
-                  <Link href="/contact">
+                  <Link href="/contact" title={linkTitleContactCta()}>
                     <Button className="micro-pop">Звʼязатися</Button>
                   </Link>
-                  <Link href="/services">
+                  <Link href="/services" title={linkTitleBreadcrumb('Послуги')}>
                     <Button
                       variant="secondary"
                       className="micro-pop border-text-inverse-muted/35 bg-white/8 text-text-inverse hover:border-text-inverse-muted/50 hover:bg-white/12"

@@ -72,3 +72,4 @@ export const KEYWORD_CLUSTERS = {
 } as const
 
 export const DEFAULT_OG_IMAGE = '/images/placeholder-category.svg'
+export const FAVICON_PATH = '/images/favicon.png'

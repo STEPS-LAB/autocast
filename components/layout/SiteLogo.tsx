@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { linkTitleHome } from '@/lib/seo/accessibility'
 
 type SiteLogoProps = {
   className?: string
@@ -13,6 +14,7 @@ export default function SiteLogo({ className, variant = 'header', darkBar = fals
   return (
     <Link
       href="/"
+      title={linkTitleHome()}
       className={cn(
         'flex items-center',
         variant === 'header' && 'gap-2 shrink-0 group',

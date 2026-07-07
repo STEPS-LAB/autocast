@@ -8,6 +8,13 @@ import { useCartStore, selectCartTotal, selectCartCount } from '@/lib/store/cart
 import { formatPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
+import {
+  imageAltProduct,
+  imageTitleProduct,
+  linkTitleCheckout,
+  linkTitleProduct,
+  linkTitleShop,
+} from '@/lib/seo/accessibility'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore()
@@ -25,7 +32,7 @@ export default function CartPage() {
             <h1 className="text-2xl font-bold text-text-primary mb-2">Кошик порожній</h1>
             <p className="text-text-secondary">Додайте товари, щоб оформити замовлення</p>
           </div>
-          <Link href="/shop">
+          <Link href="/shop" title={linkTitleShop()}>
             <Button size="lg" className="gap-2">
               Перейти в магазин <ArrowRight size={18} />
             </Button>
@@ -55,11 +62,16 @@ export default function CartPage() {
                   transition={{ duration: 0.2 }}
                   className="flex gap-4 p-4 bg-bg-surface border border-border rounded-md"
                 >
-                  <Link href={`/product/${item.product.slug}`} className="relative size-20 rounded bg-bg-elevated border border-border overflow-hidden shrink-0">
+                  <Link
+                    href={`/product/${item.product.slug}`}
+                    title={linkTitleProduct(item.product.name_ua)}
+                    className="relative size-20 rounded bg-bg-elevated border border-border overflow-hidden shrink-0"
+                  >
                     {item.product.images[0] && (
                       <Image
                         src={item.product.images[0]}
-                        alt={item.product.name_ua}
+                        alt={imageAltProduct(item.product.name_ua, item.product.category?.name_ua)}
+                        title={imageTitleProduct(item.product.name_ua)}
                         fill
                         className="object-cover"
                         sizes="80px"
@@ -68,7 +80,11 @@ export default function CartPage() {
                   </Link>
 
                   <div className="flex-1 min-w-0">
-                    <Link href={`/product/${item.product.slug}`} className="text-sm font-medium text-text-primary hover:text-accent transition-colors line-clamp-2">
+                    <Link
+                      href={`/product/${item.product.slug}`}
+                      title={linkTitleProduct(item.product.name_ua)}
+                      className="text-sm font-medium text-text-primary hover:text-accent transition-colors line-clamp-2"
+                    >
                       {item.product.name_ua}
                     </Link>
                     <p className="text-xs text-text-muted mt-0.5">
@@ -138,12 +154,12 @@ export default function CartPage() {
                   </span>
                 </div>
               </div>
-              <Link href="/checkout">
+              <Link href="/checkout" title={linkTitleCheckout()}>
                 <Button fullWidth size="lg" className="gap-2">
                   Оформити замовлення <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link href="/shop" className="block text-center text-sm text-text-muted hover:text-text-secondary transition-colors mt-3">
+              <Link href="/shop" title={linkTitleShop()} className="block text-center text-sm text-text-muted hover:text-text-secondary transition-colors mt-3">
                 Продовжити покупки
               </Link>
             </div>

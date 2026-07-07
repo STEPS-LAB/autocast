@@ -6,6 +6,12 @@ import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import type { Category } from '@/types'
 import Button from '@/components/ui/Button'
+import {
+  imageAltCategory,
+  imageTitleCategory,
+  linkTitleAllCategories,
+  linkTitleCategory,
+} from '@/lib/seo/accessibility'
 
 const container = {
   hidden: { opacity: 1 },
@@ -52,6 +58,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
           </div>
           <Link
             href="/shop"
+            title={linkTitleAllCategories()}
             className="hidden sm:flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
           >
             Всі категорії <ArrowRight size={14} />
@@ -71,13 +78,15 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
               <motion.div key={cat.id} variants={item}>
                 <Link
                   href={`/shop/${cat.slug}`}
+                  title={linkTitleCategory(displayNameUa(cat))}
                   className="group block origin-center transition-transform duration-150 ease-out active:scale-[0.98]"
                 >
                   <div className="mb-3 md:mb-4 rounded-lg shadow-[0_8px_26px_-10px_rgba(15,23,42,0.14)] transition-shadow duration-300 ease-out group-hover:shadow-[0_22px_48px_-12px_rgba(15,23,42,0.32)]">
                   <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-bg-surface border border-border">
                     <Image
                       src={categoryImage(cat.image_url)}
-                      alt={cat.name_ua}
+                      alt={imageAltCategory(displayNameUa(cat))}
+                      title={imageTitleCategory(displayNameUa(cat))}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 768px) 50vw, min(700px, calc((100vw - 6rem) / 2))"

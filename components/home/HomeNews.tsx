@@ -4,6 +4,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
+import {
+  imageAltNews,
+  imageTitleNews,
+  linkTitleAllNews,
+  linkTitleNewsArticle,
+} from '@/lib/seo/accessibility'
 
 const NEWS = [
   {
@@ -48,6 +54,7 @@ export default function HomeNews() {
           </div>
           <Link
             href="/news"
+            title={linkTitleAllNews()}
             className="hidden sm:flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
           >
             Всі новини <ArrowRight size={14} />
@@ -64,11 +71,12 @@ export default function HomeNews() {
               transition={{ duration: 0.4, delay: index * 0.08 }}
               className="group rounded-md border border-border overflow-hidden bg-bg-surface micro-lift"
             >
-              <Link href={item.href} className="block">
+              <Link href={item.href} title={linkTitleNewsArticle(item.title)} className="block">
                 <div className="relative aspect-[16/10] overflow-hidden">
                   <Image
                     src={item.image}
-                    alt={item.title}
+                    alt={imageAltNews(item.title)}
+                    title={imageTitleNews(item.title)}
                     fill
                     sizes="(max-width: 1024px) 100vw, 33vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"

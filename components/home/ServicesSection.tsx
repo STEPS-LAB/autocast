@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
 import type { ServiceListItem } from '@/types'
+import { linkTitleAllServices, linkTitleContactCta } from '@/lib/seo/accessibility'
 
 interface ServicesSectionProps {
   services: ServiceListItem[]
@@ -30,7 +31,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
               Autocast — це не лише магазин, а й майстерня. Робимо чисто, акуратно та з увагою до деталей.
             </p>
           </div>
-          <Link href="/services" className="shrink-0">
+          <Link href="/services" title={linkTitleAllServices()} className="shrink-0">
             <Button
               variant="secondary"
               className="micro-pop border-text-inverse-muted/35 bg-white/8 text-text-inverse hover:border-text-inverse-muted/50 hover:bg-white/12"
@@ -66,7 +67,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
             <p className="text-sm font-semibold text-text-inverse">Потрібна консультація?</p>
             <p className="text-sm text-text-inverse-muted">Напишіть або зателефонуйте — підкажемо найкраще рішення.</p>
           </div>
-          <Link href="/contact" className="shrink-0">
+          <Link href="/contact" title={linkTitleContactCta()} className="shrink-0">
             <Button className="micro-pop">Звʼязатися</Button>
           </Link>
         </div>

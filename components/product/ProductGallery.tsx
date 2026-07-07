@@ -5,6 +5,10 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ZoomIn, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  imageAltProductGallery,
+  imageTitleProductGallery,
+} from '@/lib/seo/accessibility'
 
 interface ProductGalleryProps {
   images: string[]
@@ -83,7 +87,8 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
           >
             <Image
               src={safeImages[safeActive]!}
-              alt={`${name} — ${safeActive + 1}`}
+              alt={imageAltProductGallery(name, safeActive, safeImages.length)}
+              title={imageTitleProductGallery(name, safeActive)}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -142,7 +147,8 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
             >
               <Image
                 src={img}
-                alt={`${name} thumb ${i + 1}`}
+                alt={imageAltProductGallery(name, i, safeImages.length)}
+                title={imageTitleProductGallery(name, i)}
                 fill
                 className="object-cover"
                 sizes="64px"
@@ -221,7 +227,8 @@ export default function ProductGallery({ images, name }: ProductGalleryProps) {
                   </button>
                   <Image
                     src={safeImages[safeActive]!}
-                    alt={name}
+                    alt={imageAltProductGallery(name, safeActive, safeImages.length)}
+                    title={imageTitleProductGallery(name, safeActive)}
                     fill
                     className="object-contain"
                     sizes="90vw"

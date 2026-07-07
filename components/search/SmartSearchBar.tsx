@@ -7,6 +7,12 @@ import { Search, X, Clock, TrendingUp, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearch } from '@/lib/hooks/useSearch'
 import { formatPrice, cn } from '@/lib/utils'
+import {
+  imageAltProduct,
+  imageTitleProduct,
+  linkTitleProduct,
+  linkTitleSearchResult,
+} from '@/lib/seo/accessibility'
 
 interface SmartSearchBarProps {
   compact?: boolean
@@ -157,6 +163,7 @@ export default function SmartSearchBar({
                   <button
                     key={opt.slug}
                     onClick={() => handleSelect(opt.slug, true)}
+                    title={linkTitleSearchResult(opt.name)}
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors',
                       'hover:bg-bg-elevated',
@@ -167,7 +174,8 @@ export default function SmartSearchBar({
                       <div className="relative size-10 rounded bg-bg-elevated shrink-0 overflow-hidden">
                         <Image
                           src={opt.image}
-                          alt={opt.name}
+                          alt={imageAltProduct(opt.name)}
+                          title={imageTitleProduct(opt.name)}
                           fill
                           className="object-cover"
                           sizes="40px"

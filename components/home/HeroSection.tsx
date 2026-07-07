@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import { imageAltHero, imageTitleHero, linkTitleHeroServices, linkTitleHeroShop } from '@/lib/seo/accessibility'
 
 const STATS = [
   { label: 'Товарів в каталозі', value: '500+' },
@@ -86,7 +87,8 @@ export default function HeroSection() {
         <div className="absolute left-0 right-0 top-[-12%] h-[124%] w-full">
           <Image
             src={HERO_SLIDE.image}
-            alt={HERO_SLIDE.title}
+            alt={imageAltHero()}
+            title={imageTitleHero()}
             fill
             priority
             fetchPriority="high"
@@ -135,13 +137,13 @@ export default function HeroSection() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-wrap gap-3 mb-12"
             >
-              <Link href={HERO_SLIDE.href}>
+              <Link href={HERO_SLIDE.href} title={linkTitleHeroServices()}>
                 <Button size="lg" className="gap-2 micro-pop">
                   {HERO_SLIDE.cta}
                   <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link href="/shop" className="lg:min-w-[11.7rem]">
+              <Link href="/shop" title={linkTitleHeroShop()} className="lg:min-w-[11.7rem]">
                 <Button size="lg" variant="secondary" fullWidth className="micro-pop">
                   Знайти деталь
                 </Button>

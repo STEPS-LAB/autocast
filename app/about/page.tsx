@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { Shield, Zap, Award, Users } from 'lucide-react'
 import PageTransition from '@/components/layout/PageTransition'
 import { buildPageMetadata } from '@/lib/seo/metadata'
+import { imageAltAbout, imageTitleAbout } from '@/lib/seo/accessibility'
 import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
 
 export const metadata = buildPageMetadata({
@@ -53,7 +54,8 @@ export default function AboutPage() {
           <div className="mt-8 w-full md:w-[70%] mx-auto rounded-lg overflow-hidden border border-border">
             <Image
               src="/images/for-pro-nas.jpg"
-              alt="Наша команда та майстерня"
+              alt={imageAltAbout()}
+              title={imageTitleAbout()}
               width={1200}
               height={700}
               className="w-full h-auto object-cover"

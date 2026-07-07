@@ -9,6 +9,13 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import type { ServiceListItem } from '@/types'
 import { cn } from '@/lib/utils'
+import {
+  imageAltService,
+  imageTitleService,
+  linkTitleAllServices,
+  linkTitleService,
+  linkTitleServices,
+} from '@/lib/seo/accessibility'
 
 interface ServicesMenuProps {
   publicDarkBar: boolean
@@ -128,6 +135,7 @@ export default function ServicesMenu({ publicDarkBar, services }: ServicesMenuPr
       <Link
         ref={triggerRef}
         href="/services"
+        title={linkTitleServices()}
         className={triggerClass}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -191,13 +199,15 @@ export default function ServicesMenu({ publicDarkBar, services }: ServicesMenuPr
                         <Link
                           key={service.slug}
                           href={`/services/${service.slug}`}
+                          title={linkTitleService(service.title)}
                           role="menuitem"
                           className="services-nav-menuitem group relative block overflow-hidden rounded-lg ring-1 ring-white/14 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] outline-none [-webkit-tap-highlight-color:transparent] hover:ring-white/28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
                           <div className="relative aspect-[4/3] bg-bg-elevated">
                             <Image
                               src={service.image}
-                              alt=""
+                              alt={imageAltService(service.title)}
+                              title={imageTitleService(service.title)}
                               fill
                               className="object-cover transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                               sizes="(min-width: 768px) 200px, 33vw"
@@ -231,6 +241,7 @@ export default function ServicesMenu({ publicDarkBar, services }: ServicesMenuPr
                     <div className="mb-2 h-px w-full bg-white/10" aria-hidden />
                     <Link
                       href="/services"
+                      title={linkTitleAllServices()}
                       role="menuitem"
                       className="flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium text-accent outline-none [-webkit-tap-highlight-color:transparent] transition-[background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:duration-100 hover:bg-accent/15 focus-visible:outline-none"
                     >

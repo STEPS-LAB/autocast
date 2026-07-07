@@ -10,6 +10,14 @@ import { useWishlistStore } from '@/lib/store/wishlist'
 import { formatPrice, cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/components/layout/DocumentBodyPortal'
+import {
+  imageAltProduct,
+  imageTitleProduct,
+  linkTitleCart,
+  linkTitleCheckout,
+  linkTitleProduct,
+  linkTitleShop,
+} from '@/lib/seo/accessibility'
 
 function unlockBodyScrollIfNoDrawer() {
   const cartOpen = useCartStore.getState().isOpen
@@ -133,7 +141,7 @@ export default function CartDrawer() {
                     onClick={closeCart}
                     className="mt-2"
                   >
-                    <Link href="/shop">Перейти в магазин</Link>
+                    <Link href="/shop" title={linkTitleShop()}>Перейти в магазин</Link>
                   </Button>
                 </div>
               ) : (
@@ -150,13 +158,15 @@ export default function CartDrawer() {
                       >
                         <Link
                           href={`/product/${item.product.slug}`}
+                          title={linkTitleProduct(item.product.name_ua)}
                           onClick={closeCart}
                           className="relative size-16 rounded bg-bg-elevated shrink-0 overflow-hidden border border-border"
                         >
                           {item.product.images[0] && (
                             <Image
                               src={item.product.images[0]}
-                              alt={item.product.name_ua}
+                              alt={imageAltProduct(item.product.name_ua, item.product.category?.name_ua)}
+                              title={imageTitleProduct(item.product.name_ua)}
                               fill
                               className="object-cover"
                               sizes="64px"
@@ -167,6 +177,7 @@ export default function CartDrawer() {
                         <div className="flex-1 min-w-0">
                           <Link
                             href={`/product/${item.product.slug}`}
+                            title={linkTitleProduct(item.product.name_ua)}
                             onClick={closeCart}
                             className="text-sm text-text-primary hover:text-accent transition-colors line-clamp-2 leading-snug"
                           >
@@ -227,12 +238,12 @@ export default function CartDrawer() {
                     {formatPrice(total)}
                   </span>
                 </div>
-                <Link href="/checkout" onClick={closeCart}>
+                <Link href="/checkout" title={linkTitleCheckout()} onClick={closeCart}>
                   <Button fullWidth size="lg">
                     Оформити замовлення
                   </Button>
                 </Link>
-                <Link href="/cart" onClick={closeCart}>
+                <Link href="/cart" title={linkTitleCart()} onClick={closeCart}>
                   <Button variant="ghost" fullWidth size="sm">
                     Переглянути кошик
                   </Button>

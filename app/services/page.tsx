@@ -10,6 +10,7 @@ import { buildPageMetadata } from '@/lib/seo/metadata'
 import { buildBreadcrumbSchema, buildServiceListSchema } from '@/lib/seo/schemas'
 import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
 import { getSiteUrl } from '@/lib/supabase/env'
+import { linkTitleContactCta, linkTitleShop } from '@/lib/seo/accessibility'
 
 export const metadata = buildPageMetadata({
   title: 'Послуги автосервісу в Житомирі',
@@ -79,10 +80,10 @@ export default async function ServicesPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Link href="/contact">
+                <Link href="/contact" title={linkTitleContactCta()}>
                   <Button className="micro-pop">Звʼязатися</Button>
                 </Link>
-                <Link href="/shop">
+                <Link href="/shop" title={linkTitleShop()}>
                   <Button variant="secondary" className="micro-pop">
                     Перейти в магазин <ArrowRight size={16} />
                   </Button>

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { getSiteUrl } from '@/lib/supabase/env'
 import { defaultSiteDescription, INDEX_ROBOTS, safeText } from '@/lib/seo/fallbacks'
-import { BUSINESS, DEFAULT_OG_IMAGE, KEYWORD_CLUSTERS, SITE_LOCALE, SITE_NAME } from '@/lib/seo/site'
+import { BUSINESS, DEFAULT_OG_IMAGE, FAVICON_PATH, KEYWORD_CLUSTERS, SITE_LOCALE, SITE_NAME } from '@/lib/seo/site'
 
 export function truncateDescription(text: string, maxLength = 160): string {
   const normalized = safeText(text, defaultSiteDescription()).replace(/\s+/g, ' ').trim()
@@ -121,8 +121,9 @@ export function buildRootMetadata(): Metadata {
       'content-language': 'uk',
     },
     icons: {
-      icon: [{ url: '/images/mk.svg', type: 'image/svg+xml' }],
-      apple: [{ url: '/images/mk.svg', type: 'image/svg+xml' }],
+      icon: [{ url: FAVICON_PATH, type: 'image/png' }],
+      apple: [{ url: FAVICON_PATH, type: 'image/png' }],
+      shortcut: [FAVICON_PATH],
     },
   }
 }
