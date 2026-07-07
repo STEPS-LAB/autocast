@@ -106,6 +106,15 @@ body {
   min-height: 100dvh;
 }
 
+@layer base {
+  p,
+  span,
+  a,
+  li {
+    @apply text-[16px] md:text-[17px] leading-relaxed;
+  }
+}
+
 /* Inner pages (non-home): cool airy canvas — depth from translucent layers, not flat gray */
 body.page-bg-subtle-dark {
   --page-canvas-base: #f1f3f8;
