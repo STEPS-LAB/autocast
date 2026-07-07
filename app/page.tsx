@@ -1,4 +1,4 @@
-import { Suspense, preload } from 'react'
+import { Suspense } from 'react'
 import HeroSection from '@/components/home/HeroSection'
 import HomePageDynamicSections from '@/components/home/HomePageDynamicSections'
 import { JsonLdGraph } from '@/lib/seo/json-ld'
@@ -18,7 +18,6 @@ export const revalidate = 120
 
 export default function HomePage() {
   const siteUrl = getSiteUrl()
-  preload('/images/hero.webp', { as: 'image', fetchPriority: 'high' })
 
   return (
     <>
