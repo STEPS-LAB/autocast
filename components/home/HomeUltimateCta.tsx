@@ -73,7 +73,7 @@ export default function HomeUltimateCta() {
   return (
     <section
       id="contact"
-      className="scroll-mt-28 relative overflow-hidden bg-bg-primary border-t border-border py-16 md:py-28 lg:py-36"
+      className="scroll-mt-28 relative overflow-hidden bg-bg-primary border-t border-border py-20 md:py-32 lg:py-40"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_0%,rgb(255_193_7/0.08),transparent_60%)]" aria-hidden />
 
@@ -156,7 +156,7 @@ export default function HomeUltimateCta() {
                   fullWidth
                   size="lg"
                   loading={isSubmitting}
-                  className="gap-2 mt-2 transition-transform duration-300 hover:scale-[1.02]"
+                  className="gap-2 mt-2 transition-transform duration-500 hover:scale-[1.02]"
                 >
                   Отримати розрахунок за 5 хвилин
                   <ArrowRight size={18} />

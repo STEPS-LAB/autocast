@@ -10,8 +10,10 @@ interface SymptomItem {
   bodyBefore: string
   ctaLabel: string
   bodyAfter: string
-  /** lg+ grid placement */
-  gridClass: string
+  /** lg+ organic canvas placement */
+  desktopClass: string
+  /** < lg bento offset */
+  mobileClass?: string
 }
 
 const SYMPTOMS: SymptomItem[] = [
@@ -21,15 +23,17 @@ const SYMPTOMS: SymptomItem[] = [
     bodyBefore: 'Халепа! Всередині фар утворилося справжнє болото. Акваріум — це чудово, але рибкам краще жити вдома, а не у Вашій оптиці. ',
     ctaLabel: 'Звʼяжіться з майстром',
     bodyAfter: ', щоб повернути фарам заводську герметичність.',
-    gridClass: 'lg:col-start-1 lg:row-start-1',
+    desktopClass: 'lg:top-[3%] lg:left-[2%] lg:-rotate-1',
+    mobileClass: 'sm:mr-6',
   },
   {
     id: 'flat-sound',
     title: 'Штатний звук став пласким і тихим',
     bodyBefore: 'Ну це жесть... Здається, Ваші улюблені виконавці просто втомилися співати у таких умовах і оголосили страйк. ',
     ctaLabel: 'Отримати прорахунок сцени',
-    bodyAfter: ', щоб повернути музиці обʼєм та соковитий бас.',
-    gridClass: 'lg:col-start-2 lg:row-start-1',
+    bodyAfter: ', щоб повернути музиці обʼєм та соковитий басс.',
+    desktopClass: 'lg:top-[7%] lg:right-[3%] lg:rotate-2',
+    mobileClass: 'sm:ml-10',
   },
   {
     id: 'frozen-screen',
@@ -37,73 +41,81 @@ const SYMPTOMS: SymptomItem[] = [
     bodyBefore: 'Катастрофа! Ваша мультимедіа просто впадає в сплячку, сумує за теплом і відмовляється думати. ',
     ctaLabel: 'Підібрати сучасну Android-систему',
     bodyAfter: ' з CarPlay, яка не боїться українських морозів.',
-    gridClass: 'lg:col-start-4 lg:row-start-1',
+    desktopClass: 'lg:top-[26%] lg:left-[1%] lg:rotate-1',
+    mobileClass: 'sm:mr-14',
   },
   {
     id: 'high-beams',
-    title: 'Зустрічні водії мигають Вам дальнім',
+    title: 'Зустрічні водії постійно мигають Вам дальнім',
     bodyBefore: 'Спокійно, вони не вітаються! Ваше світло просто нещадно випалює їм очі через збиті налаштування або лінзи, що «втомилися». ',
     ctaLabel: 'Записатись на стенд',
     bodyAfter: ', щоб відрегулювати чітку світлотіньову межу.',
-    gridClass: 'lg:col-start-5 lg:row-start-1',
+    desktopClass: 'lg:top-[30%] lg:right-[2%] lg:-rotate-2',
+    mobileClass: 'sm:ml-6',
   },
   {
     id: 'road-noise',
-    title: 'У салоні чути кожен камінчик',
+    title: 'У салоні чути кожен камінчик і шелест шин',
     bodyBefore: 'Якась дичина... Якщо для розмови з пасажиром доводиться вмикати режим крику, Ваше авто більше схоже на консервну банку. ',
     ctaLabel: 'Замовити преміум-шумоізоляцію',
     bodyAfter: ' та нарешті насолодитися тишею.',
-    gridClass: 'lg:col-start-1 lg:row-start-2',
+    desktopClass: 'lg:top-[50%] lg:left-[4%] lg:-rotate-1',
+    mobileClass: 'sm:mr-8',
   },
   {
     id: 'door-anxiety',
-    title: 'Тричі перевіряєте, чи закрилися двері',
+    title: 'Доводиться тричі перевіряти, чи закрилися двері',
     bodyBefore: 'Повна тривожність! Оце забіг навколо машини — це виснажливо. ',
     ctaLabel: 'Дізнатися вартість',
     bodyAfter: ' встановлення надійної діалогової сигналізації з автозапуском з Вашого телефону.',
-    gridClass: 'lg:col-start-5 lg:row-start-2',
+    desktopClass: 'lg:top-[54%] lg:right-[4%] lg:rotate-1',
+    mobileClass: 'sm:ml-12',
   },
   {
     id: 'blurry-camera',
-    title: 'Камера показує «мильну» картинку',
+    title: 'Камера заднього виду показує «мильну» картинку з минулого століття',
     bodyBefore: 'Ну це вже ретро... Паркування наосліп по таких кадрах — це дуже дорогий атракціон. ',
     ctaLabel: 'Замінити камеру',
     bodyAfter: ' на чітку HD-оптику з динамічною розміткою, поки не зачепили чийсь бампер.',
-    gridClass: 'lg:col-start-1 lg:row-start-4',
+    desktopClass: 'lg:bottom-[22%] lg:left-[7%] lg:rotate-2',
+    mobileClass: 'sm:mr-4',
   },
   {
     id: 'dim-headlights',
-    title: 'Світло фар тьмяне і жовте',
+    title: 'Світло фар стало тьмяним і жовтим, як у старого трамвая',
     bodyBefore: 'Повний морок! Нічні поїздки перетворилися на квест «вгадай, де яма на дорозі»? ',
     ctaLabel: 'Проконсультуватися щодо Bi-LED лінз',
     bodyAfter: ', які назавжди перетворять Вашу ніч на білий день.',
-    gridClass: 'lg:col-start-5 lg:row-start-4',
+    desktopClass: 'lg:bottom-[18%] lg:right-[5%] lg:-rotate-1',
+    mobileClass: 'sm:ml-8',
   },
   {
     id: 'speaker-crackle',
-    title: 'Колонки хриплять на басах',
+    title: 'Заводські колонки почали неприємно хрипіти на басах',
     bodyBefore: 'Слухайте, це не новий трек у стилі lo-fi... Це Ваші динаміки благають про пощаду та заміну. ',
     ctaLabel: 'Підібрати акустику',
     bodyAfter: ', яка розкачає салон під Ваші музичні вподобання.',
-    gridClass: 'lg:col-start-2 lg:row-start-5',
+    desktopClass: 'lg:bottom-[5%] lg:left-[20%] lg:-rotate-2',
+    mobileClass: 'sm:mr-16',
   },
   {
     id: 'warranty-fear',
-    title: 'Дилер лякає зняттям з гарантії',
+    title: 'Потрібно встановити складну електроніку, а дилер лякає зняттям з гарантії',
     bodyBefore: 'Класична лякалка! Ми працюємо професійно, чисто та сертифіковано, тому Ваша гарантія залишиться абсолютно недоторканою. ',
     ctaLabel: 'Обговорити проект з інженером',
     bodyAfter: ' і спати спокійно.',
-    gridClass: 'lg:col-start-4 lg:row-start-5',
+    desktopClass: 'lg:bottom-[7%] lg:right-[16%] lg:rotate-1',
+    mobileClass: 'sm:ml-4',
   },
 ]
 
 function SymptomResponse({ item }: { item: SymptomItem }) {
   return (
-    <p className="text-xs sm:text-sm leading-relaxed text-text-inverse-muted">
+    <p className="text-sm leading-relaxed text-text-inverse-muted">
       {item.bodyBefore}
       <a
         href="#contact"
-        className="inline font-semibold text-accent underline-offset-4 hover:underline transition-colors duration-300"
+        className="inline font-semibold text-accent underline-offset-4 hover:underline transition-colors duration-500"
       >
         {item.ctaLabel}
       </a>
@@ -112,62 +124,87 @@ function SymptomResponse({ item }: { item: SymptomItem }) {
   )
 }
 
-interface FlipSymptomCardProps {
-  item: SymptomItem
-  index: number
-  isFlipped: boolean
-  onToggle: () => void
-  className?: string
+const DESKTOP_CARD =
+  'w-full min-w-[300px] xl:min-w-[320px] max-w-[360px] xl:max-w-[400px] min-h-[200px] p-6'
+
+function DesktopHoverFlipCard({ item, className }: { item: SymptomItem; className?: string }) {
+  return (
+    <div
+      className={cn(
+        'absolute z-20',
+        DESKTOP_CARD,
+        item.desktopClass,
+        className,
+      )}
+    >
+      <div
+        tabIndex={0}
+        className="group h-full w-full outline-none perspective-[1000px] rounded-2xl focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep"
+      >
+        <div
+          className={cn(
+            'relative h-full w-full transition-transform duration-500 ease-out transform-3d',
+            'group-hover:transform-[rotateY(180deg)] group-focus-within:transform-[rotateY(180deg)]',
+          )}
+        >
+          {/* Front */}
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center rounded-2xl border backface-hidden',
+              'border-white/12 bg-white/6 backdrop-blur-sm',
+              'transition-all duration-500',
+              'group-hover:border-accent/35 group-hover:bg-white/10 group-hover:shadow-[0_28px_64px_-24px_rgb(255_193_7/0.35)]',
+            )}
+          >
+            <p className="text-[15px] font-semibold text-text-inverse leading-snug">{item.title}</p>
+          </div>
+
+          {/* Back */}
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center rounded-2xl border backface-hidden transform-[rotateY(180deg)]',
+              'border-accent/40 bg-graphite/95 shadow-[0_28px_64px_-24px_rgb(255_193_7/0.4)]',
+            )}
+          >
+            <SymptomResponse item={item} />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
-function FlipSymptomCard({ item, index, isFlipped, onToggle, className }: FlipSymptomCardProps) {
+function MobileExpandCard({
+  item,
+  isExpanded,
+  onToggle,
+  className,
+}: {
+  item: SymptomItem
+  isExpanded: boolean
+  onToggle: () => void
+  className?: string
+}) {
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('w-full max-w-lg', className, item.mobileClass)}>
       <button
         type="button"
         onClick={onToggle}
-        aria-expanded={isFlipped}
-        aria-label={`${item.title}. ${isFlipped ? 'Згорнути відповідь' : 'Показати відповідь майстра'}`}
-        className="group w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep rounded-xl"
+        aria-expanded={isExpanded}
+        className="w-full text-left rounded-2xl border border-white/12 bg-white/6 backdrop-blur-sm transition-all duration-500 hover:border-accent/35 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
       >
-        <div className="perspective-distant w-full">
-          <div
-            className={cn(
-              'relative w-full min-h-38 sm:min-h-42 lg:min-h-34 xl:min-h-36',
-              'transition-transform duration-500 ease-out transform-3d',
-              isFlipped && 'transform-[rotateY(180deg)]',
-            )}
-          >
-            {/* Front */}
-            <div
-              className={cn(
-                'absolute inset-0 flex flex-col rounded-xl border p-4 backface-hidden',
-                'border-white/12 bg-white/6',
-                'transition-colors duration-300',
-                'group-hover:border-accent/35 group-hover:bg-white/10',
-                isFlipped && 'pointer-events-none',
-              )}
-            >
-              <span className="mb-2 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-bold">
-                {index + 1}
-              </span>
-              <span className="text-sm font-semibold text-text-inverse leading-snug">{item.title}</span>
-              <span className="mt-auto pt-3 text-[11px] uppercase tracking-wider text-white/35">
-                Натисніть, щоб відкрити
-              </span>
-            </div>
-
-            {/* Back */}
-            <div
-              className={cn(
-                'absolute inset-0 flex flex-col rounded-xl border p-4 overflow-y-auto backface-hidden transform-[rotateY(180deg)]',
-                'border-accent/40 bg-graphite/90 shadow-[0_20px_48px_-20px_rgb(255_193_7/0.3)]',
-                !isFlipped && 'pointer-events-none',
-              )}
-            >
-              <p className="text-[11px] uppercase tracking-wider text-accent font-medium mb-2">Відповідь майстра</p>
+        <div className={cn('px-6 py-5 md:py-6 flex items-center')}>
+          <p className="text-[15px] font-semibold text-text-inverse leading-snug">{item.title}</p>
+        </div>
+        <div
+          className={cn(
+            'grid transition-all duration-500 ease-out',
+            isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+          )}
+        >
+          <div className="overflow-hidden">
+            <div className="px-6 pb-6 pt-0 border-t border-white/10">
               <SymptomResponse item={item} />
-              <span className="mt-auto pt-3 text-[11px] text-white/35">Натисніть, щоб згорнути</span>
             </div>
           </div>
         </div>
@@ -177,78 +214,63 @@ function FlipSymptomCard({ item, index, isFlipped, onToggle, className }: FlipSy
 }
 
 export default function CarSymptomsCluster() {
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const toggle = useCallback((id: string) => {
-    setActiveId(prev => (prev === id ? null : id))
+  const toggleMobile = useCallback((id: string) => {
+    setExpandedId(prev => (prev === id ? null : id))
   }, [])
 
   return (
-    <section className="relative overflow-hidden bg-graphite-deep py-16 md:py-28 lg:py-36 border-y border-white/10">
+    <section className="relative overflow-hidden bg-graphite-deep py-20 md:py-32 lg:py-40 border-y border-white/10">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgb(255_193_7/0.06),transparent_55%)]" aria-hidden />
 
-      <div className="container-xl relative">
+      <div className="container-xl relative mb-14 md:mb-20 lg:mb-24">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.45 }}
-          className="max-w-3xl mx-auto text-center mb-12 md:mb-16 lg:mb-20"
+          transition={{ duration: 0.5 }}
+          className="max-w-3xl mx-auto text-center"
         >
-          <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-4">Діагностика за симптомом</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-5">Діагностика за симптомом</p>
           <h2 className="text-headline text-text-inverse mb-5">Що турбує Ваш автомобіль?</h2>
           <p className="text-base md:text-lg text-text-inverse-muted leading-relaxed">
-            Оберіть симптом, який Вас турбує, щоб дізнатися професійне рішення від наших майстрів (на картки можна клікати).
+            Оберіть симптом, який Вас турбує, щоб дізнатися професійне рішення від наших майстрів (на картки можна наводити курсор).
           </p>
         </motion.div>
+      </div>
 
-        {/* Mobile & tablet: bento stack */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 lg:hidden">
-          {SYMPTOMS.map((symptom, index) => (
-            <FlipSymptomCard
-              key={symptom.id}
-              item={symptom}
-              index={index}
-              isFlipped={activeId === symptom.id}
-              onToggle={() => toggle(symptom.id)}
-              className={cn(
-                index % 5 === 0 && 'sm:col-span-2 sm:max-w-lg sm:mx-auto sm:w-full',
-              )}
-            />
-          ))}
-        </div>
-
-        {/* Desktop: non-overlapping 5×5 grid with centered logo */}
-        <div
-          className={cn(
-            'hidden lg:grid mx-auto max-w-6xl',
-            'grid-cols-5 grid-rows-5',
-            'gap-x-6 gap-y-8 xl:gap-x-8 xl:gap-y-10',
-            'px-4 xl:px-8 py-8 xl:py-12',
-          )}
-        >
-          {SYMPTOMS.map((symptom, index) => (
-            <FlipSymptomCard
-              key={symptom.id}
-              item={symptom}
-              index={index}
-              isFlipped={activeId === symptom.id}
-              onToggle={() => toggle(symptom.id)}
-              className={symptom.gridClass}
-            />
-          ))}
-
+      {/* Full-width organic canvas — desktop */}
+      <div className="hidden lg:block w-full px-4 md:px-12 lg:px-20 max-w-none">
+        <div className="relative mx-auto min-h-[1080px] xl:min-h-[1180px] 2xl:min-h-[1240px]">
+          {/* Central logo — clear dead zone */}
           <div
-            className="lg:col-start-3 lg:row-start-2 lg:row-span-3 flex items-center justify-center pointer-events-none select-none px-4"
+            className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 select-none text-center px-8"
             aria-hidden
           >
-            <div className="text-center">
-              <p className="font-brand text-[clamp(2.75rem,5vw,4.5rem)] font-bold leading-none tracking-tight text-white/90">
-                auto<span className="text-accent">cast</span>
-              </p>
-              <p className="mt-4 text-xs uppercase tracking-[0.35em] text-white/35">Житомир</p>
-            </div>
+            <p className="font-brand text-[clamp(3.25rem,6.5vw,5.5rem)] font-bold leading-none tracking-tight text-white/92">
+              auto<span className="text-accent">cast</span>
+            </p>
+            <p className="mt-5 text-xs uppercase tracking-[0.35em] text-white/35">Житомир</p>
           </div>
+
+          {SYMPTOMS.map(symptom => (
+            <DesktopHoverFlipCard key={symptom.id} item={symptom} />
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile & tablet — asymmetrical bento stack */}
+      <div className="lg:hidden w-full px-4 md:px-12 max-w-none">
+        <div className="mx-auto flex max-w-xl flex-col gap-5 md:gap-6">
+          {SYMPTOMS.map(symptom => (
+            <MobileExpandCard
+              key={symptom.id}
+              item={symptom}
+              isExpanded={expandedId === symptom.id}
+              onToggle={() => toggleMobile(symptom.id)}
+            />
+          ))}
         </div>
       </div>
     </section>

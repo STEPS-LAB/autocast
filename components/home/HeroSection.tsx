@@ -157,7 +157,7 @@ export default function HeroSection() {
               initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.45 }}
-              className="order-2 lg:order-1 inline-flex w-full sm:w-auto lg:max-w-md items-center justify-center gap-2 rounded-md h-12 lg:h-14 px-6 lg:px-8 text-sm sm:text-base bg-accent text-black font-bold shadow-[0_12px_40px_-10px_rgb(255_193_7/0.55)] hover:bg-accent-hover hover:scale-[1.02] transition-all duration-300"
+              className="order-2 lg:order-1 inline-flex w-full sm:w-auto lg:max-w-md items-center justify-center gap-2 rounded-md h-12 lg:h-14 px-6 lg:px-8 text-sm sm:text-base bg-accent text-black font-bold shadow-[0_12px_40px_-10px_rgb(255_193_7/0.55)] hover:bg-accent-hover hover:scale-[1.02] transition-all duration-500"
             >
               Записатись на безкоштовну консультацію майстра
               <ArrowRight size={18} />

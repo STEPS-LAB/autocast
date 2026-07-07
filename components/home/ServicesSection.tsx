@@ -16,7 +16,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
   const homeServices = services.slice(0, 4)
 
   return (
-    <section className="py-16 md:py-28 lg:py-36 bg-graphite-deep text-text-inverse border-y border-text-inverse-muted/25">
+    <section className="py-20 md:py-32 lg:py-40 bg-graphite-deep text-text-inverse border-y border-text-inverse-muted/25">
       <div className="container-xl">
         <motion.div
           initial={{ opacity: 1, y: 16 }}
@@ -72,7 +72,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
           <a href="#contact" title={linkTitleContactCta()} className="shrink-0">
             <Button
               size="lg"
-              className="micro-pop gap-2 px-8 transition-transform duration-300 hover:scale-105"
+              className="micro-pop gap-2 px-8 transition-transform duration-500 hover:scale-105"
             >
               Звʼязатися
               <ArrowRight size={18} />

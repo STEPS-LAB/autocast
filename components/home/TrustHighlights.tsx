@@ -23,7 +23,7 @@ const ITEMS = [
 
 export default function TrustHighlights() {
   return (
-    <section className="py-16 md:py-28 lg:py-36 bg-graphite/5">
+    <section className="py-20 md:py-32 lg:py-40 bg-graphite/5">
       <div className="container-xl">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
