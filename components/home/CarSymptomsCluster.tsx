@@ -4,118 +4,123 @@ import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
+interface SymptomPosition {
+  top?: string
+  left?: string
+  right?: string
+  bottom?: string
+}
+
 interface SymptomItem {
   id: string
   title: string
   bodyBefore: string
   ctaLabel: string
   bodyAfter: string
-  /** lg+ organic canvas placement */
-  desktopClass: string
-  /** < lg bento offset */
-  mobileClass?: string
+  position: SymptomPosition
 }
 
 const SYMPTOMS: SymptomItem[] = [
   {
     id: 'foggy-lights',
     title: 'Фари запітніли зсередини',
-    bodyBefore: 'Халепа! Всередині фар утворилося справжнє болото. Акваріум — це чудово, але рибкам краще жити вдома, а не у Вашій оптиці. ',
+    bodyBefore:
+      'Халепа! Всередині фар утворилося справжнє болото. Акваріум — це чудово, але рибкам краще жити вдома, а не у Вашій оптиці. ',
     ctaLabel: 'Звʼяжіться з майстром',
     bodyAfter: ', щоб повернути фарам заводську герметичність.',
-    desktopClass: 'lg:top-[3%] lg:left-[2%] lg:-rotate-1',
-    mobileClass: 'sm:mr-6',
+    position: { top: '10%', left: '5%' },
   },
   {
     id: 'flat-sound',
     title: 'Штатний звук став пласким і тихим',
-    bodyBefore: 'Ну це жесть... Здається, Ваші улюблені виконавці просто втомилися співати у таких умовах і оголосили страйк. ',
+    bodyBefore:
+      'Ну це жесть... Здається, Ваші улюблені виконавці просто втомилися співати у таких умовах і оголосили страйк. ',
     ctaLabel: 'Отримати прорахунок сцени',
     bodyAfter: ', щоб повернути музиці обʼєм та соковитий басс.',
-    desktopClass: 'lg:top-[7%] lg:right-[3%] lg:rotate-2',
-    mobileClass: 'sm:ml-10',
+    position: { top: '8%', right: '5%' },
   },
   {
     id: 'frozen-screen',
     title: 'Екран магнітоли зависає взимку',
-    bodyBefore: 'Катастрофа! Ваша мультимедіа просто впадає в сплячку, сумує за теплом і відмовляється думати. ',
+    bodyBefore:
+      'Катастрофа! Ваша мультимедіа просто впадає в сплячку, сумує за теплом і відмовляється думати. ',
     ctaLabel: 'Підібрати сучасну Android-систему',
     bodyAfter: ' з CarPlay, яка не боїться українських морозів.',
-    desktopClass: 'lg:top-[26%] lg:left-[1%] lg:rotate-1',
-    mobileClass: 'sm:mr-14',
+    position: { top: '35%', left: '2%' },
   },
   {
     id: 'high-beams',
     title: 'Зустрічні водії постійно мигають Вам дальнім',
-    bodyBefore: 'Спокійно, вони не вітаються! Ваше світло просто нещадно випалює їм очі через збиті налаштування або лінзи, що «втомилися». ',
+    bodyBefore:
+      'Спокійно, вони не вітаються! Ваше світло просто нещадно випалює їм очі через збиті налаштування або лінзи, що «втомилися». ',
     ctaLabel: 'Записатись на стенд',
     bodyAfter: ', щоб відрегулювати чітку світлотіньову межу.',
-    desktopClass: 'lg:top-[30%] lg:right-[2%] lg:-rotate-2',
-    mobileClass: 'sm:ml-6',
+    position: { top: '40%', right: '2%' },
   },
   {
     id: 'road-noise',
     title: 'У салоні чути кожен камінчик і шелест шин',
-    bodyBefore: 'Якась дичина... Якщо для розмови з пасажиром доводиться вмикати режим крику, Ваше авто більше схоже на консервну банку. ',
+    bodyBefore:
+      'Якась дичина... Якщо для розмови з пасажиром доводиться вмикати режим крику, Ваше авто більше схоже на консервну банку. ',
     ctaLabel: 'Замовити преміум-шумоізоляцію',
     bodyAfter: ' та нарешті насолодитися тишею.',
-    desktopClass: 'lg:top-[50%] lg:left-[4%] lg:-rotate-1',
-    mobileClass: 'sm:mr-8',
+    position: { top: '60%', left: '7%' },
   },
   {
     id: 'door-anxiety',
     title: 'Доводиться тричі перевіряти, чи закрилися двері',
     bodyBefore: 'Повна тривожність! Оце забіг навколо машини — це виснажливо. ',
     ctaLabel: 'Дізнатися вартість',
-    bodyAfter: ' встановлення надійної діалогової сигналізації з автозапуском з Вашого телефону.',
-    desktopClass: 'lg:top-[54%] lg:right-[4%] lg:rotate-1',
-    mobileClass: 'sm:ml-12',
+    bodyAfter:
+      ' встановлення надійної діалогової сигналізації з автозапуском з Вашого телефону.',
+    position: { top: '65%', right: '8%' },
   },
   {
     id: 'blurry-camera',
     title: 'Камера заднього виду показує «мильну» картинку з минулого століття',
-    bodyBefore: 'Ну це вже ретро... Паркування наосліп по таких кадрах — це дуже дорогий атракціон. ',
+    bodyBefore:
+      'Ну це вже ретро... Паркування наосліп по таких кадрах — це дуже дорогий атракціон. ',
     ctaLabel: 'Замінити камеру',
-    bodyAfter: ' на чітку HD-оптику з динамічною розміткою, поки не зачепили чийсь бампер.',
-    desktopClass: 'lg:bottom-[22%] lg:left-[7%] lg:rotate-2',
-    mobileClass: 'sm:mr-4',
+    bodyAfter:
+      ' на чітку HD-оптику з динамічною розміткою, поки не зачепили чийсь бампер.',
+    position: { top: '22%', left: '28%' },
   },
   {
     id: 'dim-headlights',
     title: 'Світло фар стало тьмяним і жовтим, як у старого трамвая',
-    bodyBefore: 'Повний морок! Нічні поїздки перетворилися на квест «вгадай, де яма на дорозі»? ',
+    bodyBefore:
+      'Повний морок! Нічні поїздки перетворилися на квест «вгадай, де яма на дорозі»? ',
     ctaLabel: 'Проконсультуватися щодо Bi-LED лінз',
     bodyAfter: ', які назавжди перетворять Вашу ніч на білий день.',
-    desktopClass: 'lg:bottom-[18%] lg:right-[5%] lg:-rotate-1',
-    mobileClass: 'sm:ml-8',
+    position: { top: '20%', right: '26%' },
   },
   {
     id: 'speaker-crackle',
     title: 'Заводські колонки почали неприємно хрипіти на басах',
-    bodyBefore: 'Слухайте, це не новий трек у стилі lo-fi... Це Ваші динаміки благають про пощаду та заміну. ',
+    bodyBefore:
+      'Слухайте, це не новий трек у стилі lo-fi... Це Ваші динаміки благають про пощаду та заміну. ',
     ctaLabel: 'Підібрати акустику',
     bodyAfter: ', яка розкачає салон під Ваші музичні вподобання.',
-    desktopClass: 'lg:bottom-[5%] lg:left-[20%] lg:-rotate-2',
-    mobileClass: 'sm:mr-16',
+    position: { bottom: '5%', left: '20%' },
   },
   {
     id: 'warranty-fear',
     title: 'Потрібно встановити складну електроніку, а дилер лякає зняттям з гарантії',
-    bodyBefore: 'Класична лякалка! Ми працюємо професійно, чисто та сертифіковано, тому Ваша гарантія залишиться абсолютно недоторканою. ',
+    bodyBefore:
+      'Класична лякалка! Ми працюємо професійно, чисто та сертифіковано, тому Ваша гарантія залишиться абсолютно недоторканою. ',
     ctaLabel: 'Обговорити проект з інженером',
     bodyAfter: ' і спати спокійно.',
-    desktopClass: 'lg:bottom-[7%] lg:right-[16%] lg:rotate-1',
-    mobileClass: 'sm:ml-4',
+    position: { bottom: '5%', right: '20%' },
   },
 ]
 
-function SymptomResponse({ item }: { item: SymptomItem }) {
+function MasterAnswer({ item }: { item: SymptomItem }) {
   return (
-    <p className="text-sm leading-relaxed text-text-inverse-muted">
+    <p className="text-gray-300 text-sm leading-relaxed">
       {item.bodyBefore}
       <a
         href="#contact"
-        className="inline font-semibold text-accent underline-offset-4 hover:underline transition-colors duration-500"
+        className="text-[#FFBB00] underline font-semibold mt-2 cursor-pointer inline hover:text-white transition-colors duration-500"
       >
         {item.ctaLabel}
       </a>
@@ -124,49 +129,56 @@ function SymptomResponse({ item }: { item: SymptomItem }) {
   )
 }
 
-const DESKTOP_CARD =
-  'w-full min-w-[300px] xl:min-w-[320px] max-w-[360px] xl:max-w-[400px] min-h-[200px] p-6'
-
-function DesktopHoverFlipCard({ item, className }: { item: SymptomItem; className?: string }) {
+function DesktopFlipCard({ item }: { item: SymptomItem }) {
   return (
     <div
-      className={cn(
-        'absolute z-20',
-        DESKTOP_CARD,
-        item.desktopClass,
-        className,
-      )}
+      className="group min-w-[340px] max-w-[400px] h-[160px] [perspective:1000px] absolute z-20"
+      style={item.position}
     >
-      <div
-        tabIndex={0}
-        className="group h-full w-full outline-none perspective-[1000px] rounded-2xl focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-graphite-deep"
-      >
-        <div
-          className={cn(
-            'relative h-full w-full transition-transform duration-500 ease-out transform-3d',
-            'group-hover:transform-[rotateY(180deg)] group-focus-within:transform-[rotateY(180deg)]',
-          )}
-        >
-          {/* Front */}
-          <div
-            className={cn(
-              'absolute inset-0 flex items-center rounded-2xl border backface-hidden',
-              'border-white/12 bg-white/6 backdrop-blur-sm',
-              'transition-all duration-500',
-              'group-hover:border-accent/35 group-hover:bg-white/10 group-hover:shadow-[0_28px_64px_-24px_rgb(255_193_7/0.35)]',
-            )}
-          >
-            <p className="text-[15px] font-semibold text-text-inverse leading-snug">{item.title}</p>
-          </div>
+      <div className="relative w-full h-full duration-500 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+        {/* Front — symptom */}
+        <div className="absolute inset-0 w-full h-full p-6 bg-[#1A1D21] border border-white/10 rounded-xl flex items-center justify-center text-center [backface-visibility:hidden]">
+          <p className="text-white font-medium text-base leading-snug">{item.title}</p>
+        </div>
 
-          {/* Back */}
-          <div
-            className={cn(
-              'absolute inset-0 flex items-center rounded-2xl border backface-hidden transform-[rotateY(180deg)]',
-              'border-accent/40 bg-graphite/95 shadow-[0_28px_64px_-24px_rgb(255_193_7/0.4)]',
-            )}
-          >
-            <SymptomResponse item={item} />
+        {/* Back — master's answer */}
+        <div className="absolute inset-0 w-full h-full p-6 bg-[#22252A] border border-[#FFBB00]/30 rounded-xl flex flex-col items-center justify-center text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
+          <MasterAnswer item={item} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MobileAccordionCard({
+  item,
+  isOpen,
+  onToggle,
+}: {
+  item: SymptomItem
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="w-full rounded-xl border border-white/10 bg-[#1A1D21] overflow-hidden transition-colors duration-500">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="w-full p-6 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFBB00]/50"
+      >
+        <p className="text-white font-medium text-base leading-snug">{item.title}</p>
+      </button>
+
+      <div
+        className={cn(
+          'grid transition-all duration-500 ease-out',
+          isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-white/10 bg-[#22252A] p-6">
+            <MasterAnswer item={item} />
           </div>
         </div>
       </div>
@@ -174,57 +186,22 @@ function DesktopHoverFlipCard({ item, className }: { item: SymptomItem; classNam
   )
 }
 
-function MobileExpandCard({
-  item,
-  isExpanded,
-  onToggle,
-  className,
-}: {
-  item: SymptomItem
-  isExpanded: boolean
-  onToggle: () => void
-  className?: string
-}) {
-  return (
-    <div className={cn('w-full max-w-lg', className, item.mobileClass)}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={isExpanded}
-        className="w-full text-left rounded-2xl border border-white/12 bg-white/6 backdrop-blur-sm transition-all duration-500 hover:border-accent/35 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
-      >
-        <div className={cn('px-6 py-5 md:py-6 flex items-center')}>
-          <p className="text-[15px] font-semibold text-text-inverse leading-snug">{item.title}</p>
-        </div>
-        <div
-          className={cn(
-            'grid transition-all duration-500 ease-out',
-            isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-          )}
-        >
-          <div className="overflow-hidden">
-            <div className="px-6 pb-6 pt-0 border-t border-white/10">
-              <SymptomResponse item={item} />
-            </div>
-          </div>
-        </div>
-      </button>
-    </div>
-  )
-}
-
 export default function CarSymptomsCluster() {
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
 
   const toggleMobile = useCallback((id: string) => {
-    setExpandedId(prev => (prev === id ? null : id))
+    setOpenId(prev => (prev === id ? null : id))
   }, [])
 
   return (
     <section className="relative overflow-hidden bg-graphite-deep py-20 md:py-32 lg:py-40 border-y border-white/10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgb(255_193_7/0.06),transparent_55%)]" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgb(255_187_0/0.06),transparent_55%)]"
+        aria-hidden
+      />
 
-      <div className="container-xl relative mb-14 md:mb-20 lg:mb-24">
+      {/* Section header */}
+      <div className="container-xl relative mb-14 md:mb-20">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -232,46 +209,46 @@ export default function CarSymptomsCluster() {
           transition={{ duration: 0.5 }}
           className="max-w-3xl mx-auto text-center"
         >
-          <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-5">Діагностика за симптомом</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#FFBB00] font-medium mb-5">
+            Діагностика за симптомом
+          </p>
           <h2 className="text-headline text-text-inverse mb-5">Що турбує Ваш автомобіль?</h2>
           <p className="text-base md:text-lg text-text-inverse-muted leading-relaxed">
-            Оберіть симптом, який Вас турбує, щоб дізнатися професійне рішення від наших майстрів (на картки можна наводити курсор).
+            Оберіть симптом, який Вас турбує, щоб дізнатися професійне рішення від наших майстрів.
           </p>
         </motion.div>
       </div>
 
-      {/* Full-width organic canvas — desktop */}
-      <div className="hidden lg:block w-full px-4 md:px-12 lg:px-20 max-w-none">
-        <div className="relative mx-auto min-h-[1080px] xl:min-h-[1180px] 2xl:min-h-[1240px]">
-          {/* Central logo — clear dead zone */}
+      {/* Desktop — absolute organic canvas with 3D hover flip */}
+      <div className="hidden md:block w-full px-4 md:px-12 lg:px-20">
+        <div className="relative w-full min-h-[750px] overflow-visible mx-auto max-w-[1400px]">
+          {/* Central logo */}
           <div
-            className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 select-none text-center px-8"
+            className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 select-none text-center"
             aria-hidden
           >
-            <p className="font-brand text-[clamp(3.25rem,6.5vw,5.5rem)] font-bold leading-none tracking-tight text-white/92">
-              auto<span className="text-accent">cast</span>
+            <p className="font-brand text-[clamp(3rem,6vw,5rem)] font-bold leading-none tracking-tight text-white/92">
+              auto<span className="text-[#FFBB00]">cast</span>
             </p>
-            <p className="mt-5 text-xs uppercase tracking-[0.35em] text-white/35">Житомир</p>
+            <p className="mt-4 text-xs uppercase tracking-[0.35em] text-white/35">Житомир</p>
           </div>
 
           {SYMPTOMS.map(symptom => (
-            <DesktopHoverFlipCard key={symptom.id} item={symptom} />
+            <DesktopFlipCard key={symptom.id} item={symptom} />
           ))}
         </div>
       </div>
 
-      {/* Mobile & tablet — asymmetrical bento stack */}
-      <div className="lg:hidden w-full px-4 md:px-12 max-w-none">
-        <div className="mx-auto flex max-w-xl flex-col gap-5 md:gap-6">
-          {SYMPTOMS.map(symptom => (
-            <MobileExpandCard
-              key={symptom.id}
-              item={symptom}
-              isExpanded={expandedId === symptom.id}
-              onToggle={() => toggleMobile(symptom.id)}
-            />
-          ))}
-        </div>
+      {/* Mobile — simple accordion stack, no absolute positioning */}
+      <div className="md:hidden flex flex-col gap-4 w-full px-4">
+        {SYMPTOMS.map(symptom => (
+          <MobileAccordionCard
+            key={symptom.id}
+            item={symptom}
+            isOpen={openId === symptom.id}
+            onToggle={() => toggleMobile(symptom.id)}
+          />
+        ))}
       </div>
     </section>
   )
