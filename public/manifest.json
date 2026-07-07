@@ -1,0 +1,28 @@
+{
+  "name": "Autocast — Автоелектроніка та послуги",
+  "short_name": "Autocast",
+  "description": "Сервісний центр і магазин автоелектроніки в Житомирі: автозвук, фари, магнітоли, сигналізації. Доставка по Україні.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#09090B",
+  "theme_color": "#09090B",
+  "lang": "uk",
+  "dir": "ltr",
+  "categories": ["automotive", "shopping"],
+  "icons": [
+    {
+      "src": "/images/mk.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/placeholder-category.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

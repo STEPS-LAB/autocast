@@ -1,13 +1,16 @@
-import type { Metadata } from 'next'
 import Image from 'next/image'
 import { Shield, Zap, Award, Users } from 'lucide-react'
 import PageTransition from '@/components/layout/PageTransition'
+import { buildPageMetadata } from '@/lib/seo/metadata'
+import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
 
-export const metadata: Metadata = {
-  title: 'Про нас',
+export const metadata = buildPageMetadata({
+  title: 'Про Autocast — автоелектроніка в Житомирі',
   description:
-    'Autocast — сервісний центр і команда експертів з автоелектроніки: діагностика, монтаж, тюнінг та супровід проєкту від ідеї до результату.',
-}
+    'Autocast — сервісний центр і команда експертів з автоелектроніки в Житомирі: діагностика, монтаж, тюнінг та супровід проєкту від ідеї до результату.',
+  path: '/about',
+  keywords: ['Autocast', 'про нас', ...KEYWORD_CLUSTERS.localServices.slice(0, 8)],
+})
 
 const VALUES = [
   {

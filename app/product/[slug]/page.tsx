@@ -17,6 +17,14 @@ import { createClient } from '@/lib/supabase/server'
 import ProductTabs from '@/components/product/ProductTabs'
 import ProductReviews, { type ProductReview } from '@/components/product/ProductReviews'
 import ProductVideos from '@/components/product/ProductVideos'
+import { JsonLdGraph } from '@/lib/seo/json-ld'
+import { buildPageMetadata, buildProductTitle, truncateDescription } from '@/lib/seo/metadata'
+import { buildBreadcrumbSchema, buildProductSchema } from '@/lib/seo/schemas'
+import {
+  productDescriptionFallback,
+  productNameFallback,
+} from '@/lib/seo/fallbacks'
+import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
 import { getSiteUrl } from '@/lib/supabase/env'
 
 interface Props {
@@ -30,24 +38,25 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const product = await getProductBySlugFromDb(slug)
-  if (!product) return { title: 'Товар не знайдено' }
-  const siteUrl = getSiteUrl()
-  const url = `${siteUrl}/product/${product.slug}`
-  const image = product.images[0] ? product.images[0] : `${siteUrl}/images/placeholder-product.svg`
-  return {
-    title: product.name_ua,
-    description: product.description_ua.slice(0, 160),
-    alternates: {
-      canonical: url,
-    },
-    openGraph: {
-      type: 'website',
-      url,
-      title: product.name_ua,
-      description: product.description_ua.slice(0, 160),
-      images: product.images[0] ? [product.images[0]] : [],
-    },
-  }
+
+  const title = buildProductTitle(product?.name_ua ?? productNameFallback(slug))
+  const description = truncateDescription(
+    product?.description_ua || productDescriptionFallback(product?.name_ua ?? slug)
+  )
+  const categoryKeyword = product?.category?.name_ua
+
+  return buildPageMetadata({
+    title,
+    description,
+    path: product?.slug ? `/product/${product.slug}` : '/shop',
+    image: product?.images?.[0],
+    keywords: [
+      product?.name_ua ?? productNameFallback(slug),
+      categoryKeyword,
+      ...(categoryKeyword ? [`${categoryKeyword} купити`] : []),
+      ...KEYWORD_CLUSTERS.nationalShop.slice(0, 4),
+    ].filter((item): item is string => Boolean(item)),
+  })
 }
 export const dynamic = 'force-dynamic'
 
@@ -74,25 +83,6 @@ export default async function ProductPage({ params }: Props) {
     : null
 
   const displayPrice = product.sale_price ?? product.price
-  const productUrl = `${siteUrl}/product/${product.slug}`
-  const productImage = product.images[0] ? product.images[0] : `${siteUrl}/images/placeholder-product.svg`
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: product.name_ua,
-    description: product.description_ua,
-    image: product.images?.length ? product.images : [productImage],
-    sku: product.id,
-    brand: brand?.name ? { '@type': 'Brand', name: brand.name } : undefined,
-    offers: {
-      '@type': 'Offer',
-      url: productUrl,
-      priceCurrency: 'UAH',
-      price: String(displayPrice),
-      availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      itemCondition: 'https://schema.org/NewCondition',
-    },
-  }
 
   const productCard = {
     id: product.id,
@@ -120,13 +110,27 @@ export default async function ProductPage({ params }: Props) {
     reviews = []
   }
 
+  const breadcrumbItems = [
+    { name: 'Головна', path: '/' },
+    { name: 'Магазин', path: '/shop' },
+    ...(category
+      ? [{ name: category.name_ua, path: `/shop?category=${category.slug}` }]
+      : []),
+    { name: product.name_ua, path: `/product/${product.slug}` },
+  ]
+
+  const jsonLdGraphs = [
+    buildProductSchema(product, {
+      siteUrl,
+      reviewCount: reviews.length,
+      ratingValue: reviews.length > 0 ? 5 : undefined,
+    }),
+    buildBreadcrumbSchema(breadcrumbItems, siteUrl),
+  ]
+
   return (
     <PageTransition>
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLdGraph graphs={jsonLdGraphs} />
       <div className="container-xl py-8 min-w-0 max-w-full">
         {/* Breadcrumbs */}
         <nav className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-muted mb-8">

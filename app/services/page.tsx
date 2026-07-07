@@ -1,4 +1,3 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import PageTransition from '@/components/layout/PageTransition'
@@ -6,18 +5,38 @@ import Button from '@/components/ui/Button'
 import ServiceCard from '@/components/services/ServiceCard'
 import { CornerAccentLines } from '@/components/services/ServiceSectionDecor'
 import { getServicesForListing } from '@/lib/data/services-db'
+import { JsonLdGraph } from '@/lib/seo/json-ld'
+import { buildPageMetadata } from '@/lib/seo/metadata'
+import { buildBreadcrumbSchema, buildServiceListSchema } from '@/lib/seo/schemas'
+import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
+import { getSiteUrl } from '@/lib/supabase/env'
 
-export const metadata: Metadata = {
-  title: 'Послуги',
+export const metadata = buildPageMetadata({
+  title: 'Послуги автосервісу в Житомирі',
   description:
-    'Майстерня Autocast: установка автозвуку, магнітол, фар, сигналізацій, шумоізоляція та перелінзовка. Професійний монтаж і консультація.',
-}
+    'Майстерня Autocast у Житомирі: установка автозвуку, магнітол, фар, Bi-LED лінз, сигналізацій, шумоізоляція та перелінзовка. Професійний монтаж і консультація.',
+  path: '/services',
+  keywords: KEYWORD_CLUSTERS.localServices,
+})
 
 export default async function ServicesPage() {
+  const siteUrl = getSiteUrl()
   const services = await getServicesForListing()
 
   return (
     <PageTransition>
+      <JsonLdGraph
+        graphs={[
+          buildServiceListSchema(services, siteUrl),
+          buildBreadcrumbSchema(
+            [
+              { name: 'Головна', path: '/' },
+              { name: 'Послуги', path: '/services' },
+            ],
+            siteUrl
+          ),
+        ]}
+      />
       <section className="relative overflow-hidden pt-20 pb-14 md:pt-24 md:pb-16">
         <div className="pointer-events-none absolute right-4 top-28 text-accent/20 md:right-12">
           <CornerAccentLines className="h-20 w-20 md:h-28 md:w-28" />
@@ -26,10 +45,12 @@ export default async function ServicesPage() {
 
         <div className="container-xl relative">
           <div className="max-w-3xl">
-            <h1 className="text-headline text-text-primary mb-4">Послуги</h1>
+            <h1 className="text-headline text-text-primary mb-4">
+              Послуги автосервісу Autocast у Житомирі
+            </h1>
             <p className="text-lg leading-relaxed text-text-secondary">
-              Autocast — майстерня з акуратним монтажем і повагою до електрики вашого авто. Обирайте напрямок нижче —
-              підкажемо оптимальний варіант і зробимо роботу якісно.
+              Autocast — майстерня з акуратним монтажем і повагою до електрики вашого авто. Установка автозвуку,
+              магнітол, фар, Bi-LED лінз, сигналізацій та шумоізоляція — обирайте напрямок нижче.
             </p>
           </div>
 

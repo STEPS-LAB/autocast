@@ -9,6 +9,14 @@ import ServiceCard from '@/components/services/ServiceCard'
 import ServiceFaqAccordion from '@/components/services/ServiceFaqAccordion'
 import { CornerAccentLines, DiagonalStripes } from '@/components/services/ServiceSectionDecor'
 import { getNextServices, getServiceBySlug, getServicesForListing } from '@/lib/data/services-db'
+import { JsonLdGraph } from '@/lib/seo/json-ld'
+import { buildPageMetadata, buildServiceTitle, truncateDescription } from '@/lib/seo/metadata'
+import { buildBreadcrumbSchema, buildFaqPageSchema, buildServiceSchema } from '@/lib/seo/schemas'
+import {
+  serviceDescriptionFallback,
+  serviceTitleFallback,
+} from '@/lib/seo/fallbacks'
+import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
 import { getSiteUrl } from '@/lib/supabase/env'
 import { cn } from '@/lib/utils'
 
@@ -26,22 +34,25 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const service = await getServiceBySlug(slug)
-  if (!service) return { title: 'Послуга не знайдена' }
-  const siteUrl = getSiteUrl()
-  const url = `${siteUrl}/services/${service.slug}`
-  const ogImageUrl = service.image.startsWith('/') ? `${siteUrl}${service.image}` : service.image
-  return {
-    title: service.title,
-    description: service.metaDescription,
-    alternates: { canonical: url },
-    openGraph: {
-      type: 'website',
-      url,
-      title: service.title,
-      description: service.metaDescription,
-      images: [{ url: ogImageUrl, width: 1600, height: 1000, alt: service.title }],
-    },
-  }
+
+  const title = buildServiceTitle(service?.title ?? serviceTitleFallback(slug))
+  const description = truncateDescription(
+    service?.metaDescription || service?.intro || service?.shortDescription || serviceDescriptionFallback(service?.title ?? slug)
+  )
+
+  return buildPageMetadata({
+    title,
+    description,
+    path: service?.slug ? `/services/${service.slug}` : '/services',
+    image: service?.image,
+    keywords: [
+      service?.title ?? serviceTitleFallback(slug),
+      `${service?.title ?? 'автопослуга'} Житомир`,
+      'Autocast',
+      'автосервіс Житомир',
+      ...KEYWORD_CLUSTERS.localServices.slice(0, 4),
+    ],
+  })
 }
 
 export default async function ServiceDetailPage({ params }: Props) {
@@ -49,21 +60,35 @@ export default async function ServiceDetailPage({ params }: Props) {
   const service = await getServiceBySlug(slug)
   if (!service) notFound()
 
+  const siteUrl = getSiteUrl()
   const related = await getNextServices(service.slug, 3)
+  const faqSchema = buildFaqPageSchema(service.faqs, `/services/${service.slug}`, siteUrl)
+  const jsonLdGraphs = [
+    buildServiceSchema(service, siteUrl),
+    buildBreadcrumbSchema(
+      [
+        { name: 'Головна', path: '/' },
+        { name: 'Послуги', path: '/services' },
+        { name: service.title, path: `/services/${service.slug}` },
+      ],
+      siteUrl
+    ),
+    ...(faqSchema ? [faqSchema] : []),
+  ]
 
   return (
     <PageTransition>
+      <JsonLdGraph graphs={jsonLdGraphs} />
       <article>
         {/* Hero — повноекранний фон */}
         <section className="relative flex min-h-[min(85vh,45rem)] flex-col overflow-hidden">
           <Image
             src={service.image}
-            alt=""
+            alt={`${service.title} — Autocast, Житомир`}
             fill
             priority
             className="object-cover object-center"
             sizes="100vw"
-            aria-hidden
           />
           <div
             className="pointer-events-none absolute inset-0 bg-gradient-to-t from-graphite-deep/78 via-graphite-deep/55 to-graphite-deep/38"
@@ -97,7 +122,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             <div className="container-xl flex flex-1 flex-col justify-end pb-12 pt-4 md:pb-16 md:pt-8">
               <div className="max-w-2xl">
                 <h1 className="mb-4 text-balance text-3xl font-semibold tracking-tight text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)] sm:text-4xl md:text-[2.35rem] md:leading-[1.15]">
-                  {service.title}
+                  {buildServiceTitle(service.title)}
                 </h1>
                 <p className="mb-8 text-lg leading-relaxed text-white/82">{service.intro}</p>
                 <div className="flex flex-wrap gap-3">
@@ -253,11 +278,10 @@ export default async function ServiceDetailPage({ params }: Props) {
               <div className="absolute inset-0 min-h-[14rem] md:min-h-0 service-why-photo-column-mask">
                 <Image
                   src={service.whyImage}
-                  alt=""
+                  alt={`Чому важлива послуга «${service.title}» — Autocast`}
                   fill
                   className="object-cover object-center"
                   sizes="(max-width: 767px) 100vw, 40vw"
-                  aria-hidden
                 />
               </div>
             </div>
@@ -267,7 +291,7 @@ export default async function ServiceDetailPage({ params }: Props) {
         {/* FAQ */}
         <section className="border-t border-border/60 bg-bg-surface/50 py-16 md:py-20">
           <div className="container-xl max-w-3xl">
-            <h2 className="text-headline text-text-primary mb-3">Часті запитання</h2>
+            <h2 className="text-headline text-text-primary mb-3">Часті запитання про {service.title.toLowerCase()}</h2>
             <p className="mb-8 text-sm text-text-muted">
               Коротко відповідаємо на типові питання перед записом. Деталі щодо вашого авто уточнимо на консультації.
             </p>
