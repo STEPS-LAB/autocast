@@ -151,23 +151,23 @@ export default function HeroSection() {
             </motion.div>
           </div>
 
-          <div className="mt-28 lg:mt-44 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 lg:gap-12">
+          <div className="mt-28 lg:mt-44 flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-8 lg:gap-12">
             <motion.a
               href="#contact"
               initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.45 }}
-              className="order-2 lg:order-1 inline-flex w-full sm:w-auto lg:max-w-md items-center justify-center gap-2 rounded-md h-12 lg:h-14 px-6 lg:px-8 text-sm sm:text-base bg-accent text-black font-bold shadow-[0_12px_40px_-10px_rgb(255_193_7/0.55)] hover:bg-accent-hover hover:scale-[1.02] transition-all duration-500"
+              className="order-2 lg:order-1 inline-flex w-full md:w-auto md:min-w-[29rem] whitespace-nowrap shrink-0 self-stretch items-center justify-center gap-2 rounded-md px-6 md:px-8 text-sm sm:text-base bg-accent text-black font-bold shadow-[0_12px_40px_-10px_rgb(255_193_7/0.55)] hover:bg-accent-hover hover:scale-[1.02] transition-all duration-500"
             >
               Записатись на безкоштовну консультацію майстра
-              <ArrowRight size={18} />
+              <ArrowRight size={18} className="shrink-0" />
             </motion.a>
 
             <motion.div
               initial={{ opacity: 1, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="order-1 lg:order-2 grid grid-cols-3 gap-4 lg:flex lg:flex-nowrap lg:gap-10 lg:text-right w-full max-w-xl lg:max-w-none lg:w-auto lg:translate-x-4 mx-auto lg:mx-0"
+              className="order-1 lg:order-2 grid grid-cols-3 gap-4 lg:flex lg:flex-nowrap lg:items-center lg:gap-10 lg:text-right w-full max-w-xl lg:max-w-none lg:w-auto lg:translate-x-4 mx-auto lg:mx-0"
             >
               {STATS.map(({ label, value }) => (
                 <div key={label} className="text-center">
