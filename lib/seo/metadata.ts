@@ -41,7 +41,7 @@ export function buildPageMetadata(input: {
   description: string
   path: string
   image?: string | null
-  keywords?: string[]
+  keywords?: readonly string[]
 }): Metadata {
   const siteUrl = getSiteUrl()
   const url = buildCanonical(input.path, siteUrl)
