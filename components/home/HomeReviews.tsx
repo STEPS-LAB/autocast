@@ -26,13 +26,13 @@ const REVIEWS = [
 
 export default function HomeReviews() {
   return (
-    <section className="py-16 bg-bg-surface border-y border-graphite/12">
+    <section className="py-16 md:py-28 lg:py-36 bg-bg-surface border-y border-graphite/12">
       <div className="container-xl">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center max-w-3xl mx-auto mb-10"
+          className="text-center max-w-3xl mx-auto mb-12 md:mb-16"
         >
           <h2 className="text-headline text-text-primary mb-3">Що кажуть наші клієнти</h2>
           <p className="text-text-secondary">
@@ -40,7 +40,7 @@ export default function HomeReviews() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 lg:gap-8 items-stretch">
           {REVIEWS.map((review, index) => (
             <motion.article
               key={review.id}
@@ -48,7 +48,7 @@ export default function HomeReviews() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.08 }}
-              className="h-full rounded-md border border-graphite/15 bg-bg-surface p-5 flex flex-col micro-lift shadow-[0_12px_40px_-16px_rgb(30_35_41/0.2)]"
+              className="h-full rounded-md border border-graphite/15 bg-bg-surface p-6 md:p-7 flex flex-col micro-lift shadow-[0_12px_40px_-16px_rgb(30_35_41/0.2)]"
             >
               <p className="text-sm text-text-secondary leading-relaxed flex-1">{review.text}</p>
               <div className="pt-5 mt-5 border-t border-graphite/10">

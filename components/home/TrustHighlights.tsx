@@ -23,14 +23,14 @@ const ITEMS = [
 
 export default function TrustHighlights() {
   return (
-    <section className="py-16 bg-graphite/5">
+    <section className="py-16 md:py-28 lg:py-36 bg-graphite/5">
       <div className="container-xl">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45 }}
-          className="text-center max-w-2xl mx-auto mb-10"
+          className="text-center max-w-2xl mx-auto mb-12 md:mb-16"
         >
           <h2 className="text-headline text-text-primary mb-3">Наші переваги</h2>
           <p className="text-text-secondary">
@@ -38,7 +38,7 @@ export default function TrustHighlights() {
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-3 gap-5 md:gap-6 lg:gap-8">
           {ITEMS.map(({ icon: Icon, title, text }, index) => (
             <motion.article
               key={title}
@@ -46,7 +46,7 @@ export default function TrustHighlights() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.08 }}
-              className="rounded-md border border-graphite/15 bg-bg-surface p-5 micro-lift shadow-[0_12px_40px_-16px_rgb(30_35_41/0.2)]"
+              className="rounded-md border border-graphite/15 bg-bg-surface p-6 md:p-7 micro-lift shadow-[0_12px_40px_-16px_rgb(30_35_41/0.2)]"
             >
               <div className="inline-flex size-10 items-center justify-center rounded border border-graphite/20 bg-graphite/10 mb-3">
                 <Icon size={18} className="text-graphite" />

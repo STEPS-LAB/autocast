@@ -73,7 +73,7 @@ export default function HomeUltimateCta() {
   return (
     <section
       id="contact"
-      className="scroll-mt-28 relative overflow-hidden bg-bg-primary border-t border-border py-20 md:py-28"
+      className="scroll-mt-28 relative overflow-hidden bg-bg-primary border-t border-border py-16 md:py-28 lg:py-36"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_0%,rgb(255_193_7/0.08),transparent_60%)]" aria-hidden />
 
@@ -83,7 +83,7 @@ export default function HomeUltimateCta() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45 }}
-          className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center"
+          className="grid lg:grid-cols-2 gap-12 lg:gap-20 xl:gap-24 items-center"
         >
           <div className="max-w-xl">
             <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-4">Персональний сервіс</p>

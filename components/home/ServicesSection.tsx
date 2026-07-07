@@ -16,14 +16,14 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
   const homeServices = services.slice(0, 4)
 
   return (
-    <section className="py-20 bg-graphite-deep text-text-inverse border-y border-text-inverse-muted/25">
+    <section className="py-16 md:py-28 lg:py-36 bg-graphite-deep text-text-inverse border-y border-text-inverse-muted/25">
       <div className="container-xl">
         <motion.div
           initial={{ opacity: 1, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45 }}
-          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-10"
+          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12 md:mb-16"
         >
           <div className="max-w-2xl">
             <h2 className="text-headline text-text-inverse mb-3">Послуги</h2>
@@ -41,7 +41,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
           </Link>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:gap-8">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:gap-8 lg:gap-10">
           {homeServices.map((service, index) => (
             <ServiceCard
               key={service.slug}
@@ -57,7 +57,7 @@ export default function ServicesSection({ services }: ServicesSectionProps) {
 
         <div
           className={[
-            'mt-12 md:mt-14 flex flex-col sm:flex-row gap-5 sm:items-center sm:justify-between rounded-2xl p-8 md:p-10 lg:p-12',
+            'mt-14 md:mt-16 lg:mt-20 flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between rounded-2xl p-8 md:p-10 lg:p-12',
             'bg-gradient-to-br from-white/[0.14] via-white/[0.08] to-white/[0.04]',
             'shadow-[0_24px_56px_-24px_rgb(255_193_7/0.22),inset_0_1px_0_0_rgba(255,255,255,0.12)]',
             'ring-1 ring-inset ring-accent/20',

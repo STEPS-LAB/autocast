@@ -45,7 +45,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
     cat.slug === 'zakhyst-vid-uhonu' ? 'Охоронні системи' : cat.name_ua
 
   return (
-    <section className="py-20 bg-graphite/5">
+    <section className="py-16 md:py-28 lg:py-36 bg-graphite/5">
       <div className="container-xl">
         {/* Heading */}
         <motion.div
@@ -53,7 +53,7 @@ export default function FeaturedCategories({ categories }: FeaturedCategoriesPro
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="flex items-end justify-between mb-10"
+          className="flex items-end justify-between mb-12 md:mb-16"
         >
           <div>
             <h2 className="text-headline text-text-primary">Категорії товарів</h2>
