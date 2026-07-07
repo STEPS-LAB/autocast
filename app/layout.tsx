@@ -4,6 +4,7 @@ import './globals.css'
 import AppLayoutClient from '@/components/layout/AppLayoutClient'
 import RootClientBoundary from '@/components/error/RootClientBoundary'
 import { buildRootMetadata } from '@/lib/seo/metadata'
+import { CRITICAL_CSS, DEFER_STYLES_BOOTSTRAP } from '@/lib/critical-css'
 
 const inter = Inter({
   subsets: ['latin', 'cyrillic'],
@@ -36,6 +37,10 @@ export default function RootLayout({
       lang="uk"
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: DEFER_STYLES_BOOTSTRAP }} />
+        <style id="critical-css" dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }} />
+      </head>
       <body className="min-h-dvh flex flex-col">
         <RootClientBoundary>
           <AppLayoutClient>{children}</AppLayoutClient>
