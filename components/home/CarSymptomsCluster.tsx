@@ -228,7 +228,8 @@ export default function CarSymptomsCluster() {
             aria-hidden
           >
             <p className="font-brand text-[clamp(3rem,6vw,5rem)] font-bold leading-none tracking-tight text-white/92">
-              auto<span className="text-[#FFBB00]">cast</span>
+              auto
+              <span className="text-[#FFBB00] text-[clamp(3rem,6vw,5rem)] leading-none">cast</span>
             </p>
             <p className="mt-4 text-xs uppercase tracking-[0.35em] text-white/35">Житомир</p>
           </div>
