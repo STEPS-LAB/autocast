@@ -6,15 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPrice(price: number): string {
-  // Deterministic formatting to avoid hydration mismatches between server/client.
-  // We intentionally do NOT use `Intl.NumberFormat(..., { style: 'currency' })`
-  // because its output (e.g. `₴` vs `грн`) can differ across environments/locales.
   const rounded = Math.round(price)
   const sign = rounded < 0 ? '-' : ''
   const abs = Math.abs(rounded)
   const digits = abs.toString()
-
-  // Thousands separator as NBSP (typography-friendly and stable).
   const withSeparators = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0')
   return `${sign}${withSeparators}\u00A0₴`
 }

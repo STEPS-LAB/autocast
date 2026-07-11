@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 import { ShoppingCart, Heart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { useWishlistStore, selectIsWished } from '@/lib/store/wishlist'
-import { formatPrice, getDiscountPercent, cn } from '@/lib/utils'
+import { getDiscountPercent, cn, formatPrice } from '@/lib/utils'
 import {
   imageAltProduct,
   imageTitleProduct,
@@ -38,18 +38,6 @@ export default function ProductCard({ product }: ProductCardProps) {
       : null
 
   const displayPrice = displayProduct.sale_price ?? displayProduct.price
-  const displayPriceText = formatPrice(displayPrice)
-  const basePriceText = formatPrice(displayProduct.price)
-
-  function renderPriceWithCurrency(priceText: string) {
-    const amount = priceText.replace(/\s*₴$/, '')
-    return (
-      <>
-        <span className="font-sans tabular-nums">{amount}</span>
-        <span className="font-sans"> ₴</span>
-      </>
-    )
-  }
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
@@ -164,12 +152,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         </Link>
 
         <div className="flex items-center gap-2 mt-auto pt-1">
-          <span className="text-base font-bold text-text-primary">
-            {renderPriceWithCurrency(displayPriceText)}
+          <span className="text-base font-bold text-text-primary price">
+            {formatPrice(displayPrice)}
           </span>
           {displayProduct.sale_price && (
-            <span className="text-xs text-text-muted line-through">
-              {renderPriceWithCurrency(basePriceText)}
+            <span className="text-xs text-text-muted line-through price">
+              {formatPrice(displayProduct.price)}
             </span>
           )}
         </div>

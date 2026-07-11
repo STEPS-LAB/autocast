@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Pencil, Percent, Plus } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
-import { cn, formatPrice } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { useAdminPrice } from '@/lib/hooks/useAdminPrice'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -42,6 +43,7 @@ export default function AdminProductsPage() {
   const overrides = useDiscountStore(selectDiscountOverrides)
   const setDiscountPercent = useDiscountStore(s => s.setDiscountPercent)
   const clearDiscount = useDiscountStore(s => s.clearDiscount)
+  const { formatDual } = useAdminPrice()
 
   async function getSupabase() {
     const mod = await import('@/lib/supabase/client')
@@ -322,9 +324,9 @@ export default function AdminProductsPage() {
       type: 'number',
       render: (row) => (
         <div>
-          <span className="text-sm font-semibold text-text-primary price">{formatPrice(row.price)}</span>
+          <span className="text-sm font-semibold text-text-primary price">{formatDual(row.price)}</span>
           {row.sale_price && (
-            <p className="text-xs text-accent price">{formatPrice(row.sale_price)}</p>
+            <p className="text-xs text-accent price">{formatDual(row.sale_price)}</p>
           )}
         </div>
       ),
@@ -529,7 +531,7 @@ export default function AdminProductsPage() {
                 className="flex-1 h-full px-3 text-sm text-text-primary placeholder:text-text-muted bg-transparent border-0 focus:outline-none focus:border-accent"
               />
               <div className="px-3 border-l border-border flex items-center text-sm text-text-muted whitespace-nowrap">
-                Після: {discountedPriceForUi !== null ? formatPrice(discountedPriceForUi) : '—'}
+                Після: {discountedPriceForUi !== null ? formatDual(discountedPriceForUi) : '—'}
               </div>
             </div>
           </label>

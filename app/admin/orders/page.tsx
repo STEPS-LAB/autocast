@@ -7,7 +7,8 @@ import AdminTable from '@/components/admin/AdminTable'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
-import { formatPrice, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
+import { useAdminPrice } from '@/lib/hooks/useAdminPrice'
 import type { Column } from '@/components/admin/AdminTable'
 
 interface AdminOrder {
@@ -34,6 +35,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
+  const { formatDual } = useAdminPrice()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -146,7 +148,7 @@ export default function AdminOrdersPage() {
       key: 'total',
       label: 'Сума',
       render: (row) => (
-        <span className="text-sm font-semibold text-text-primary price">{formatPrice(row.total)}</span>
+        <span className="text-sm font-semibold text-text-primary price">{formatDual(row.total)}</span>
       ),
     },
     {

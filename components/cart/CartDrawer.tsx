@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { useCartStore, selectCartTotal, selectCartCount } from '@/lib/store/cart'
 import { useWishlistStore } from '@/lib/store/wishlist'
-import { formatPrice, cn } from '@/lib/utils'
+import { cn, formatPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/components/layout/DocumentBodyPortal'
 import {

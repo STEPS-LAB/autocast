@@ -130,12 +130,14 @@ export interface ShippingInfo {
 
 // ─── Profile / Auth ────────────────────────────────────────────────
 export type UserRole = 'user' | 'admin'
+export type CurrencyCode = 'UAH' | 'USD'
 
 export interface Profile {
   id: string
   role: UserRole
   phone: string | null
   delivery_address: string | null
+  preferred_currency: CurrencyCode
   created_at: string
 }
 

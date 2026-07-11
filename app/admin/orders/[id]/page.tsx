@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import Badge from '@/components/ui/Badge'
-import { formatPrice } from '@/lib/utils'
+import { useAdminPrice } from '@/lib/hooks/useAdminPrice'
 import Button from '@/components/ui/Button'
 
 type ShippingInfo = {
@@ -85,6 +85,7 @@ function formatDateTime(date: string) {
 export default function AdminOrderDetailsPage() {
   const params = useParams<{ id: string }>()
   const orderId = params.id
+  const { formatDual } = useAdminPrice()
   const [order, setOrder] = useState<AdminOrderDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [ttnValue, setTtnValue] = useState('')
@@ -184,12 +185,12 @@ export default function AdminOrderDetailsPage() {
                 </p>
                 <p className="text-text-secondary">
                   <span className="text-text-muted">Сума:</span>{' '}
-                  <span className="text-text-primary font-semibold price">{formatPrice(order.total)}</span>
+                  <span className="text-text-primary font-semibold price">{formatDual(order.total)}</span>
                 </p>
                 {typeof order.shipping_total === 'number' && (
                   <p className="text-text-secondary">
                     <span className="text-text-muted">Доставка:</span>{' '}
-                    <span className="text-text-primary font-semibold price">{formatPrice(Number(order.shipping_total))}</span>
+                    <span className="text-text-primary font-semibold price">{formatDual(Number(order.shipping_total))}</span>
                   </p>
                 )}
               </div>
@@ -293,8 +294,8 @@ export default function AdminOrderDetailsPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-text-secondary">{item.qty} шт.</td>
-                        <td className="px-4 py-3 text-text-secondary price">{formatPrice(Number(item.unit_price))}</td>
-                        <td className="px-4 py-3 text-text-primary font-semibold price">{formatPrice(lineTotal)}</td>
+                        <td className="px-4 py-3 text-text-secondary price">{formatDual(Number(item.unit_price))}</td>
+                        <td className="px-4 py-3 text-text-primary font-semibold price">{formatDual(lineTotal)}</td>
                       </tr>
                     )
                   })}
