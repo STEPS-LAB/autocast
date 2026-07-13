@@ -35,8 +35,6 @@ yarn-error.log*
 
 # local database dumps (never commit)
 *.dump
-autocast-prod.dump
-autocast-prod-public.dump
 
 # vercel
 .vercel

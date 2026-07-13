@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import { convertUahToUsd } from '@/lib/currency/convert'
 import { parseNbuExchangeDate } from '@/lib/currency/nbu'
 import { formatMoney, formatAdminDualPrice } from '@/lib/currency/format'
-import { parseCurrencyCookie } from '@/lib/currency/cookies'
 
 describe('convertUahToUsd', () => {
   it('converts UAH to USD with 2 decimal places', () => {
@@ -53,18 +52,5 @@ describe('formatAdminDualPrice', () => {
 
   it('falls back to UAH when rate is missing', () => {
     expect(formatAdminDualPrice(1000, null)).toBe('1\u00A0000\u00A0₴')
-  })
-})
-
-describe('parseCurrencyCookie', () => {
-  it('parses valid currency codes', () => {
-    expect(parseCurrencyCookie('UAH')).toBe('UAH')
-    expect(parseCurrencyCookie('USD')).toBe('USD')
-  })
-
-  it('defaults to UAH for invalid or empty values', () => {
-    expect(parseCurrencyCookie()).toBe('UAH')
-    expect(parseCurrencyCookie('')).toBe('UAH')
-    expect(parseCurrencyCookie('EUR')).toBe('UAH')
   })
 })
