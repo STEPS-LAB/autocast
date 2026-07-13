@@ -15,11 +15,14 @@ export function formatPrice(price: number): string {
 }
 
 export function formatDate(date: string | Date): string {
+  const parsed = date instanceof Date ? date : new Date(date)
+  if (Number.isNaN(parsed.getTime())) return '—'
+
   return new Intl.DateTimeFormat('uk-UA', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(new Date(date))
+  }).format(parsed)
 }
 
 export function slugify(str: string): string {

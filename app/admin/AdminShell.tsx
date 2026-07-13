@@ -88,9 +88,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             })}
           </div>
 
-          <AdminUsdRateBar />
-
           <div className="p-5 md:p-8 fade-up-in">
+            <AdminUsdRateBar />
             {children}
           </div>
         </main>
