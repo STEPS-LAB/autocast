@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import ProductGrid from '@/components/shop/ProductGrid'
 import ProductFilters from '@/components/shop/ProductFilters'
@@ -10,6 +10,9 @@ import PageTransition from '@/components/layout/PageTransition'
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
+import { useClientMounted } from '@/lib/hooks/useClientMounted'
+import Pagination from '@/components/ui/Pagination'
+import { clampPage, getTotalPages, paginateSlice, pageRangeLabel, SHOP_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
 import type { Brand, Category, ProductCard } from '@/types'
 
 interface ShopContentProps {
@@ -20,7 +23,10 @@ interface ShopContentProps {
 
 export default function ShopContent({ products, categories, brands }: ShopContentProps) {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const isClient = useClientMounted()
 
   const query = searchParams.get('q') ?? ''
   const categoriesSelected = useMemo(() => {
@@ -137,6 +143,45 @@ export default function ShopContent({ products, categories, brands }: ShopConten
     categoryDescendants,
   ])
 
+  const totalPages = Math.max(1, getTotalPages(filtered.length, SHOP_PRODUCTS_PAGE_SIZE))
+  const requestedPage = Number.parseInt(searchParams.get('page') ?? '1', 10)
+  const page = clampPage(Number.isFinite(requestedPage) ? requestedPage : 1, totalPages)
+  const displayPage = isClient ? page : 1
+  const paginatedProducts = useMemo(
+    () => paginateSlice(filtered, displayPage, SHOP_PRODUCTS_PAGE_SIZE),
+    [filtered, displayPage]
+  )
+  const showPagination = isClient && filtered.length > SHOP_PRODUCTS_PAGE_SIZE
+
+  const filterKey = [
+    query,
+    categoriesSelected.join(','),
+    brandsSelected.join(','),
+    minPrice ?? '',
+    maxPrice ?? '',
+    inStock ? '1' : '',
+    sort,
+  ].join('|')
+
+  const prevFilterKeyRef = useRef(filterKey)
+  useEffect(() => {
+    if (prevFilterKeyRef.current === filterKey) return
+    prevFilterKeyRef.current = filterKey
+    if (!searchParams.get('page')) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('page')
+    const next = params.toString()
+    router.replace(next ? `${pathname}?${next}` : pathname)
+  }, [filterKey, pathname, router, searchParams])
+
+  function handlePageChange(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextPage <= 1) params.delete('page')
+    else params.set('page', String(nextPage))
+    const next = params.toString()
+    router.push(next ? `${pathname}?${next}` : pathname)
+  }
+
   const hasFilters = Object.values(filters).some(Boolean)
   const showCatalogNotReady = allProducts.length === 0 && !query && !hasFilters
 
@@ -155,6 +200,12 @@ export default function ShopContent({ products, categories, brands }: ShopConten
           <h1 className="text-headline text-text-primary mb-1">{headingText}</h1>
           <p className="text-sm text-text-muted">
             {filtered.length} товар{filtered.length === 1 ? '' : filtered.length < 5 ? 'и' : 'ів'}
+            {showPagination && (
+              <span className="text-text-muted">
+                {' '}
+                · {pageRangeLabel(page, SHOP_PRODUCTS_PAGE_SIZE, filtered.length)}
+              </span>
+            )}
           </p>
         </div>
 
@@ -193,7 +244,17 @@ export default function ShopContent({ products, categories, brands }: ShopConten
                 </p>
               </div>
             ) : (
-              <ProductGrid products={filtered} />
+              <>
+                <ProductGrid products={paginatedProducts} />
+                {showPagination && (
+                  <Pagination
+                    page={page}
+                    totalItems={filtered.length}
+                    pageSize={SHOP_PRODUCTS_PAGE_SIZE}
+                    onPageChange={handlePageChange}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>

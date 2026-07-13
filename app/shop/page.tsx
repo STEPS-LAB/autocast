@@ -2,6 +2,8 @@ import ShopContent from '@/components/shop/ShopContent'
 import { getProductCardsFromDb, getCategories, getBrands } from '@/lib/data/catalog-db'
 import { buildPageMetadata } from '@/lib/seo/metadata'
 import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
+import { Suspense } from 'react'
+import ShopLoading from './loading'
 
 export const metadata = buildPageMetadata({
   title: 'Інтернет-магазин автоелектроніки',
@@ -20,5 +22,9 @@ export default async function ShopPage() {
     getBrands(),
   ])
 
-  return <ShopContent products={products} categories={categories} brands={brands} />
+  return (
+    <Suspense fallback={<ShopLoading />}>
+      <ShopContent products={products} categories={categories} brands={brands} />
+    </Suspense>
+  )
 }

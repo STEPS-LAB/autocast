@@ -18,6 +18,8 @@ import { applyDiscountToProduct, clampDiscountPercent, salePriceFromPercent } fr
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
 import type { Category } from '@/types'
 import ImageCropModal from '@/components/admin/ImageCropModal'
+import Pagination from '@/components/ui/Pagination'
+import { clampPage, paginateSlice, pageRangeLabel, ADMIN_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
 
 type ProductRow = Product & { id: string }
 
@@ -52,6 +54,7 @@ function AdminProductsPageInner() {
   const imageCropQueueRef = useRef<string[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [page, setPage] = useState(1)
   const overrides = useDiscountStore(selectDiscountOverrides)
   const setDiscountPercent = useDiscountStore(s => s.setDiscountPercent)
   const clearDiscount = useDiscountStore(s => s.clearDiscount)
@@ -100,6 +103,10 @@ function AdminProductsPageInner() {
       isMounted = false
     }
   }, [importRefreshKey, pathname])
+
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery])
 
   useEffect(() => {
     setProducts(prev => prev.map(p => applyDiscountToProduct(p, overrides)))
@@ -383,6 +390,17 @@ function AdminProductsPageInner() {
     })
   }, [brands, categories, products, searchQuery])
 
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ADMIN_PRODUCTS_PAGE_SIZE))
+  const currentPage = clampPage(page, totalPages)
+  const paginatedProducts = useMemo(
+    () => paginateSlice(filteredProducts, currentPage, ADMIN_PRODUCTS_PAGE_SIZE),
+    [filteredProducts, currentPage]
+  )
+
+  useEffect(() => {
+    if (page !== currentPage) setPage(currentPage)
+  }, [currentPage, page])
+
   const productForDiscount = useMemo(
     () => products.find(p => p.id === discountProductId) ?? null,
     [products, discountProductId],
@@ -449,7 +467,11 @@ function AdminProductsPageInner() {
         <div>
           <h1 className="text-xl font-bold text-text-primary">Товари</h1>
           <p className="text-sm text-text-muted">
-            {loading ? 'Завантаження...' : `${filteredProducts.length} товарів`}
+            {loading
+              ? 'Завантаження...'
+              : filteredProducts.length > ADMIN_PRODUCTS_PAGE_SIZE
+                ? `${filteredProducts.length} товарів · ${pageRangeLabel(currentPage, ADMIN_PRODUCTS_PAGE_SIZE, filteredProducts.length)}`
+                : `${filteredProducts.length} товарів`}
           </p>
           {loadError && (
             <p className="text-sm text-red-500 mt-1">{loadError}</p>
@@ -495,7 +517,7 @@ function AdminProductsPageInner() {
       </div>
 
       <AdminTable
-        data={filteredProducts}
+        data={paginatedProducts}
         columns={columns}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
@@ -521,6 +543,12 @@ function AdminProductsPageInner() {
             </button>
           </>
         )}
+      />
+      <Pagination
+        page={currentPage}
+        totalItems={filteredProducts.length}
+        pageSize={ADMIN_PRODUCTS_PAGE_SIZE}
+        onPageChange={setPage}
       />
       {loading && (
         <p className="text-sm text-text-muted mt-3">Завантаження...</p>
