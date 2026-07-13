@@ -2,6 +2,29 @@
 
 Локальна розробка має підключатись до **окремого** Supabase-проєкту, щоб не змінювати production.
 
+## Клон prod → dev (pg_dump)
+
+На більшості мереж (IPv4) **не працює** `db.[ref].supabase.co` — DNS не резолвиться.
+
+Використовуйте **Session pooler** (порт **5432**):
+
+1. Supabase → проєкт → **Connect** (або Database → Connection string)
+2. **Session pooler** → **URI**
+3. Скопіюйте рядок виду:
+   ```
+   postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+   ```
+4. Якщо в паролі є `@`, `#`, `%` — **URL-encode** (`@` → `%40`)
+
+```bash
+export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+export PROD_DATABASE_URL='...session pooler URI prod...'
+export DEV_DATABASE_URL='...session pooler URI dev...'
+./scripts/clone-prod-to-dev.sh
+```
+
+Після клону: `npm run dev`, логін тим самим акаунтом що на prod.
+
 ## Варіант A — новий dev-проєкт (рекомендовано)
 
 1. [Supabase Dashboard](https://supabase.com/dashboard) → **New project** (наприклад `autocast-dev`).
