@@ -38,9 +38,14 @@ const nextConfig: NextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
+  serverExternalPackages: ['exceljs'],
   experimental: {
     // framer-motion не додаємо: optimizePackageImports може зламати AnimatePresence / exit.
     optimizePackageImports: ['lucide-react'],
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+    proxyClientMaxBodySize: '50mb',
   },
 
   async headers() {

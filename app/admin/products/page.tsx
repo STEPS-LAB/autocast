@@ -1,10 +1,10 @@
 'use client'
 
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Pencil, Percent, Plus } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Pencil, Percent, Plus, Upload } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
 import { cn } from '@/lib/utils'
 import { useAdminPrice } from '@/lib/hooks/useAdminPrice'
@@ -22,8 +22,19 @@ import ImageCropModal from '@/components/admin/ImageCropModal'
 type ProductRow = Product & { id: string }
 
 export default function AdminProductsPage() {
+  return (
+    <Suspense fallback={<p className="p-8 text-sm text-text-muted">Завантаження товарів...</p>}>
+      <AdminProductsPageInner />
+    </Suspense>
+  )
+}
+
+function AdminProductsPageInner() {
   const MAX_IMAGES = 10
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const importRefreshKey = searchParams.get('imported')
   const [products, setProducts] = useState<ProductRow[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
@@ -40,6 +51,7 @@ export default function AdminProductsPage() {
   const [imageError, setImageError] = useState('')
   const imageCropQueueRef = useRef<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const overrides = useDiscountStore(selectDiscountOverrides)
   const setDiscountPercent = useDiscountStore(s => s.setDiscountPercent)
   const clearDiscount = useDiscountStore(s => s.clearDiscount)
@@ -53,30 +65,41 @@ export default function AdminProductsPage() {
   useEffect(() => {
     let isMounted = true
     async function loadData() {
-      const supabase = await getSupabase()
-      const [{ data: productsData }, { data: categoriesData }, { data: brandsData }] = await Promise.all([
-        supabase
-          .from('products')
-          .select('id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('categories')
-          .select('id,slug,name_ua,parent_id,image_url,sort_order')
-          .order('sort_order', { ascending: true }),
-        supabase.from('brands').select('id,name,logo_url').order('name', { ascending: true }),
-      ])
+      setLoading(true)
+      setLoadError('')
+      try {
+        const response = await fetch('/api/admin/products', { cache: 'no-store' })
+        const payload = await response.json() as {
+          error?: string
+          products?: ProductRow[]
+          categories?: Category[]
+          brands?: Brand[]
+        }
 
-      if (!isMounted) return
-      setProducts((productsData as ProductRow[]) ?? [])
-      setCategories((categoriesData as Category[]) ?? [])
-      setBrands((brandsData as Brand[]) ?? [])
-      setLoading(false)
+        if (!isMounted) return
+
+        if (!response.ok) {
+          setLoadError(payload.error ?? 'Не вдалося завантажити товари.')
+          setProducts([])
+          return
+        }
+
+        setProducts(payload.products ?? [])
+        setCategories(payload.categories ?? [])
+        setBrands(payload.brands ?? [])
+      } catch (error) {
+        if (!isMounted) return
+        setLoadError(error instanceof Error ? error.message : 'Не вдалося завантажити товари.')
+        setProducts([])
+      } finally {
+        if (isMounted) setLoading(false)
+      }
     }
     void loadData()
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [importRefreshKey, pathname])
 
   useEffect(() => {
     setProducts(prev => prev.map(p => applyDiscountToProduct(p, overrides)))
@@ -425,7 +448,12 @@ export default function AdminProductsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Товари</h1>
-          <p className="text-sm text-text-muted">{filteredProducts.length} товарів</p>
+          <p className="text-sm text-text-muted">
+            {loading ? 'Завантаження...' : `${filteredProducts.length} товарів`}
+          </p>
+          {loadError && (
+            <p className="text-sm text-red-500 mt-1">{loadError}</p>
+          )}
         </div>
         <div className="flex-1 max-w-md">
           <label className="sr-only" htmlFor="products-search">Пошук товарів</label>
@@ -438,18 +466,32 @@ export default function AdminProductsPage() {
             className="w-full h-9 rounded border border-border bg-bg-input px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
           />
         </div>
-        <Link
-          href="/admin/products/new"
-          className={cn(
-            'inline-flex items-center justify-center font-medium rounded transition-all duration-150',
-            'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
-            'bg-accent text-text-primary hover:bg-accent-hover active:scale-[0.98] shadow-sm',
-            'h-8 px-3 text-sm gap-1.5 shrink-0'
-          )}
-        >
-          <Plus size={14} />
-          Додати товар
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/admin/products/import"
+            className={cn(
+              'inline-flex items-center justify-center font-medium rounded transition-all duration-150',
+              'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
+              'border border-border bg-bg-surface text-text-primary hover:bg-bg-elevated',
+              'h-8 px-3 text-sm gap-1.5'
+            )}
+          >
+            <Upload size={14} />
+            Імпорт
+          </Link>
+          <Link
+            href="/admin/products/new"
+            className={cn(
+              'inline-flex items-center justify-center font-medium rounded transition-all duration-150',
+              'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
+              'bg-accent text-text-primary hover:bg-accent-hover active:scale-[0.98] shadow-sm',
+              'h-8 px-3 text-sm gap-1.5'
+            )}
+          >
+            <Plus size={14} />
+            Додати товар
+          </Link>
+        </div>
       </div>
 
       <AdminTable

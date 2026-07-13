@@ -126,13 +126,13 @@ async function fetchCategories(_dbOnly: boolean): Promise<Category[]> {
 const getCategoriesCached = unstable_cache(
   () => fetchCategories(false),
   ['catalog-categories', 'db-only'],
-  { revalidate: 120 }
+  { revalidate: 120, tags: ['catalog-categories'] }
 )
 
 const getCategoriesDbOnlyCached = unstable_cache(
   () => fetchCategories(true),
   ['catalog-categories-dbonly', 'db-only'],
-  { revalidate: 120 }
+  { revalidate: 120, tags: ['catalog-categories'] }
 )
 
 export async function getCategories(options?: CatalogReadOptions): Promise<Category[]> {
@@ -186,7 +186,7 @@ async function fetchProductCards(_dbOnly: boolean): Promise<ProductCard[]> {
 const getProductCardsCached = unstable_cache(
   () => fetchProductCards(false),
   ['catalog-product-cards', 'db-only'],
-  { revalidate: 60 }
+  { revalidate: 60, tags: ['catalog-products'] }
 )
 
 export async function getProductCardsFromDb(options?: CatalogReadOptions): Promise<ProductCard[]> {

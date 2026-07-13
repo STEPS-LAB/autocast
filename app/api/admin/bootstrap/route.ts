@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { revalidateCatalogCache } from '@/lib/admin/revalidate-catalog'
 import { BRANDS, CAR_MAKES, CAR_MODELS, CATEGORIES } from '@/lib/data/seed'
 import { rateLimit } from '@/lib/security/rateLimit'
 
@@ -88,6 +89,8 @@ export async function POST(request: Request) {
     supabase.from('car_makes').select('*', { count: 'exact', head: true }),
     supabase.from('car_models').select('*', { count: 'exact', head: true }),
   ])
+
+  revalidateCatalogCache()
 
   return NextResponse.json({
     ok: true,
