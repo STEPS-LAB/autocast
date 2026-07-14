@@ -13,6 +13,7 @@ import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
 import { useClientMounted } from '@/lib/hooks/useClientMounted'
 import Pagination from '@/components/ui/Pagination'
 import { clampPage, getTotalPages, paginateSlice, pageRangeLabel, SHOP_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
+import { parseProductSortKey, sortProducts, DEFAULT_SHOP_PRODUCT_SORT, SHOP_PRODUCT_SORT_OPTIONS } from '@/lib/product-sort'
 import type { Brand, Category, ProductCard } from '@/types'
 
 interface ShopContentProps {
@@ -41,7 +42,7 @@ export default function ShopContent({ products, categories, brands }: ShopConten
   const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined
   const inStock = searchParams.get('inStock') === '1'
   const sortRaw = searchParams.get('sort')
-  const sort = !sortRaw || sortRaw === 'default' ? 'sale' : sortRaw
+  const sort = parseProductSortKey(sortRaw, SHOP_PRODUCT_SORT_OPTIONS, DEFAULT_SHOP_PRODUCT_SORT)
   const make = searchParams.get('make') ?? ''
 
   const filters = { categories: categoriesSelected, brands: brandsSelected, minPrice, maxPrice, inStock }
@@ -111,26 +112,7 @@ export default function ShopContent({ products, categories, brands }: ShopConten
       products = products.filter(p => p.stock > 0)
     }
 
-    switch (sort) {
-      case 'price_asc':
-        products = [...products].sort((a, b) => (a.sale_price ?? a.price) - (b.sale_price ?? b.price))
-        break
-      case 'price_desc':
-        products = [...products].sort((a, b) => (b.sale_price ?? b.price) - (a.sale_price ?? a.price))
-        break
-      case 'sale':
-        products = [...products].sort((a, b) => {
-          const aDisc = a.sale_price ? 1 : 0
-          const bDisc = b.sale_price ? 1 : 0
-          return bDisc - aDisc
-        })
-        break
-      case 'newest':
-        // Default DB order is created_at desc; keep current order after filtering.
-        break
-    }
-
-    return products
+    return sortProducts(products, sort)
   }, [
     allProducts,
     query,

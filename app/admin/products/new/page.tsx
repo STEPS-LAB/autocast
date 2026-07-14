@@ -82,88 +82,108 @@ function AdminNewProductPageInner() {
 
   useEffect(() => {
     let mounted = true
+
     async function load() {
-      const supabase = await getSupabase()
-      const [{ data: cat }, { data: br }] = await Promise.all([
-        supabase.from('categories').select('id,slug,name_ua,parent_id,image_url,sort_order').order('sort_order', { ascending: true }),
-        supabase.from('brands').select('id,name,logo_url').order('name', { ascending: true }),
-      ])
-      if (!mounted) return
-      const c = (cat as Category[]) ?? []
-      setCategories(c)
-      const nextBrands = (br as Brand[]) ?? []
-      setBrands(nextBrands)
+      try {
+        if (editProductId) {
+          const response = await fetch(`/api/admin/products/${encodeURIComponent(editProductId)}`, {
+            cache: 'no-store',
+          })
+          const payload = await response.json() as {
+            error?: string
+            product?: {
+              id: string
+              name_ua: string
+              description_ua: string
+              price: number
+              stock: number
+              category_id: string
+              brand_id: string | null
+              specs: Record<string, string> | null
+              images: string[] | null
+              video_urls?: string[] | null
+              is_featured: boolean
+            }
+            categories?: Category[]
+            brands?: Brand[]
+          }
 
-      if (editProductId) {
-        const { data: existing, error } = await supabase
-          .from('products')
-          .select('id,name_ua,description_ua,price,stock,category_id,brand_id,specs,images,video_urls,is_featured')
-          .eq('id', editProductId)
-          .single()
+          if (!mounted) return
 
+          if (!response.ok || !payload.product) {
+            setFormError(payload.error ?? 'Не вдалося завантажити товар для редагування.')
+            setLoading(false)
+            return
+          }
+
+          const c = payload.categories ?? []
+          const nextBrands = payload.brands ?? []
+          setCategories(c)
+          setBrands(nextBrands)
+
+          const existing = payload.product
+          setName(existing.name_ua ?? '')
+          setDescription(existing.description_ua ?? '')
+          setPrice(String(existing.price ?? ''))
+          setStock(String(existing.stock ?? ''))
+          {
+            const existingCategoryId = existing.category_id ?? ''
+            setCategoryId(existingCategoryId)
+            const selected = c.find(cc => cc.id === existingCategoryId) ?? null
+            const parentId = selected?.parent_id ?? null
+            if (parentId) {
+              setParentCategoryId(parentId)
+              setSubcategoryId(existingCategoryId)
+            } else {
+              setParentCategoryId(existingCategoryId)
+              setSubcategoryId('')
+            }
+          }
+          setFeatured(!!existing.is_featured)
+          setSpecsText(specsToText(existing.specs))
+          setPendingImages(existing.images ?? [])
+          setVideoUrlsText((existing.video_urls ?? []).join('\n'))
+          const brandName = nextBrands.find(b => b.id === existing.brand_id)?.name ?? ''
+          setBrandInput(brandName)
+        } else {
+          const response = await fetch('/api/admin/products', { cache: 'no-store' })
+          const payload = await response.json() as {
+            error?: string
+            categories?: Category[]
+            brands?: Brand[]
+          }
+          if (!mounted) return
+          if (!response.ok) {
+            setFormError(payload.error ?? 'Не вдалося завантажити довідники.')
+            setLoading(false)
+            return
+          }
+          setCategories(payload.categories ?? [])
+          setBrands(payload.brands ?? [])
+          setCategoryId('')
+          setParentCategoryId('')
+          setSubcategoryId('')
+          setVideoUrlsText('')
+        }
+      } catch (error) {
         if (!mounted) return
-        let resolvedExisting: any = existing
-        let resolvedError: any = error
-        if (resolvedError) {
-          const msg = String(resolvedError?.message ?? resolvedError)
-          if (msg.includes('video_urls')) {
-            const retry = await supabase
-              .from('products')
-              .select('id,name_ua,description_ua,price,stock,category_id,brand_id,specs,images,is_featured')
-              .eq('id', editProductId)
-              .single()
-            resolvedExisting = retry.data
-            resolvedError = retry.error
-          }
-        }
-
-        if (resolvedError || !resolvedExisting) {
-          setFormError('Не вдалося завантажити товар для редагування.')
-          setLoading(false)
-          return
-        }
-
-        setName(resolvedExisting.name_ua ?? '')
-        setDescription(resolvedExisting.description_ua ?? '')
-        setPrice(String(resolvedExisting.price ?? ''))
-        setStock(String(resolvedExisting.stock ?? ''))
-        {
-          const existingCategoryId = (resolvedExisting.category_id ?? '') as string
-          setCategoryId(existingCategoryId)
-          const selected = c.find(cc => cc.id === existingCategoryId) ?? null
-          const parentId = selected?.parent_id ?? null
-          if (parentId) {
-            setParentCategoryId(parentId)
-            setSubcategoryId(existingCategoryId)
-          } else {
-            setParentCategoryId(existingCategoryId)
-            setSubcategoryId('')
-          }
-        }
-        setFeatured(!!resolvedExisting.is_featured)
-        setSpecsText(specsToText((resolvedExisting as any).specs))
-        setPendingImages(((resolvedExisting as any).images as string[] | null) ?? [])
-        setVideoUrlsText((((resolvedExisting as any).video_urls as string[] | null) ?? []).join('\n'))
-        const brandName = nextBrands.find(b => b.id === (resolvedExisting as any).brand_id)?.name ?? ''
-        setBrandInput(brandName)
-      } else {
-        setCategoryId('')
-        setParentCategoryId('')
-        setSubcategoryId('')
-        setVideoUrlsText('')
+        setFormError(error instanceof Error ? error.message : 'Не вдалося завантажити товар для редагування.')
+      } finally {
+        if (mounted) setLoading(false)
       }
-      setLoading(false)
     }
+
     void load()
 
     async function refreshOnFocus() {
-      const supabase = await getSupabase()
-      const { data: cat } = await supabase
-        .from('categories')
-        .select('id,slug,name_ua,parent_id,image_url,sort_order')
-        .order('sort_order', { ascending: true })
-      if (!mounted) return
-      setCategories((cat as Category[]) ?? [])
+      try {
+        const response = await fetch('/api/admin/products', { cache: 'no-store' })
+        if (!response.ok || !mounted) return
+        const payload = await response.json() as { categories?: Category[] }
+        setCategories(payload.categories ?? [])
+      } catch {
+        // ignore refresh errors
+      }
     }
 
     function onFocus() {

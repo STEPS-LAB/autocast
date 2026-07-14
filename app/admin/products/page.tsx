@@ -20,29 +20,14 @@ import type { Category } from '@/types'
 import ImageCropModal from '@/components/admin/ImageCropModal'
 import Pagination from '@/components/ui/Pagination'
 import { clampPage, paginateSlice, pageRangeLabel, ADMIN_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
+import {
+  ADMIN_PRODUCT_SORT_OPTIONS,
+  DEFAULT_ADMIN_PRODUCT_SORT,
+  type ProductSortKey,
+  sortProducts,
+} from '@/lib/product-sort'
 
 type ProductRow = Product & { id: string }
-
-type SortKey =
-  | 'newest'
-  | 'oldest'
-  | 'name_asc'
-  | 'name_desc'
-  | 'price_asc'
-  | 'price_desc'
-  | 'stock_asc'
-  | 'stock_desc'
-
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'newest', label: 'Спочатку нові' },
-  { value: 'oldest', label: 'Спочатку старі' },
-  { value: 'name_asc', label: 'Назва: А → Я' },
-  { value: 'name_desc', label: 'Назва: Я → А' },
-  { value: 'price_asc', label: 'Ціна: зростання' },
-  { value: 'price_desc', label: 'Ціна: спадання' },
-  { value: 'stock_asc', label: 'Залишок: зростання' },
-  { value: 'stock_desc', label: 'Залишок: спадання' },
-]
 
 export default function AdminProductsPage() {
   return (
@@ -66,7 +51,7 @@ function AdminProductsPageInner() {
   const [discountInput, setDiscountInput] = useState('')
   const [discountError, setDiscountError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('newest')
+  const [sortKey, setSortKey] = useState<ProductSortKey>(DEFAULT_ADMIN_PRODUCT_SORT)
   const [editingImageProductId, setEditingImageProductId] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<string[]>([])
   const [selectedFileName, setSelectedFileName] = useState('')
@@ -411,39 +396,10 @@ function AdminProductsPageInner() {
         })
       : products
 
-    const sorted = [...filtered]
-    switch (sortKey) {
-      case 'oldest':
-        sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-        break
-      case 'name_asc':
-        sorted.sort((a, b) => a.name_ua.localeCompare(b.name_ua, 'uk'))
-        break
-      case 'name_desc':
-        sorted.sort((a, b) => b.name_ua.localeCompare(a.name_ua, 'uk'))
-        break
-      case 'price_asc':
-        sorted.sort((a, b) => (a.sale_price ?? a.price) - (b.sale_price ?? b.price))
-        break
-      case 'price_desc':
-        sorted.sort((a, b) => (b.sale_price ?? b.price) - (a.sale_price ?? a.price))
-        break
-      case 'stock_asc':
-        sorted.sort((a, b) => a.stock - b.stock)
-        break
-      case 'stock_desc':
-        sorted.sort((a, b) => b.stock - a.stock)
-        break
-      case 'newest':
-      default:
-        sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        break
-    }
-
-    return sorted
+    return sortProducts(filtered, sortKey)
   }, [brands, categories, products, searchQuery, sortKey])
 
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ADMIN_PRODUCTS_PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ADMIN_PRODUCTS_PAGE_SIZE) || 1)
   const currentPage = clampPage(page, totalPages)
   const paginatedProducts = useMemo(
     () => paginateSlice(filteredProducts, currentPage, ADMIN_PRODUCTS_PAGE_SIZE),
@@ -451,8 +407,8 @@ function AdminProductsPageInner() {
   )
 
   useEffect(() => {
-    if (page !== currentPage) setPage(currentPage)
-  }, [currentPage, page])
+    setPage(prev => (prev === currentPage ? prev : currentPage))
+  }, [currentPage])
 
   const productForDiscount = useMemo(
     () => products.find(p => p.id === discountProductId) ?? null,
@@ -545,10 +501,10 @@ function AdminProductsPageInner() {
             <select
               id="products-sort"
               value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              onChange={(e) => setSortKey(e.target.value as ProductSortKey)}
               className="h-9 pl-3 pr-8 bg-bg-surface border border-border rounded text-sm text-text-secondary appearance-none cursor-pointer focus:outline-none focus:border-accent transition-colors hover:border-border-light"
             >
-              {SORT_OPTIONS.map(option => (
+              {ADMIN_PRODUCT_SORT_OPTIONS.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

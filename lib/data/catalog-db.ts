@@ -101,6 +101,7 @@ function rowToProductCard(row: DbProductRow): ProductCard {
     sale_price: row.sale_price === null ? null : Number(row.sale_price),
     images: row.images ?? [],
     stock: row.stock,
+    created_at: row.created_at,
     category: category
       ? { name_ua: category.name_ua, slug: category.slug }
       : undefined,

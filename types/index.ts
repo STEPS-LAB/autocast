@@ -44,6 +44,7 @@ export interface ProductCard {
   sale_price: number | null
   images: string[]
   stock: number
+  created_at?: string
   category?: { name_ua: string; slug: string }
   brand?: { name: string }
 }
