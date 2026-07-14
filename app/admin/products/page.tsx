@@ -4,7 +4,7 @@ import { type ChangeEvent, Suspense, useEffect, useMemo, useRef, useState } from
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Pencil, Percent, Plus, Upload } from 'lucide-react'
+import { ChevronDown, Pencil, Percent, Plus, Upload } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
 import { cn } from '@/lib/utils'
 import { useAdminPrice } from '@/lib/hooks/useAdminPrice'
@@ -22,6 +22,27 @@ import Pagination from '@/components/ui/Pagination'
 import { clampPage, paginateSlice, pageRangeLabel, ADMIN_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
 
 type ProductRow = Product & { id: string }
+
+type SortKey =
+  | 'newest'
+  | 'oldest'
+  | 'name_asc'
+  | 'name_desc'
+  | 'price_asc'
+  | 'price_desc'
+  | 'stock_asc'
+  | 'stock_desc'
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'newest', label: 'Спочатку нові' },
+  { value: 'oldest', label: 'Спочатку старі' },
+  { value: 'name_asc', label: 'Назва: А → Я' },
+  { value: 'name_desc', label: 'Назва: Я → А' },
+  { value: 'price_asc', label: 'Ціна: зростання' },
+  { value: 'price_desc', label: 'Ціна: спадання' },
+  { value: 'stock_asc', label: 'Залишок: зростання' },
+  { value: 'stock_desc', label: 'Залишок: спадання' },
+]
 
 export default function AdminProductsPage() {
   return (
@@ -45,6 +66,7 @@ function AdminProductsPageInner() {
   const [discountInput, setDiscountInput] = useState('')
   const [discountError, setDiscountError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('newest')
   const [editingImageProductId, setEditingImageProductId] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<string[]>([])
   const [selectedFileName, setSelectedFileName] = useState('')
@@ -106,7 +128,7 @@ function AdminProductsPageInner() {
 
   useEffect(() => {
     setPage(1)
-  }, [searchQuery])
+  }, [searchQuery, sortKey])
 
   useEffect(() => {
     setProducts(prev => prev.map(p => applyDiscountToProduct(p, overrides)))
@@ -376,19 +398,50 @@ function AdminProductsPageInner() {
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    if (!query) return products
+    const filtered = query
+      ? products.filter((product) => {
+          const categoryName = categories.find(c => c.id === product.category_id)?.name_ua ?? ''
+          const brandName = brands.find(b => b.id === product.brand_id)?.name ?? ''
+          return (
+            product.name_ua.toLowerCase().includes(query)
+            || product.description_ua.toLowerCase().includes(query)
+            || categoryName.toLowerCase().includes(query)
+            || brandName.toLowerCase().includes(query)
+          )
+        })
+      : products
 
-    return products.filter((product) => {
-      const categoryName = categories.find(c => c.id === product.category_id)?.name_ua ?? ''
-      const brandName = brands.find(b => b.id === product.brand_id)?.name ?? ''
-      return (
-        product.name_ua.toLowerCase().includes(query)
-        || product.description_ua.toLowerCase().includes(query)
-        || categoryName.toLowerCase().includes(query)
-        || brandName.toLowerCase().includes(query)
-      )
-    })
-  }, [brands, categories, products, searchQuery])
+    const sorted = [...filtered]
+    switch (sortKey) {
+      case 'oldest':
+        sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        break
+      case 'name_asc':
+        sorted.sort((a, b) => a.name_ua.localeCompare(b.name_ua, 'uk'))
+        break
+      case 'name_desc':
+        sorted.sort((a, b) => b.name_ua.localeCompare(a.name_ua, 'uk'))
+        break
+      case 'price_asc':
+        sorted.sort((a, b) => (a.sale_price ?? a.price) - (b.sale_price ?? b.price))
+        break
+      case 'price_desc':
+        sorted.sort((a, b) => (b.sale_price ?? b.price) - (a.sale_price ?? a.price))
+        break
+      case 'stock_asc':
+        sorted.sort((a, b) => a.stock - b.stock)
+        break
+      case 'stock_desc':
+        sorted.sort((a, b) => b.stock - a.stock)
+        break
+      case 'newest':
+      default:
+        sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        break
+    }
+
+    return sorted
+  }, [brands, categories, products, searchQuery, sortKey])
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ADMIN_PRODUCTS_PAGE_SIZE))
   const currentPage = clampPage(page, totalPages)
@@ -477,7 +530,7 @@ function AdminProductsPageInner() {
             <p className="text-sm text-red-500 mt-1">{loadError}</p>
           )}
         </div>
-        <div className="flex-1 max-w-md">
+        <div className="flex-1 max-w-xl flex items-center gap-2">
           <label className="sr-only" htmlFor="products-search">Пошук товарів</label>
           <input
             id="products-search"
@@ -487,6 +540,25 @@ function AdminProductsPageInner() {
             placeholder="Пошук товарів..."
             className="w-full h-9 rounded border border-border bg-bg-input px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
           />
+          <div className="relative shrink-0">
+            <label className="sr-only" htmlFor="products-sort">Сортування</label>
+            <select
+              id="products-sort"
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="h-9 pl-3 pr-8 bg-bg-surface border border-border rounded text-sm text-text-secondary appearance-none cursor-pointer focus:outline-none focus:border-accent transition-colors hover:border-border-light"
+            >
+              {SORT_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={13}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
