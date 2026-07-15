@@ -94,26 +94,45 @@ async function loadExistingByOfferId(supabase: SupabaseClient): Promise<Map<stri
   return byOfferId
 }
 
+function buildSlugCandidates(baseName: string, offerId: string): string[] {
+  const idPart = slugify(offerId) || offerId.replace(/[^a-zA-Z0-9_-]/g, '') || 'item'
+  const namePart = slugify(baseName)
+  // Always include offerId — bare name slug collides across similar UA titles
+  // (slugify strips Cyrillic) and under concurrent inserts.
+  return [
+    namePart ? `${namePart}-${idPart}` : `product-${idPart}`,
+    `torssen-${idPart}`,
+    `torssen-${idPart}-${Date.now()}`,
+  ].filter(Boolean)
+}
+
 async function uniqueSlug(
   supabase: SupabaseClient,
   baseName: string,
   offerId: string,
+  reservedSlugs: Set<string>,
   excludeId?: string
 ): Promise<string> {
-  const candidates = [
-    slugify(baseName),
-    slugify(`${baseName}-${offerId}`),
-    slugify(`torssen-${offerId}`),
-  ].filter(Boolean)
+  for (const candidate of buildSlugCandidates(baseName, offerId)) {
+    if (reservedSlugs.has(candidate)) continue
+    // Reserve before the DB round-trip so parallel workers don't pick the same slug.
+    reservedSlugs.add(candidate)
 
-  for (const candidate of candidates) {
     let query = supabase.from('products').select('id').eq('slug', candidate)
     if (excludeId) query = query.neq('id', excludeId)
     const { data } = await query.maybeSingle()
     if (!data) return candidate
+
+    // Taken in DB already — keep reserved to avoid re-checking, try next candidate.
   }
 
-  return `torssen-${offerId}-${Date.now()}`
+  const fallback = `torssen-${offerId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  reservedSlugs.add(fallback)
+  return fallback
+}
+
+function isUniqueViolation(message: string): boolean {
+  return /duplicate key|unique constraint|products_slug_key/i.test(message)
 }
 
 async function mapPool<T>(
@@ -187,6 +206,7 @@ export async function runTorssenImport(url: string): Promise<ImportResult> {
   const { data: brands } = await supabase.from('brands').select('id,name,logo_url')
   let knownBrands = (brands ?? []) as Brand[]
   const brandCache = new Map<string, string | null>()
+  const reservedSlugs = new Set<string>()
 
   const result: ImportResult = {
     created: 0,
@@ -207,6 +227,48 @@ export async function runTorssenImport(url: string): Promise<ImportResult> {
     if (newBrand) knownBrands = [...knownBrands, newBrand]
     brandCache.set(cacheKey, brandId)
     return brandId
+  }
+
+  async function insertProduct(
+    product: ParsedTorssenOffer,
+    categoryId: string,
+    brandId: string | null,
+    specs: Record<string, string>,
+    images: string[]
+  ): Promise<ProductRow> {
+    let lastError: Error | null = null
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const slug = await uniqueSlug(supabase, product.name, product.offerId, reservedSlugs)
+      const { data: inserted, error } = await supabase
+        .from('products')
+        .insert({
+          slug,
+          name_ua: product.name,
+          description_ua: product.description || product.name,
+          price: product.price,
+          sale_price: product.oldPrice,
+          stock: product.stock,
+          category_id: categoryId,
+          brand_id: brandId,
+          specs,
+          images,
+          is_featured: false,
+        })
+        .select('id,slug,name_ua,specs')
+        .single()
+
+      if (!error && inserted) return inserted as ProductRow
+
+      const message = error?.message ?? 'Не вдалося створити товар.'
+      reservedSlugs.delete(slug)
+      if (!isUniqueViolation(message)) throw new Error(message)
+      lastError = new Error(message)
+      // Another worker took this slug — reserve a fresher candidate next loop.
+      reservedSlugs.add(slug)
+    }
+
+    throw lastError ?? new Error('Не вдалося створити товар після повторів slug.')
   }
 
   await mapPool(parsed.products, WRITE_CONCURRENCY, async product => {
@@ -245,27 +307,8 @@ export async function runTorssenImport(url: string): Promise<ImportResult> {
         return
       }
 
-      const slug = await uniqueSlug(supabase, product.name, product.offerId)
-      const { data: inserted, error } = await supabase
-        .from('products')
-        .insert({
-          slug,
-          name_ua: product.name,
-          description_ua: product.description || product.name,
-          price: product.price,
-          sale_price: product.oldPrice,
-          stock: product.stock,
-          category_id: categoryId,
-          brand_id: brandId,
-          specs,
-          images,
-          is_featured: false,
-        })
-        .select('id,slug,name_ua,specs')
-        .single()
-
-      if (error || !inserted) throw new Error(error?.message ?? 'Не вдалося створити товар.')
-      byOfferId.set(product.offerId, inserted as ProductRow)
+      const inserted = await insertProduct(product, categoryId, brandId, specs, images)
+      byOfferId.set(product.offerId, inserted)
       result.created += 1
       result.imagesUploaded += images.length
     } catch (error) {
