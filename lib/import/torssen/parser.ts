@@ -1,0 +1,295 @@
+import type { ParsedTorssenOffer, TorssenCategory, TorssenParseResult } from './types'
+
+const OFFER_OPEN_RE = /<offer\b[^>]*>/i
+const OFFER_CLOSE_RE = /<\/offer>/i
+const CATEGORY_RE =
+  /<category\s+id="(\d+)"(?:\s+parentId="(\d+)")?\s*>([^<]*)<\/category>/gi
+
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+}
+
+export function stripHtmlToText(value: string): string {
+  const withoutCdata = value
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
+    .replace(/<!\[CDATA\[/gi, '')
+    .replace(/\]\]>/g, '')
+
+  return decodeXmlEntities(withoutCdata)
+    .replace(/<\s*;\s*p>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
+}
+
+function tagContent(xml: string, tag: string): string | null {
+  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'i')
+  const match = re.exec(xml)
+  if (!match?.[1]) return null
+  return match[1].trim()
+}
+
+function allTagContents(xml: string, tag: string): string[] {
+  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'gi')
+  const values: string[] = []
+  let match: RegExpExecArray | null
+  while ((match = re.exec(xml)) !== null) {
+    const value = match[1]?.trim()
+    if (value) values.push(value)
+  }
+  return values
+}
+
+function parseNumber(value: string | null): number | null {
+  if (!value) return null
+  const normalized = value.replace(/\s+/g, '').replace(',', '.')
+  const num = Number(normalized)
+  return Number.isFinite(num) ? num : null
+}
+
+function parseOfferAttributes(openTag: string): { id: string | null; available: boolean } {
+  const idMatch = /\bid="([^"]+)"/i.exec(openTag)
+  const availableMatch = /\bavailable="([^"]+)"/i.exec(openTag)
+  return {
+    id: idMatch?.[1] ?? null,
+    available: (availableMatch?.[1] ?? 'false').toLowerCase() === 'true',
+  }
+}
+
+function parseParams(offerXml: string): Record<string, string> {
+  const params: Record<string, string> = {}
+  const re = /<param\b[^>]*\bname="([^"]+)"[^>]*>([\s\S]*?)<\/param>/gi
+  let match: RegExpExecArray | null
+  while ((match = re.exec(offerXml)) !== null) {
+    const name = decodeXmlEntities(match[1] ?? '').trim()
+    const value = stripHtmlToText(match[2] ?? '')
+    if (name && value) params[name] = value
+  }
+  return params
+}
+
+export function parseOfferXml(
+  offerXml: string,
+  categoryById: Map<string, TorssenCategory>,
+  options?: { skipOutOfStock?: boolean }
+): { product: ParsedTorssenOffer | null; skipReason: 'oos' | 'invalid' | null } {
+  const openTag = OFFER_OPEN_RE.exec(offerXml)?.[0] ?? ''
+  const { id: offerId, available } = parseOfferAttributes(openTag)
+  if (!offerId) return { product: null, skipReason: 'invalid' }
+
+  const nameRaw = tagContent(offerXml, 'name')
+  const name = nameRaw ? stripHtmlToText(nameRaw) : ''
+  const price = parseNumber(tagContent(offerXml, 'price'))
+  if (!name || price == null || price < 0) {
+    return { product: null, skipReason: 'invalid' }
+  }
+
+  const stock = parseNumber(tagContent(offerXml, 'quantity_in_stock')) ?? (available ? 1 : 0)
+  const skipOutOfStock = options?.skipOutOfStock !== false
+  if (skipOutOfStock && stock <= 0) {
+    return { product: null, skipReason: 'oos' }
+  }
+
+  const categoryId = tagContent(offerXml, 'categoryId')?.trim() || '0'
+  const category = categoryById.get(categoryId)
+  const categoryName = category?.name?.trim() || `Категорія ${categoryId}`
+
+  const oldPrice = parseNumber(tagContent(offerXml, 'price_old'))
+  const vendorCodeRaw = tagContent(offerXml, 'vendorCode')
+  const vendorRaw = tagContent(offerXml, 'vendor')
+  const urlRaw = tagContent(offerXml, 'url')
+  const descriptionRaw = tagContent(offerXml, 'description') ?? ''
+
+  const pictures = allTagContents(offerXml, 'picture')
+    .map(src => decodeXmlEntities(src).trim())
+    .filter(src => /^https?:\/\//i.test(src))
+
+  return {
+    product: {
+      offerId,
+      available,
+      name,
+      vendorCode: vendorCodeRaw ? stripHtmlToText(vendorCodeRaw) : null,
+      vendor: vendorRaw ? stripHtmlToText(vendorRaw) : null,
+      categoryId,
+      categoryName,
+      price: Math.round(price * 100) / 100,
+      oldPrice: oldPrice != null && oldPrice > price ? Math.round(oldPrice * 100) / 100 : null,
+      stock: Math.max(0, Math.floor(stock)),
+      description: stripHtmlToText(descriptionRaw),
+      pictures,
+      params: parseParams(offerXml),
+      url: urlRaw ? decodeXmlEntities(urlRaw).trim() : null,
+    },
+    skipReason: null,
+  }
+}
+
+function ingestCategories(chunk: string, categoryById: Map<string, TorssenCategory>) {
+  CATEGORY_RE.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = CATEGORY_RE.exec(chunk)) !== null) {
+    const id = match[1]
+    if (!id) continue
+    categoryById.set(id, {
+      id,
+      parentId: match[2] ?? null,
+      name: decodeXmlEntities(match[3] ?? '').trim(),
+    })
+  }
+}
+
+async function* readTextChunks(
+  source: ReadableStream<Uint8Array> | NodeJS.ReadableStream
+): AsyncGenerator<string> {
+  const decoder = new TextDecoder('utf-8')
+
+  if (typeof (source as ReadableStream<Uint8Array>).getReader === 'function') {
+    const reader = (source as ReadableStream<Uint8Array>).getReader()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value) yield decoder.decode(value, { stream: true })
+    }
+    const tail = decoder.decode()
+    if (tail) yield tail
+    return
+  }
+
+  const nodeStream = source as NodeJS.ReadableStream
+  for await (const chunk of nodeStream) {
+    const buf = typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Buffer)
+    yield decoder.decode(buf, { stream: true })
+  }
+  const tail = decoder.decode()
+  if (tail) yield tail
+}
+
+export async function parseTorssenYmlStream(
+  source: ReadableStream<Uint8Array> | NodeJS.ReadableStream,
+  options?: { skipOutOfStock?: boolean }
+): Promise<TorssenParseResult> {
+  const categoryById = new Map<string, TorssenCategory>()
+  const products: ParsedTorssenOffer[] = []
+  const seenIds = new Set<string>()
+
+  let skippedOutOfStock = 0
+  let skippedDuplicateId = 0
+  let skippedInvalid = 0
+  let totalOffers = 0
+
+  let buffer = ''
+  let insideOffer = false
+  let categoriesClosed = false
+
+  for await (const chunk of readTextChunks(source)) {
+    buffer += chunk
+
+    if (!categoriesClosed) {
+      ingestCategories(buffer, categoryById)
+      if (buffer.includes('</categories>')) {
+        categoriesClosed = true
+        // Keep a small tail before offers to avoid cutting an open category oddly;
+        // offers start after categories in YML.
+        const offersAt = buffer.search(/<offers[\s>]/i)
+        if (offersAt >= 0) buffer = buffer.slice(offersAt)
+        else if (buffer.length > 512_000) buffer = buffer.slice(-64_000)
+      } else if (buffer.length > 2_000_000) {
+        // Categories section unexpectedly huge — keep sliding window.
+        ingestCategories(buffer.slice(-500_000), categoryById)
+        buffer = buffer.slice(-250_000)
+      }
+    }
+
+    while (true) {
+      if (!insideOffer) {
+        const open = OFFER_OPEN_RE.exec(buffer)
+        if (!open || open.index == null) {
+          if (buffer.length > 64_000) buffer = buffer.slice(-8_000)
+          break
+        }
+        buffer = buffer.slice(open.index)
+        insideOffer = true
+        OFFER_OPEN_RE.lastIndex = 0
+      }
+
+      const closeMatch = OFFER_CLOSE_RE.exec(buffer)
+      if (!closeMatch || closeMatch.index == null) {
+        OFFER_CLOSE_RE.lastIndex = 0
+        if (buffer.length > 4_000_000) {
+          throw new Error('Offer XML занадто великий для парсингу.')
+        }
+        break
+      }
+
+      const end = closeMatch.index + closeMatch[0].length
+      const offerXml = buffer.slice(0, end)
+      buffer = buffer.slice(end)
+      insideOffer = false
+      OFFER_CLOSE_RE.lastIndex = 0
+      totalOffers += 1
+
+      const { product, skipReason } = parseOfferXml(offerXml, categoryById, options)
+      if (skipReason === 'oos') {
+        skippedOutOfStock += 1
+        continue
+      }
+      if (skipReason === 'invalid' || !product) {
+        skippedInvalid += 1
+        continue
+      }
+      if (seenIds.has(product.offerId)) {
+        skippedDuplicateId += 1
+        continue
+      }
+      seenIds.add(product.offerId)
+      products.push(product)
+    }
+  }
+
+  return {
+    categories: [...categoryById.values()],
+    products,
+    skippedOutOfStock,
+    skippedDuplicateId,
+    skippedInvalid,
+    totalOffers,
+  }
+}
+
+export async function parseTorssenYmlFromUrl(
+  url: string,
+  options?: { skipOutOfStock?: boolean }
+): Promise<TorssenParseResult> {
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'AutocastImporter/1.0',
+      Accept: 'application/xml,text/xml,*/*',
+    },
+    signal: AbortSignal.timeout(240_000),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Не вдалося завантажити фід (HTTP ${response.status}).`)
+  }
+  if (!response.body) {
+    throw new Error('Порожня відповідь фіду.')
+  }
+
+  return parseTorssenYmlStream(response.body, options)
+}

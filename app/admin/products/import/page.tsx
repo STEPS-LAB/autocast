@@ -7,45 +7,74 @@ import { ArrowLeft, FileSpreadsheet, Upload } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import type { ImportPreview, ImportResult } from '@/lib/import/drivex/types'
 
+type Mode = 'drivex' | 'xml'
 type Step = 'upload' | 'preview' | 'done'
 
 export default function AdminImportProductsPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [step, setStep] = useState<Step>('upload')
+
+  const [mode, setMode] = useState<Mode>('xml')
+  const [feedUrl, setFeedUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  const [step, setStep] = useState<Step>('upload')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const selected = event.target.files?.[0] ?? null
-    setFile(selected)
+  function resetFlow() {
     setPreview(null)
     setResult(null)
     setError('')
     setStep('upload')
   }
 
-  async function handlePreview() {
-    if (!file) {
-      setError('Оберіть файл .xlsx')
-      return
-    }
+  function onModeChange(next: Mode) {
+    setMode(next)
+    setFile(null)
+    resetFlow()
+  }
 
+  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0] ?? null
+    setFile(selected)
+    resetFlow()
+  }
+
+  async function handlePreview() {
     setLoading(true)
     setError('')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const response = await fetch('/api/admin/import-products/preview', {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error ?? 'Помилка превʼю')
-      setPreview(data as ImportPreview)
+      if (mode === 'drivex') {
+        if (!file) {
+          setError('Оберіть файл .xlsx')
+          return
+        }
+        const formData = new FormData()
+        formData.append('file', file)
+        const response = await fetch('/api/admin/import-products/preview', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error ?? 'Помилка превʼю')
+        setPreview(data as ImportPreview)
+      } else {
+        const url = feedUrl.trim()
+        if (!url) {
+          setError('Вставте посилання на XML')
+          return
+        }
+        const response = await fetch('/api/admin/import-yml/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error ?? 'Помилка превʼю XML')
+        setPreview(data as ImportPreview)
+      }
       setStep('preview')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося зробити превʼю')
@@ -55,20 +84,33 @@ export default function AdminImportProductsPage() {
   }
 
   async function handleImport() {
-    if (!file) return
-
     setLoading(true)
     setError('')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const response = await fetch('/api/admin/import-products', {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error ?? 'Помилка імпорту')
-      setResult(data as ImportResult)
+      if (mode === 'drivex') {
+        if (!file) return
+        const formData = new FormData()
+        formData.append('file', file)
+        const response = await fetch('/api/admin/import-products', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error ?? 'Помилка імпорту')
+        setResult(data as ImportResult)
+      } else {
+        const url = feedUrl.trim()
+        if (!url) return
+        const response = await fetch('/api/admin/import-yml', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error ?? 'Помилка імпорту XML')
+        setResult(data as ImportResult)
+      }
+
       setStep('done')
       try {
         await fetch('/api/admin/bootstrap', { method: 'POST' })
@@ -82,6 +124,8 @@ export default function AdminImportProductsPage() {
     }
   }
 
+  const canPreview = mode === 'xml' ? Boolean(feedUrl.trim()) : Boolean(file)
+
   return (
     <div className="p-4 md:p-8 max-w-4xl">
       <div className="mb-6">
@@ -92,50 +136,86 @@ export default function AdminImportProductsPage() {
           <ArrowLeft size={14} />
           Назад до товарів
         </Link>
-        <h1 className="text-2xl font-bold text-text-primary mt-3">Імпорт прайсу DriveX</h1>
+        <h1 className="text-2xl font-bold text-text-primary mt-3">Імпорт товарів</h1>
         <p className="text-sm text-text-muted mt-1">
-          Завантажте Excel-прайс дилера. Імпортуються 7 каталожних листів, ціни оновлюються з «Зміни у прайсі».
+          XML — прайс за посиланням (YML/Rozetka). Excel таблиця — прайс дилера DriveX.
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-bg-surface p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            onChange={onFileChange}
-            className="hidden"
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2"
-          >
-            <FileSpreadsheet size={16} />
-            Обрати файл
-          </Button>
-          {file && (
-            <span className="text-sm text-text-secondary truncate">
-              {file.name} ({(file.size / 1024 / 1024).toFixed(1)} МБ)
-            </span>
-          )}
-        </div>
+      <div className="mb-4 flex gap-2">
+        <ModeTab active={mode === 'xml'} onClick={() => onModeChange('xml')}>
+          XML
+        </ModeTab>
+        <ModeTab active={mode === 'drivex'} onClick={() => onModeChange('drivex')}>
+          Excel таблиця
+        </ModeTab>
+      </div>
 
-        {error && (
-          <p className="text-sm text-red-500">{error}</p>
+      <div className="rounded-xl border border-border bg-bg-surface p-5 space-y-4">
+        {mode === 'drivex' ? (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              onChange={onFileChange}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2"
+            >
+              <FileSpreadsheet size={16} />
+              Обрати файл
+            </Button>
+            {file && (
+              <span className="text-sm text-text-secondary truncate">
+                {file.name} ({(file.size / 1024 / 1024).toFixed(1)} МБ)
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <label className="block text-sm text-text-secondary">
+              Посилання на XML
+              <input
+                type="url"
+                value={feedUrl}
+                onChange={event => {
+                  setFeedUrl(event.target.value)
+                  resetFlow()
+                }}
+                placeholder="https://example.com/price.xml"
+                className="mt-1 w-full rounded-lg border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary"
+              />
+            </label>
+            <p className="text-xs text-text-muted">
+              Вставте HTTPS-посилання на `.xml` фід. Імпортуються товари з наявністю (stock &gt; 0).
+              Ідентифікатор оновлення — offer id у specs «Torssen ID». HTML в описі очищається до
+              тексту. Зображення зберігаються як URL з фіду.
+            </p>
+          </div>
         )}
+
+        {error && <p className="text-sm text-red-500">{error}</p>}
 
         {step === 'upload' && (
           <Button
             type="button"
             onClick={() => void handlePreview()}
-            disabled={!file || loading}
+            disabled={!canPreview || loading}
             className="inline-flex items-center gap-2"
           >
             <Upload size={16} />
-            {loading ? 'Аналіз файлу…' : 'Перевірити файл'}
+            {loading
+              ? mode === 'xml'
+                ? 'Завантаження та аналіз XML…'
+                : 'Аналіз файлу…'
+              : mode === 'xml'
+                ? 'Перевірити XML'
+                : 'Перевірити файл'}
           </Button>
         )}
 
@@ -148,17 +228,31 @@ export default function AdminImportProductsPage() {
               <Stat label="Пропущено" value={preview.skipped} />
             </div>
             <p className="text-xs text-text-muted">
-              Пропущено без наявності: {preview.skippedOutOfStock}, дублікатів коду: {preview.skippedDuplicateCode}.
-              Змін цін: {preview.priceChanges} (знайдено в каталозі: {preview.priceChangesMatched}).
+              Пропущено без наявності: {preview.skippedOutOfStock}, дублікатів коду:{' '}
+              {preview.skippedDuplicateCode}.
+              {mode === 'drivex' && (
+                <>
+                  {' '}
+                  Змін цін: {preview.priceChanges} (знайдено в каталозі: {preview.priceChangesMatched}
+                  ).
+                </>
+              )}
             </p>
             <div>
-              <p className="text-sm font-medium text-text-primary mb-2">Категорії (листи Excel)</p>
-              <div className="flex flex-wrap gap-2">
-                {preview.categories.map(name => (
+              <p className="text-sm font-medium text-text-primary mb-2">
+                {mode === 'drivex' ? 'Категорії (листи Excel)' : 'Категорії з фіду'}
+              </p>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                {preview.categories.slice(0, 40).map(name => (
                   <span key={name} className="text-xs px-2 py-1 rounded bg-bg-elevated text-text-secondary">
                     {name}
                   </span>
                 ))}
+                {preview.categories.length > 40 && (
+                  <span className="text-xs px-2 py-1 text-text-muted">
+                    +{preview.categories.length - 40} ще
+                  </span>
+                )}
               </div>
             </div>
             {preview.sample.length > 0 && (
@@ -166,9 +260,9 @@ export default function AdminImportProductsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-text-muted border-b border-border">
-                      <th className="py-2 pr-3">Код</th>
+                      <th className="py-2 pr-3">{mode === 'xml' ? 'Offer ID' : 'Код'}</th>
                       <th className="py-2 pr-3">Назва</th>
-                      <th className="py-2 pr-3">Лист</th>
+                      <th className="py-2 pr-3">Категорія</th>
                       <th className="py-2 pr-3">Ціна</th>
                       <th className="py-2 pr-3">Залишок</th>
                       <th className="py-2 pr-3">Фото</th>
@@ -210,8 +304,11 @@ export default function AdminImportProductsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <Stat label="Створено" value={result.created} />
               <Stat label="Оновлено" value={result.updated} />
-              <Stat label="Цін оновлено" value={result.priceUpdates} />
-              <Stat label="Фото завантажено" value={result.imagesUploaded} />
+              {mode === 'drivex' && <Stat label="Цін оновлено" value={result.priceUpdates} />}
+              <Stat
+                label={mode === 'xml' ? 'Фото (URL)' : 'Фото завантажено'}
+                value={result.imagesUploaded}
+              />
               <Stat label="Помилок" value={result.errors.length} />
             </div>
             {result.errors.length > 0 && (
@@ -235,6 +332,30 @@ export default function AdminImportProductsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+function ModeTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+        active
+          ? 'bg-accent text-white'
+          : 'bg-bg-elevated text-text-secondary hover:text-text-primary'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 

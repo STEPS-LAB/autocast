@@ -35,6 +35,16 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'via.placeholder.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'torssen.com',
+        pathname: '/image/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.torssen.com',
+        pathname: '/image/**',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
   },
