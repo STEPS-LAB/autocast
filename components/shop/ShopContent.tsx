@@ -1,160 +1,70 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import ProductGrid from '@/components/shop/ProductGrid'
 import ProductFilters from '@/components/shop/ProductFilters'
 import SortSelect from '@/components/shop/SortSelect'
 import PageTransition from '@/components/layout/PageTransition'
+import Pagination from '@/components/ui/Pagination'
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
-import { useClientMounted } from '@/lib/hooks/useClientMounted'
-import Pagination from '@/components/ui/Pagination'
-import { clampPage, getTotalPages, paginateSlice, pageRangeLabel, SHOP_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
-import { parseProductSortKey, sortProducts, DEFAULT_SHOP_PRODUCT_SORT, SHOP_PRODUCT_SORT_OPTIONS } from '@/lib/product-sort'
+import { pageRangeLabel } from '@/lib/pagination'
+import { getRootCategories } from '@/lib/shop/category-tree'
 import type { Brand, Category, ProductCard } from '@/types'
 
 interface ShopContentProps {
   products: ProductCard[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
   categories: Category[]
   brands: Brand[]
+  mode: 'hub' | 'category'
+  rootCategory?: Category | null
+  heading: string
+  /** Current filter selection from URL (already parsed on server). */
+  filters: {
+    categories: string[]
+    brands: string[]
+    minPrice?: number
+    maxPrice?: number
+    inStock?: boolean
+  }
+  query?: string
 }
 
-export default function ShopContent({ products, categories, brands }: ShopContentProps) {
-  const searchParams = useSearchParams()
+export default function ShopContent({
+  products,
+  total,
+  page,
+  pageSize,
+  totalPages,
+  categories,
+  brands,
+  mode,
+  rootCategory = null,
+  heading,
+  filters,
+  query,
+}: ShopContentProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const isClient = useClientMounted()
+  const displayProducts = useDiscountedProductCards(products)
+  const rootCategories = useMemo(() => getRootCategories(categories), [categories])
 
-  const query = searchParams.get('q') ?? ''
-  const categoriesSelected = useMemo(() => {
-    const raw = searchParams.getAll('category').map(s => s.trim()).filter(Boolean)
-    return Array.from(new Set(raw))
-  }, [searchParams])
-  const brandsSelected = useMemo(() => {
-    const raw = searchParams.getAll('brand').map(s => s.trim()).filter(Boolean)
-    return Array.from(new Set(raw))
-  }, [searchParams])
-  const minPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined
-  const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined
-  const inStock = searchParams.get('inStock') === '1'
-  const sortRaw = searchParams.get('sort')
-  const sort = parseProductSortKey(sortRaw, SHOP_PRODUCT_SORT_OPTIONS, DEFAULT_SHOP_PRODUCT_SORT)
-  const make = searchParams.get('make') ?? ''
-
-  const filters = { categories: categoriesSelected, brands: brandsSelected, minPrice, maxPrice, inStock }
-
-  const allProducts = useDiscountedProductCards(products)
-
-  const categoryDescendants = useMemo(() => {
-    const idBySlug = new Map(categories.map(c => [c.slug, c.id]))
-    const slugById = new Map(categories.map(c => [c.id, c.slug]))
-    const childrenById = new Map<string, string[]>()
-    for (const c of categories) {
-      if (!c.parent_id) continue
-      const list = childrenById.get(c.parent_id) ?? []
-      list.push(c.id)
-      childrenById.set(c.parent_id, list)
-    }
-
-    function collectSlugs(rootSlug: string): Set<string> {
-      const rootId = idBySlug.get(rootSlug)
-      const out = new Set<string>()
-      if (!rootId) return out
-      out.add(rootSlug)
-      const stack = [...(childrenById.get(rootId) ?? [])]
-      while (stack.length > 0) {
-        const id = stack.pop()
-        if (!id) break
-        const slug = slugById.get(id)
-        if (slug) out.add(slug)
-        const kids = childrenById.get(id) ?? []
-        for (const k of kids) stack.push(k)
-      }
-      return out
-    }
-
-    return { collectSlugs }
-  }, [categories])
-
-  const filtered = useMemo(() => {
-    let products = allProducts
-
-    if (query) {
-      const q = query.toLowerCase()
-      products = products.filter(p => p.name_ua.toLowerCase().includes(q))
-    }
-    if (categoriesSelected.length > 0) {
-      const allowedSets = categoriesSelected.map(slug => categoryDescendants.collectSlugs(slug))
-      products = products.filter(p => {
-        const slug = p.category?.slug
-        if (!slug) return false
-        return allowedSets.some(set => set.has(slug))
-      })
-    }
-    if (brandsSelected.length > 0) {
-      const allowed = new Set(brandsSelected)
-      products = products.filter(p => {
-        const name = p.brand?.name
-        return !!name && allowed.has(name)
-      })
-    }
-    if (minPrice !== undefined) {
-      products = products.filter(p => (p.sale_price ?? p.price) >= minPrice)
-    }
-    if (maxPrice !== undefined) {
-      products = products.filter(p => (p.sale_price ?? p.price) <= maxPrice)
-    }
-    if (inStock) {
-      products = products.filter(p => p.stock > 0)
-    }
-
-    return sortProducts(products, sort)
-  }, [
-    allProducts,
-    query,
-    categoriesSelected,
-    brandsSelected,
-    minPrice,
-    maxPrice,
-    inStock,
-    sort,
-    categoryDescendants,
-  ])
-
-  const totalPages = Math.max(1, getTotalPages(filtered.length, SHOP_PRODUCTS_PAGE_SIZE))
-  const requestedPage = Number.parseInt(searchParams.get('page') ?? '1', 10)
-  const page = clampPage(Number.isFinite(requestedPage) ? requestedPage : 1, totalPages)
-  const displayPage = isClient ? page : 1
-  const paginatedProducts = useMemo(
-    () => paginateSlice(filtered, displayPage, SHOP_PRODUCTS_PAGE_SIZE),
-    [filtered, displayPage]
-  )
-  const showPagination = isClient && filtered.length > SHOP_PRODUCTS_PAGE_SIZE
-
-  const filterKey = [
-    query,
-    categoriesSelected.join(','),
-    brandsSelected.join(','),
-    minPrice ?? '',
-    maxPrice ?? '',
-    inStock ? '1' : '',
-    sort,
-  ].join('|')
-
-  const prevFilterKeyRef = useRef(filterKey)
-  useEffect(() => {
-    if (prevFilterKeyRef.current === filterKey) return
-    prevFilterKeyRef.current = filterKey
-    if (!searchParams.get('page')) return
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('page')
-    const next = params.toString()
-    router.replace(next ? `${pathname}?${next}` : pathname)
-  }, [filterKey, pathname, router, searchParams])
+  const hasFilters =
+    filters.categories.length > 0 ||
+    filters.brands.length > 0 ||
+    filters.minPrice !== undefined ||
+    filters.maxPrice !== undefined ||
+    !!filters.inStock
 
   function handlePageChange(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString())
@@ -164,28 +74,29 @@ export default function ShopContent({ products, categories, brands }: ShopConten
     router.push(next ? `${pathname}?${next}` : pathname)
   }
 
-  const hasFilters = Object.values(filters).some(Boolean)
-  const showCatalogNotReady = allProducts.length === 0 && !query && !hasFilters
-
-  const headingText = categoriesSelected.length === 1
-    ? allProducts.find(p => p.category?.slug === categoriesSelected[0])?.category?.name_ua ?? 'Каталог'
-    : make
-    ? `Запчастини для ${make}`
-    : query
-    ? `Результати: «${query}»`
-    : 'Магазин'
+  const emptyCatalog = total === 0 && !query && !hasFilters
 
   return (
     <PageTransition>
       <div className="container-xl py-10">
         <div className="mb-8">
-          <h1 className="text-headline text-text-primary mb-1">{headingText}</h1>
+          {mode === 'category' && (
+            <Link
+              href="/shop"
+              className="inline-block text-xs text-text-muted hover:text-accent mb-2 transition-colors"
+            >
+              ← Усі товари
+            </Link>
+          )}
+          <h1 className="text-headline text-text-primary mb-1">{heading}</h1>
           <p className="text-sm text-text-muted">
-            {filtered.length} товар{filtered.length === 1 ? '' : filtered.length < 5 ? 'и' : 'ів'}
-            {showPagination && (
-              <span className="text-text-muted">
+            {total === 0
+              ? 'Товари відсутні'
+              : `${total} товар${total === 1 ? '' : total < 5 ? 'и' : 'ів'}`}
+            {total > pageSize && (
+              <span>
                 {' '}
-                · {pageRangeLabel(page, SHOP_PRODUCTS_PAGE_SIZE, filtered.length)}
+                · {pageRangeLabel(page, pageSize, total)}
               </span>
             )}
           </p>
@@ -194,13 +105,20 @@ export default function ShopContent({ products, categories, brands }: ShopConten
         <div className="flex gap-8">
           <div className="hidden lg:block w-56 shrink-0">
             <div className="sticky top-24">
-              <ProductFilters filters={filters} categories={categories} brands={brands} />
+              <ProductFilters
+                filters={filters}
+                categories={categories}
+                brands={brands}
+                mode={mode}
+                rootCategory={rootCategory}
+              />
             </div>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3 mb-6">
               <button
+                type="button"
                 onClick={() => setFiltersOpen(true)}
                 className="lg:hidden flex items-center gap-2 h-9 px-3 bg-bg-surface border border-border rounded text-sm text-text-secondary hover:text-text-primary hover:border-border-light transition-colors"
               >
@@ -208,7 +126,10 @@ export default function ShopContent({ products, categories, brands }: ShopConten
                 Фільтри
                 {hasFilters && (
                   <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">
-                    {filters.categories.length + filters.brands.length + (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) + (filters.inStock ? 1 : 0)}
+                    {filters.categories.length +
+                      filters.brands.length +
+                      (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) +
+                      (filters.inStock ? 1 : 0)}
                   </span>
                 )}
               </button>
@@ -218,21 +139,36 @@ export default function ShopContent({ products, categories, brands }: ShopConten
               </div>
             </div>
 
-            {showCatalogNotReady ? (
+            {mode === 'hub' && rootCategories.length > 0 && (
+              <div className="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {rootCategories.map(cat => (
+                  <Link
+                    key={cat.id}
+                    href={`/shop/${cat.slug}`}
+                    className={cn(
+                      'rounded-md border border-border bg-bg-surface',
+                      'px-4 py-3.5 text-sm font-medium text-text-primary truncate',
+                      'hover:border-accent/40 hover:bg-bg-elevated transition-colors'
+                    )}
+                  >
+                    {cat.name_ua}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {emptyCatalog ? (
               <div className="rounded-md border border-border bg-bg-surface p-8 text-center">
-                <h3 className="text-base font-semibold text-text-primary mb-1">Каталог порожній</h3>
-                <p className="text-sm text-text-muted">
-                  У базі немає товарів або запит не повернув дані. Перевірте таблицю products і RLS у Supabase.
-                </p>
+                <p className="text-sm text-text-muted">Товари відсутні</p>
               </div>
             ) : (
               <>
-                <ProductGrid products={paginatedProducts} />
-                {showPagination && (
+                <ProductGrid products={displayProducts} />
+                {totalPages > 1 && (
                   <Pagination
                     page={page}
-                    totalItems={filtered.length}
-                    pageSize={SHOP_PRODUCTS_PAGE_SIZE}
+                    totalItems={total}
+                    pageSize={pageSize}
                     onPageChange={handlePageChange}
                   />
                 )}
@@ -266,6 +202,8 @@ export default function ShopContent({ products, categories, brands }: ShopConten
                 filters={filters}
                 categories={categories}
                 brands={brands}
+                mode={mode}
+                rootCategory={rootCategory}
                 onClose={() => setFiltersOpen(false)}
               />
             </motion.div>

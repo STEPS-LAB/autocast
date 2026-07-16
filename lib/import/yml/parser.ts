@@ -1,9 +1,14 @@
-import type { ParsedTorssenOffer, TorssenCategory, TorssenParseResult } from './types'
+import type { ParsedYmlOffer, YmlCategory, YmlParseResult } from './types'
 
 const OFFER_OPEN_RE = /<offer\b[^>]*>/i
 const OFFER_CLOSE_RE = /<\/offer>/i
-const CATEGORY_RE =
-  /<category\s+id="(\d+)"(?:\s+parentId="(\d+)")?\s*>([^<]*)<\/category>/gi
+const CATEGORY_RE = /<category\b([^>]*)>([^<]*)<\/category>/gi
+
+function parseCategoryAttributes(attrs: string): { id: string | null; parentId: string | null } {
+  const id = /\bid="(\d+)"/i.exec(attrs)?.[1] ?? null
+  const parentId = /\bparentId="(\d+)"/i.exec(attrs)?.[1] ?? null
+  return { id, parentId }
+}
 
 function decodeXmlEntities(value: string): string {
   return value
@@ -85,9 +90,9 @@ function parseParams(offerXml: string): Record<string, string> {
 
 export function parseOfferXml(
   offerXml: string,
-  categoryById: Map<string, TorssenCategory>,
+  categoryById: Map<string, YmlCategory>,
   options?: { skipOutOfStock?: boolean }
-): { product: ParsedTorssenOffer | null; skipReason: 'oos' | 'invalid' | null } {
+): { product: ParsedYmlOffer | null; skipReason: 'oos' | 'invalid' | null } {
   const openTag = OFFER_OPEN_RE.exec(offerXml)?.[0] ?? ''
   const { id: offerId, available } = parseOfferAttributes(openTag)
   if (!offerId) return { product: null, skipReason: 'invalid' }
@@ -140,16 +145,16 @@ export function parseOfferXml(
   }
 }
 
-function ingestCategories(chunk: string, categoryById: Map<string, TorssenCategory>) {
+function ingestCategories(chunk: string, categoryById: Map<string, YmlCategory>) {
   CATEGORY_RE.lastIndex = 0
   let match: RegExpExecArray | null
   while ((match = CATEGORY_RE.exec(chunk)) !== null) {
-    const id = match[1]
+    const { id, parentId } = parseCategoryAttributes(match[1] ?? '')
     if (!id) continue
     categoryById.set(id, {
       id,
-      parentId: match[2] ?? null,
-      name: decodeXmlEntities(match[3] ?? '').trim(),
+      parentId,
+      name: decodeXmlEntities(match[2] ?? '').trim(),
     })
   }
 }
@@ -180,12 +185,12 @@ async function* readTextChunks(
   if (tail) yield tail
 }
 
-export async function parseTorssenYmlStream(
+export async function parseYmlStream(
   source: ReadableStream<Uint8Array> | NodeJS.ReadableStream,
   options?: { skipOutOfStock?: boolean }
-): Promise<TorssenParseResult> {
-  const categoryById = new Map<string, TorssenCategory>()
-  const products: ParsedTorssenOffer[] = []
+): Promise<YmlParseResult> {
+  const categoryById = new Map<string, YmlCategory>()
+  const products: ParsedYmlOffer[] = []
   const seenIds = new Set<string>()
 
   let skippedOutOfStock = 0
@@ -272,10 +277,10 @@ export async function parseTorssenYmlStream(
   }
 }
 
-export async function parseTorssenYmlFromUrl(
+export async function parseYmlFromUrl(
   url: string,
   options?: { skipOutOfStock?: boolean }
-): Promise<TorssenParseResult> {
+): Promise<YmlParseResult> {
   const response = await fetch(url, {
     headers: {
       'User-Agent': 'AutocastImporter/1.0',
@@ -291,5 +296,5 @@ export async function parseTorssenYmlFromUrl(
     throw new Error('Порожня відповідь фіду.')
   }
 
-  return parseTorssenYmlStream(response.body, options)
+  return parseYmlStream(response.body, options)
 }

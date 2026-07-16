@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/security/rateLimit'
-import { resolveTorssenFeedUrl } from '@/lib/import/torssen/feeds'
-import { runTorssenImport } from '@/lib/import/torssen/run-import'
+import { resolveYmlFeedUrl } from '@/lib/import/yml/feeds'
+import { runYmlImport } from '@/lib/import/yml/run-import'
 import { revalidateCatalogCache } from '@/lib/admin/revalidate-catalog'
+import type { ImportProgressEvent } from '@/lib/import/types'
+import { NextResponse } from 'next/server'
 
 async function isCurrentUserAdmin() {
   const supabase = await createClient()
@@ -37,13 +38,56 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Очікується JSON з feedId або url.' }, { status: 400 })
   }
 
+  let resolved: ReturnType<typeof resolveYmlFeedUrl>
   try {
-    const resolved = resolveTorssenFeedUrl(body)
-    const result = await runTorssenImport(resolved.url)
-    revalidateCatalogCache()
-    return NextResponse.json({ ...result, feedUrl: resolved.url, feedId: resolved.feedId })
+    resolved = resolveYmlFeedUrl(body)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Не вдалося виконати імпорт фіду.'
-    return NextResponse.json({ error: message }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Некоректне посилання на XML.'
+    return NextResponse.json({ error: message }, { status: 400 })
   }
+
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: ImportProgressEvent) => {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`))
+      }
+
+      try {
+        send({ type: 'status', message: 'Завантаження та розбір XML…' })
+        const result = await runYmlImport(resolved.url, {
+          onProgress: progress => {
+            send({
+              type: 'progress',
+              processed: progress.processed,
+              total: progress.total,
+              created: progress.created,
+              updated: progress.updated,
+              skipped: progress.skipped,
+              message: `Оброблено ${progress.processed} з ${progress.total}`,
+            })
+          },
+        })
+        try {
+          revalidateCatalogCache()
+        } catch {
+          // Cache revalidation must not block completion.
+        }
+        send({ type: 'done', result })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Не вдалося виконати імпорт фіду.'
+        send({ type: 'error', error: message })
+      } finally {
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  })
 }

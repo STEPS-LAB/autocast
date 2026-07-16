@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/security/rateLimit'
-import { resolveTorssenFeedUrl } from '@/lib/import/torssen/feeds'
-import { buildTorssenImportPreview } from '@/lib/import/torssen/run-import'
+import { resolveYmlFeedUrl } from '@/lib/import/yml/feeds'
+import { buildYmlImportPreview } from '@/lib/import/yml/run-import'
 
 async function isCurrentUserAdmin() {
   const supabase = await createClient()
@@ -37,8 +37,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const resolved = resolveTorssenFeedUrl(body)
-    const preview = await buildTorssenImportPreview(resolved.url)
+    const resolved = resolveYmlFeedUrl(body)
+    const preview = await buildYmlImportPreview(resolved.url)
     return NextResponse.json({ ...preview, feedUrl: resolved.url, feedId: resolved.feedId })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Не вдалося зробити превʼю фіду.'

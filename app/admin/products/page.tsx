@@ -12,19 +12,17 @@ import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import type { Column } from '@/components/admin/AdminTable'
-import type { Brand, Product } from '@/types'
+import type { Product } from '@/types'
 import Image from 'next/image'
 import { applyDiscountToProduct, clampDiscountPercent, salePriceFromPercent } from '@/lib/discounts'
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
-import type { Category } from '@/types'
 import ImageCropModal from '@/components/admin/ImageCropModal'
 import Pagination from '@/components/ui/Pagination'
-import { clampPage, paginateSlice, pageRangeLabel, ADMIN_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
+import { clampPage, pageRangeLabel, ADMIN_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
 import {
   ADMIN_PRODUCT_SORT_OPTIONS,
   DEFAULT_ADMIN_PRODUCT_SORT,
   type ProductSortKey,
-  sortProducts,
 } from '@/lib/product-sort'
 
 type ProductRow = Product & { id: string }
@@ -44,12 +42,12 @@ function AdminProductsPageInner() {
   const searchParams = useSearchParams()
   const importRefreshKey = searchParams.get('imported')
   const [products, setProducts] = useState<ProductRow[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [brands, setBrands] = useState<Brand[]>([])
+  const [totalItems, setTotalItems] = useState(0)
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
   const [discountProductId, setDiscountProductId] = useState<string | null>(null)
   const [discountInput, setDiscountInput] = useState('')
   const [discountError, setDiscountError] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortKey, setSortKey] = useState<ProductSortKey>(DEFAULT_ADMIN_PRODUCT_SORT)
   const [editingImageProductId, setEditingImageProductId] = useState<string | null>(null)
@@ -73,17 +71,38 @@ function AdminProductsPageInner() {
   }
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim())
+      setPage(1)
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchInput])
+
+  useEffect(() => {
     let isMounted = true
+    const controller = new AbortController()
+
     async function loadData() {
       setLoading(true)
       setLoadError('')
       try {
-        const response = await fetch('/api/admin/products', { cache: 'no-store' })
-        const payload = await response.json() as {
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: String(ADMIN_PRODUCTS_PAGE_SIZE),
+          sort: sortKey,
+        })
+        if (searchQuery) params.set('q', searchQuery)
+
+        const response = await fetch(`/api/admin/products?${params.toString()}`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        const payload = (await response.json()) as {
           error?: string
           products?: ProductRow[]
-          categories?: Category[]
-          brands?: Brand[]
+          total?: number
+          page?: number
+          totalPages?: number
         }
 
         if (!isMounted) return
@@ -91,16 +110,22 @@ function AdminProductsPageInner() {
         if (!response.ok) {
           setLoadError(payload.error ?? 'Не вдалося завантажити товари.')
           setProducts([])
+          setTotalItems(0)
           return
         }
 
-        setProducts(payload.products ?? [])
-        setCategories(payload.categories ?? [])
-        setBrands(payload.brands ?? [])
+        const rows = (payload.products ?? []).map(p => applyDiscountToProduct(p, overrides))
+        setProducts(rows)
+        setTotalItems(Number(payload.total ?? 0))
+        if (typeof payload.page === 'number' && payload.page !== page) {
+          setPage(payload.page)
+        }
       } catch (error) {
         if (!isMounted) return
+        if (error instanceof DOMException && error.name === 'AbortError') return
         setLoadError(error instanceof Error ? error.message : 'Не вдалося завантажити товари.')
         setProducts([])
+        setTotalItems(0)
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -108,12 +133,11 @@ function AdminProductsPageInner() {
     void loadData()
     return () => {
       isMounted = false
+      controller.abort()
     }
-  }, [importRefreshKey, pathname])
-
-  useEffect(() => {
-    setPage(1)
-  }, [searchQuery, sortKey])
+    // overrides applied in a separate effect after load
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [importRefreshKey, pathname, page, searchQuery, sortKey])
 
   useEffect(() => {
     setProducts(prev => prev.map(p => applyDiscountToProduct(p, overrides)))
@@ -146,7 +170,12 @@ function AdminProductsPageInner() {
     const supabase = await getSupabase()
     await supabase.from('products').delete().eq('id', id)
     setProducts(prev => prev.filter(p => p.id !== id))
+    setTotalItems(prev => Math.max(0, prev - 1))
     setDeleteProductId(null)
+    // If we deleted the last row on this page, go back one page (triggers reload).
+    if (products.length <= 1 && page > 1) {
+      setPage(prev => Math.max(1, prev - 1))
+    }
     await syncCatalogAfterChange()
   }
 
@@ -350,8 +379,8 @@ function AdminProductsPageInner() {
       key: 'category_id',
       label: 'Категорія',
       render: (row) => {
-        const cat = categories.find(c => c.id === row.category_id)
-        return <span className="text-sm text-text-secondary">{cat?.name_ua ?? '—'}</span>
+        const categoryName = row.category?.name_ua
+        return <span className="text-sm text-text-secondary">{categoryName ?? '—'}</span>
       },
     },
     {
@@ -381,34 +410,12 @@ function AdminProductsPageInner() {
     },
   ]
 
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    const filtered = query
-      ? products.filter((product) => {
-          const categoryName = categories.find(c => c.id === product.category_id)?.name_ua ?? ''
-          const brandName = brands.find(b => b.id === product.brand_id)?.name ?? ''
-          return (
-            product.name_ua.toLowerCase().includes(query)
-            || product.description_ua.toLowerCase().includes(query)
-            || categoryName.toLowerCase().includes(query)
-            || brandName.toLowerCase().includes(query)
-          )
-        })
-      : products
-
-    return sortProducts(filtered, sortKey)
-  }, [brands, categories, products, searchQuery, sortKey])
-
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ADMIN_PRODUCTS_PAGE_SIZE) || 1)
+  const totalPages = Math.max(1, Math.ceil(totalItems / ADMIN_PRODUCTS_PAGE_SIZE) || 1)
   const currentPage = clampPage(page, totalPages)
-  const paginatedProducts = useMemo(
-    () => paginateSlice(filteredProducts, currentPage, ADMIN_PRODUCTS_PAGE_SIZE),
-    [filteredProducts, currentPage]
-  )
 
   useEffect(() => {
-    setPage(prev => (prev === currentPage ? prev : currentPage))
-  }, [currentPage])
+    if (page !== currentPage) setPage(currentPage)
+  }, [currentPage, page])
 
   const productForDiscount = useMemo(
     () => products.find(p => p.id === discountProductId) ?? null,
@@ -478,9 +485,9 @@ function AdminProductsPageInner() {
           <p className="text-sm text-text-muted">
             {loading
               ? 'Завантаження...'
-              : filteredProducts.length > ADMIN_PRODUCTS_PAGE_SIZE
-                ? `${filteredProducts.length} товарів · ${pageRangeLabel(currentPage, ADMIN_PRODUCTS_PAGE_SIZE, filteredProducts.length)}`
-                : `${filteredProducts.length} товарів`}
+              : totalItems > ADMIN_PRODUCTS_PAGE_SIZE
+                ? `${totalItems} товарів · ${pageRangeLabel(currentPage, ADMIN_PRODUCTS_PAGE_SIZE, totalItems)}`
+                : `${totalItems} товарів`}
           </p>
           {loadError && (
             <p className="text-sm text-red-500 mt-1">{loadError}</p>
@@ -491,8 +498,8 @@ function AdminProductsPageInner() {
           <input
             id="products-search"
             type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Пошук товарів..."
             className="w-full h-9 rounded border border-border bg-bg-input px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
           />
@@ -501,7 +508,10 @@ function AdminProductsPageInner() {
             <select
               id="products-sort"
               value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as ProductSortKey)}
+              onChange={(e) => {
+                setSortKey(e.target.value as ProductSortKey)
+                setPage(1)
+              }}
               className="h-9 pl-3 pr-8 bg-bg-surface border border-border rounded text-sm text-text-secondary appearance-none cursor-pointer focus:outline-none focus:border-accent transition-colors hover:border-border-light"
             >
               {ADMIN_PRODUCT_SORT_OPTIONS.map(option => (
@@ -545,7 +555,7 @@ function AdminProductsPageInner() {
       </div>
 
       <AdminTable
-        data={paginatedProducts}
+        data={products}
         columns={columns}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
@@ -574,12 +584,12 @@ function AdminProductsPageInner() {
       />
       <Pagination
         page={currentPage}
-        totalItems={filteredProducts.length}
+        totalItems={totalItems}
         pageSize={ADMIN_PRODUCTS_PAGE_SIZE}
         onPageChange={setPage}
       />
       {loading && (
-        <p className="text-sm text-text-muted mt-3">Завантаження...</p>
+        <p className="text-sm text-text-muted mt-3">Завантаження сторінки...</p>
       )}
 
       <Modal

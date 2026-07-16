@@ -1,14 +1,13 @@
 import ExcelJS from 'exceljs'
-import {
-  DRIVEX_PRICE_CHANGES_SHEET,
-  DRIVEX_PRODUCT_SHEETS,
-  type DrivexImage,
-  type DrivexParseResult,
-  type ParsedDrivexPriceChange,
-  type ParsedDrivexProduct,
+import type {
+  ExcelImage,
+  ExcelParseResult,
+  ParsedExcelPriceChange,
+  ParsedExcelProduct,
 } from './types'
 import { readCell, readCellNumber, readCellString } from './cell'
-import { parseDrivexStock } from './stock'
+import { parseExcelStock } from './stock'
+import { isNonProductSheetName } from './sheet-detect'
 
 const HEADER_ROW = 3
 const COL_CHARACTERISTICS = 1
@@ -25,6 +24,9 @@ const COL_CODE = 14
 const PRICE_CHANGE_NAME_COL = 2
 const PRICE_CHANGE_OLD_RETAIL_COL = 6
 const PRICE_CHANGE_NEW_RETAIL_COL = 10
+
+/** Minimum product rows (in stock or skipped) for a sheet to count as a catalog. */
+const MIN_PRODUCT_ROWS = 1
 
 function isProductRow(row: ExcelJS.Row): boolean {
   const code = readCellString(row, COL_CODE)
@@ -43,15 +45,15 @@ function buildDescription(row: ExcelJS.Row): string {
 function extractSheetImages(
   worksheet: ExcelJS.Worksheet,
   workbook: ExcelJS.Workbook
-): Map<number, DrivexImage[]> {
-  const byRow = new Map<number, DrivexImage[]>()
+): Map<number, ExcelImage[]> {
+  const byRow = new Map<number, ExcelImage[]>()
 
   for (const image of worksheet.getImages()) {
     const media = workbook.getImage(image.imageId)
     if (!media?.buffer) continue
 
     const excelRow = image.range.tl.nativeRow + 1
-    const entry: DrivexImage = {
+    const entry: ExcelImage = {
       buffer: Buffer.from(media.buffer),
       extension: media.extension || 'jpeg',
       excelRow,
@@ -66,8 +68,8 @@ function extractSheetImages(
 }
 
 function attachImages(
-  product: ParsedDrivexProduct,
-  imagesByRow: Map<number, DrivexImage[]>
+  product: ParsedExcelProduct,
+  imagesByRow: Map<number, ExcelImage[]>
 ): void {
   const rows = [product.excelRow, product.excelRow - 1, product.excelRow + 1]
   const seen = new Set<string>()
@@ -83,12 +85,12 @@ function attachImages(
 }
 
 function parseProductSheet(
-  sheetName: (typeof DRIVEX_PRODUCT_SHEETS)[number],
+  sheetName: string,
   worksheet: ExcelJS.Worksheet,
   workbook: ExcelJS.Workbook
-): { products: ParsedDrivexProduct[]; skippedOutOfStock: number } {
+): { products: ParsedExcelProduct[]; skippedOutOfStock: number } {
   const imagesByRow = extractSheetImages(worksheet, workbook)
-  const products: ParsedDrivexProduct[] = []
+  const products: ParsedExcelProduct[] = []
   let skippedOutOfStock = 0
 
   for (let rowNumber = HEADER_ROW + 1; rowNumber <= worksheet.actualRowCount; rowNumber++) {
@@ -99,7 +101,7 @@ function parseProductSheet(
     const baseName = readCellString(row, COL_BASE_NAME)
     const retail = readCellNumber(row, COL_RETAIL)
     const stockRaw = readCell(row, COL_STOCK)
-    const { stock, label } = parseDrivexStock(stockRaw)
+    const { stock, label } = parseExcelStock(stockRaw)
 
     if (stock <= 0) {
       skippedOutOfStock++
@@ -108,7 +110,7 @@ function parseProductSheet(
 
     if (!dealerCode || !baseName || retail == null) continue
 
-    const product: ParsedDrivexProduct = {
+    const product: ParsedExcelProduct = {
       sheet: sheetName,
       dealerCode,
       name: baseName,
@@ -132,10 +134,10 @@ function parseProductSheet(
   return { products, skippedOutOfStock }
 }
 
-function parsePriceChangesSheet(worksheet: ExcelJS.Worksheet | undefined): ParsedDrivexPriceChange[] {
+function parsePriceChangesSheet(worksheet: ExcelJS.Worksheet | undefined): ParsedExcelPriceChange[] {
   if (!worksheet) return []
 
-  const changes: ParsedDrivexPriceChange[] = []
+  const changes: ParsedExcelPriceChange[] = []
 
   for (let rowNumber = HEADER_ROW + 1; rowNumber <= worksheet.actualRowCount; rowNumber++) {
     const row = worksheet.getRow(rowNumber)
@@ -156,12 +158,12 @@ function parsePriceChangesSheet(worksheet: ExcelJS.Worksheet | undefined): Parse
   return changes
 }
 
-function dedupeByDealerCode(products: ParsedDrivexProduct[]): {
-  products: ParsedDrivexProduct[]
+function dedupeByDealerCode(products: ParsedExcelProduct[]): {
+  products: ParsedExcelProduct[]
   skippedDuplicateCode: number
 } {
   const seen = new Set<string>()
-  const unique: ParsedDrivexProduct[] = []
+  const unique: ParsedExcelProduct[] = []
   let skippedDuplicateCode = 0
 
   for (const product of products) {
@@ -176,29 +178,49 @@ function dedupeByDealerCode(products: ParsedDrivexProduct[]): {
   return { products: unique, skippedDuplicateCode }
 }
 
-export async function parseDrivexWorkbook(buffer: Buffer): Promise<DrivexParseResult> {
+function findPriceChangesWorksheet(workbook: ExcelJS.Workbook): ExcelJS.Worksheet | undefined {
+  for (const worksheet of workbook.worksheets) {
+    if (isNonProductSheetName(worksheet.name) && /змін/i.test(worksheet.name)) {
+      return worksheet
+    }
+  }
+  return workbook.worksheets.find(ws => /зміни у прайсі/i.test(ws.name.trim()))
+}
+
+/**
+ * Parse a dealer-style .xlsx price list.
+ * Product sheets are auto-detected (any sheet with product rows that is not a
+ * price-changes / info sheet). Sheet name becomes the category name.
+ */
+export async function parseExcelWorkbook(buffer: Buffer): Promise<ExcelParseResult> {
   const workbook = new ExcelJS.Workbook()
   await workbook.xlsx.load(buffer)
 
-  let allProducts: ParsedDrivexProduct[] = []
+  let allProducts: ParsedExcelProduct[] = []
   let skippedOutOfStock = 0
+  const productSheets: string[] = []
 
-  for (const sheetName of DRIVEX_PRODUCT_SHEETS) {
-    const worksheet = workbook.getWorksheet(sheetName)
-    if (!worksheet) continue
+  for (const worksheet of workbook.worksheets) {
+    const sheetName = worksheet.name.trim()
+    if (!sheetName || isNonProductSheetName(sheetName)) continue
 
     const parsed = parseProductSheet(sheetName, worksheet, workbook)
+    const totalRows = parsed.products.length + parsed.skippedOutOfStock
+    if (totalRows < MIN_PRODUCT_ROWS) continue
+
+    productSheets.push(sheetName)
     allProducts = allProducts.concat(parsed.products)
     skippedOutOfStock += parsed.skippedOutOfStock
   }
 
   const { products, skippedDuplicateCode } = dedupeByDealerCode(allProducts)
-  const priceChanges = parsePriceChangesSheet(workbook.getWorksheet(DRIVEX_PRICE_CHANGES_SHEET))
+  const priceChanges = parsePriceChangesSheet(findPriceChangesWorksheet(workbook))
 
   return {
     products,
     priceChanges,
     skippedOutOfStock,
     skippedDuplicateCode,
+    productSheets,
   }
 }

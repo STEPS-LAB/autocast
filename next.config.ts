@@ -59,18 +59,24 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
-    return [
-      // ─── Hashed Next.js build output (JS / CSS chunks) ─────────────────
-      {
-        source: '/_next/static/:path*',
-        headers: [{ key: 'Cache-Control', value: IMMUTABLE_ONE_YEAR }],
-      },
+    // Immutable hashed chunks break Turbopack HMR in development (stale module factories).
+    const isDev = process.env.NODE_ENV === 'development'
 
-      // ─── Optimized images (URL includes width/quality params = natural cache key) ─
-      {
-        source: '/_next/image/:path*',
-        headers: [{ key: 'Cache-Control', value: IMMUTABLE_ONE_YEAR }],
-      },
+    const productionAssetHeaders = isDev
+      ? []
+      : [
+          {
+            source: '/_next/static/:path*',
+            headers: [{ key: 'Cache-Control', value: IMMUTABLE_ONE_YEAR }],
+          },
+          {
+            source: '/_next/image/:path*',
+            headers: [{ key: 'Cache-Control', value: IMMUTABLE_ONE_YEAR }],
+          },
+        ]
+
+    return [
+      ...productionAssetHeaders,
 
       // ─── Public static assets (no hash in path — moderate TTL) ───────────
       {

@@ -2,7 +2,13 @@ import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
 import { createStaticClient } from '@/lib/supabase/static'
+import { fetchAllCategories } from '@/lib/data/categories'
 import { unstable_cache } from 'next/cache'
+import { clampPage, getTotalPages, SHOP_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
+import {
+  DEFAULT_SHOP_PRODUCT_SORT,
+  type ProductSortKey,
+} from '@/lib/product-sort'
 import type { Brand, Category, Product, ProductCard } from '@/types'
 
 interface DbCategoryRow {
@@ -112,12 +118,8 @@ function rowToProductCard(row: DbProductRow): ProductCard {
 async function fetchCategories(_dbOnly: boolean): Promise<Category[]> {
   try {
     const supabase = createStaticClient()
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id,slug,name_ua,parent_id,image_url,sort_order')
-      .order('sort_order', { ascending: true })
-
-    if (error || !data || data.length === 0) return []
+    const { data, error } = await fetchAllCategories(supabase)
+    if (error || data.length === 0) return []
     return (data as DbCategoryRow[]).map(rowToCategory)
   } catch {
     return []
@@ -171,7 +173,7 @@ async function fetchProductCards(_dbOnly: boolean): Promise<ProductCard[]> {
     const { data, error } = await supabase
       .from('products')
       .select(`
-        id,slug,name_ua,price,sale_price,stock,images,category_id,brand_id,created_at,is_featured,description_ua,specs,
+        id,slug,name_ua,price,sale_price,stock,images,category_id,brand_id,created_at,
         category:categories(id,slug,name_ua,parent_id,image_url,sort_order),
         brand:brands(id,name,logo_url)
       `)
@@ -259,4 +261,136 @@ export async function getProductBySlugFromDb(slug: string): Promise<Product | un
     return undefined
   }
 }
+
+const SHOP_CARD_SELECT = `
+  id,slug,name_ua,price,sale_price,stock,images,category_id,brand_id,created_at,
+  category:categories(id,slug,name_ua,parent_id,image_url,sort_order),
+  brand:brands(id,name,logo_url)
+`
+
+export type ShopProductsQuery = {
+  categoryIds?: string[] | null
+  brandNames?: string[]
+  minPrice?: number
+  maxPrice?: number
+  inStock?: boolean
+  q?: string
+  sort?: ProductSortKey
+  page?: number
+  pageSize?: number
+}
+
+function shopSortOrder(sort: ProductSortKey): {
+  column: string
+  ascending: boolean
+} {
+  switch (sort) {
+    case 'oldest':
+      return { column: 'created_at', ascending: true }
+    case 'name_asc':
+      return { column: 'name_ua', ascending: true }
+    case 'name_desc':
+      return { column: 'name_ua', ascending: false }
+    case 'price_asc':
+      return { column: 'price', ascending: true }
+    case 'price_desc':
+      return { column: 'price', ascending: false }
+    case 'newest':
+    default:
+      return { column: 'created_at', ascending: false }
+  }
+}
+
+/** Server-paginated shop listing — only one page of lean cards crosses the wire. */
+export async function getShopProductsPage(query: ShopProductsQuery): Promise<{
+  products: ProductCard[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}> {
+  const pageSize =
+    Number.isFinite(query.pageSize) && (query.pageSize ?? 0) > 0
+      ? Math.min(48, Math.floor(query.pageSize!))
+      : SHOP_PRODUCTS_PAGE_SIZE
+  const sort = query.sort ?? DEFAULT_SHOP_PRODUCT_SORT
+  const { column, ascending } = shopSortOrder(sort)
+
+  try {
+    const supabase = createStaticClient()
+
+    let countQuery = supabase.from('products').select('id', { count: 'exact', head: true })
+    let dataQuery = supabase
+      .from('products')
+      .select(SHOP_CARD_SELECT)
+      .order(column, { ascending })
+      .order('id', { ascending: true })
+
+    if (query.categoryIds) {
+      if (query.categoryIds.length === 0) {
+        return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
+      }
+      countQuery = countQuery.in('category_id', query.categoryIds)
+      dataQuery = dataQuery.in('category_id', query.categoryIds)
+    }
+
+    if (query.brandNames && query.brandNames.length > 0) {
+      const { data: brandRows } = await supabase
+        .from('brands')
+        .select('id,name')
+        .in('name', query.brandNames)
+      const brandIds = (brandRows ?? []).map(b => b.id)
+      if (brandIds.length === 0) {
+        return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
+      }
+      countQuery = countQuery.in('brand_id', brandIds)
+      dataQuery = dataQuery.in('brand_id', brandIds)
+    }
+
+    if (query.minPrice !== undefined && Number.isFinite(query.minPrice)) {
+      countQuery = countQuery.gte('price', query.minPrice)
+      dataQuery = dataQuery.gte('price', query.minPrice)
+    }
+    if (query.maxPrice !== undefined && Number.isFinite(query.maxPrice)) {
+      countQuery = countQuery.lte('price', query.maxPrice)
+      dataQuery = dataQuery.lte('price', query.maxPrice)
+    }
+    if (query.inStock) {
+      countQuery = countQuery.gt('stock', 0)
+      dataQuery = dataQuery.gt('stock', 0)
+    }
+    if (query.q?.trim()) {
+      const q = query.q.trim().replace(/[%_,.()"'\\]/g, ' ').slice(0, 80)
+      countQuery = countQuery.ilike('name_ua', `%${q}%`)
+      dataQuery = dataQuery.ilike('name_ua', `%${q}%`)
+    }
+
+    const { count, error: countError } = await countQuery
+    if (countError) {
+      return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
+    }
+
+    const total = Number(count ?? 0)
+    const totalPages = getTotalPages(total, pageSize)
+    const page = clampPage(query.page ?? 1, totalPages)
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, error } = await dataQuery.range(from, to)
+    if (error || !data) {
+      return { products: [], total, page, pageSize, totalPages }
+    }
+
+    return {
+      products: (data as DbProductRow[]).map(rowToProductCard),
+      total,
+      page,
+      pageSize,
+      totalPages,
+    }
+  } catch {
+    return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
+  }
+}
+
 

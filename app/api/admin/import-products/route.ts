@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/security/rateLimit'
-import { runDrivexImport } from '@/lib/import/drivex/run-import'
+import { runExcelImport } from '@/lib/import/excel/run-import'
 import { revalidateCatalogCache } from '@/lib/admin/revalidate-catalog'
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
-    const result = await runDrivexImport(buffer)
+    const result = await runExcelImport(buffer)
     revalidateCatalogCache()
     return NextResponse.json(result)
   } catch (error) {

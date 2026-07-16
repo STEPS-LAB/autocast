@@ -9,7 +9,7 @@ import ProductDetailPanel from '@/components/product/ProductDetailPanel'
 import AddToCart from '@/components/product/AddToCart'
 import RelatedProducts from '@/components/product/RelatedProducts'
 import PageTransition from '@/components/layout/PageTransition'
-import { getDiscountPercent } from '@/lib/utils'
+import { resolveSalePricing } from '@/lib/utils'
 import RecentlyViewedTracker from '@/components/product/RecentlyViewedTracker'
 import { applyDiscountToProduct, DISCOUNTS_COOKIE_KEY, parseDiscountOverrides } from '@/lib/discounts'
 import { getProductBySlugFromDb, getProductCardsFromDb } from '@/lib/data/catalog-db'
@@ -83,11 +83,11 @@ export default async function ProductPage({ params }: Props) {
     .filter(p => p.id !== product.id && p.category?.slug === category?.slug)
     .slice(0, 4)
 
-  const discount = product.sale_price
-    ? getDiscountPercent(product.price, product.sale_price)
-    : null
-
-  const displayPrice = product.sale_price ?? product.price
+  const pricing = resolveSalePricing(product.price, product.sale_price)
+  const discount = pricing.discountPercent
+  const displayPrice = pricing.displayPrice
+  const basePrice = pricing.listPrice
+  const hasSale = pricing.salePrice != null
 
   const productCard = {
     id: product.id,
@@ -174,8 +174,8 @@ export default async function ProductPage({ params }: Props) {
             <ProductDetailPanel
               nameUa={product.name_ua}
               displayPrice={displayPrice}
-              basePrice={product.price}
-              hasSale={!!product.sale_price}
+              basePrice={basePrice}
+              hasSale={hasSale}
               stock={product.stock}
               brandName={brand?.name}
               categoryName={category?.name_ua}

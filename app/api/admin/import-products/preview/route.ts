@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/security/rateLimit'
-import { buildImportPreview } from '@/lib/import/drivex/run-import'
+import { buildExcelImportPreview } from '@/lib/import/excel/run-import'
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
-    const preview = await buildImportPreview(buffer)
+    const preview = await buildExcelImportPreview(buffer)
     return NextResponse.json(preview)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Не вдалося розібрати файл.'

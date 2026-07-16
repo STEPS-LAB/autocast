@@ -2,19 +2,22 @@ import type {
   ImportPreview,
   ImportPreviewItem,
   ImportResult,
-} from '@/lib/import/drivex/types'
+} from '@/lib/import/types'
 
-export const TORSSEN_OFFER_ID_SPEC_KEY = 'Torssen ID'
-export const TORSSEN_VENDOR_CODE_SPEC_KEY = 'Артикул'
-export const TORSSEN_SOURCE_URL_SPEC_KEY = 'Джерело'
+/** Dedup key for YML/XML offer updates (any supplier using YML). */
+export const YML_OFFER_ID_SPEC_KEY = 'Offer ID'
+/** Legacy key from earlier imports — still read for matching. */
+export const LEGACY_OFFER_ID_SPEC_KEY = 'Torssen ID'
+export const YML_VENDOR_CODE_SPEC_KEY = 'Артикул'
+export const YML_SOURCE_URL_SPEC_KEY = 'Джерело'
 
-export interface TorssenCategory {
+export interface YmlCategory {
   id: string
   name: string
   parentId: string | null
 }
 
-export interface ParsedTorssenOffer {
+export interface ParsedYmlOffer {
   offerId: string
   available: boolean
   name: string
@@ -31,9 +34,9 @@ export interface ParsedTorssenOffer {
   url: string | null
 }
 
-export interface TorssenParseResult {
-  categories: TorssenCategory[]
-  products: ParsedTorssenOffer[]
+export interface YmlParseResult {
+  categories: YmlCategory[]
+  products: ParsedYmlOffer[]
   skippedOutOfStock: number
   skippedDuplicateId: number
   skippedInvalid: number

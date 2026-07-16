@@ -5,8 +5,8 @@ const STOCK_MAP: Record<string, number> = {
   'нема': 0,
 }
 
-/** Текстова наявність з прайсу DriveX → числовий залишок. */
-export function parseDrivexStock(raw: unknown): { stock: number; label: string | null } {
+/** Textual stock labels (Багато/Мало/Немає) or numeric → stock qty. */
+export function parseExcelStock(raw: unknown): { stock: number; label: string | null } {
   if (raw == null) return { stock: 0, label: null }
 
   const label = String(raw).trim()

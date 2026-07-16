@@ -25,7 +25,7 @@ export default function Pagination({
   const totalPages = getTotalPages(safeTotalItems, safePageSize)
   const currentPage = clampPage(page, totalPages)
 
-  if (safeTotalItems <= safePageSize) return null
+  if (totalPages <= 1) return null
 
   function goTo(nextPage: number) {
     const safe = clampPage(nextPage, totalPages)

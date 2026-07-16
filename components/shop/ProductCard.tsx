@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 import { ShoppingCart, Heart } from 'lucide-react'
 import { useCartStore } from '@/lib/store/cart'
 import { useWishlistStore, selectIsWished } from '@/lib/store/wishlist'
-import { getDiscountPercent, cn, formatPrice } from '@/lib/utils'
+import { resolveSalePricing, cn, formatPrice } from '@/lib/utils'
 import {
   imageAltProduct,
   imageTitleProduct,
@@ -32,12 +32,11 @@ export default function ProductCard({ product }: ProductCardProps) {
   const wished = useWishlistStore(selectIsWished(displayProduct.id))
   const toggleWished = useWishlistStore(s => s.toggle)
 
-  const discount =
-    displayProduct.sale_price
-      ? getDiscountPercent(displayProduct.price, displayProduct.sale_price)
-      : null
-
-  const displayPrice = displayProduct.sale_price ?? displayProduct.price
+  const pricing = resolveSalePricing(displayProduct.price, displayProduct.sale_price)
+  const discount = pricing.discountPercent
+  const displayPrice = pricing.displayPrice
+  const listPrice = pricing.listPrice
+  const hasSale = pricing.salePrice != null
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
@@ -98,7 +97,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
-        {discount && (
+        {discount != null && discount > 0 && (
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             <Badge variant="error" className="text-xs">
               -{discount}%
@@ -155,9 +154,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           <span className="text-base font-bold text-text-primary price">
             {formatPrice(displayPrice)}
           </span>
-          {displayProduct.sale_price && (
+          {hasSale && (
             <span className="text-xs text-text-muted line-through price">
-              {formatPrice(displayProduct.price)}
+              {formatPrice(listPrice)}
             </span>
           )}
         </div>

@@ -1,26 +1,30 @@
-export const TORSSEN_FEEDS = [
+/**
+ * Optional presets for convenience. Any HTTPS `.xml` URL is accepted —
+ * these are just examples, not a vendor lock-in.
+ */
+export const KNOWN_YML_FEEDS = [
   {
     id: 'rozetkaua',
-    label: 'Rozetka UA (без HTML)',
+    label: 'Приклад: Rozetka UA (без HTML)',
     url: 'https://torssen.com/price/rozetkaua.xml',
     language: 'ua',
     hasHtmlDescription: false,
   },
   {
     id: 'rozetka_html_ua',
-    label: 'Rozetka UA (HTML-опис)',
+    label: 'Приклад: Rozetka UA (HTML-опис)',
     url: 'https://torssen.com/price/rozetka_html_ua.xml',
     language: 'ua',
     hasHtmlDescription: true,
   },
 ] as const
 
-export type TorssenFeedId = (typeof TORSSEN_FEEDS)[number]['id']
+export type KnownYmlFeedId = (typeof KNOWN_YML_FEEDS)[number]['id']
 
-export const DEFAULT_XML_FEED_URL = 'https://torssen.com/price/rozetkaua.xml'
+export const DEFAULT_XML_FEED_URL = KNOWN_YML_FEEDS[0].url
 
-export function getTorssenFeed(id: string) {
-  return TORSSEN_FEEDS.find(feed => feed.id === id) ?? null
+export function getKnownYmlFeed(id: string) {
+  return KNOWN_YML_FEEDS.find(feed => feed.id === id) ?? null
 }
 
 function isBlockedHostname(hostname: string): boolean {
@@ -52,12 +56,12 @@ function isBlockedHostname(hostname: string): boolean {
 }
 
 /** SSRF guard: HTTPS public XML only. */
-export function resolveTorssenFeedUrl(input: {
+export function resolveYmlFeedUrl(input: {
   feedId?: string | null
   url?: string | null
-}): { url: string; feedId: TorssenFeedId | null; hasHtmlDescription: boolean } {
+}): { url: string; feedId: KnownYmlFeedId | null; hasHtmlDescription: boolean } {
   if (input.feedId) {
-    const feed = getTorssenFeed(input.feedId)
+    const feed = getKnownYmlFeed(input.feedId)
     if (!feed) {
       throw new Error('Невідомий фід.')
     }
@@ -90,7 +94,7 @@ export function resolveTorssenFeedUrl(input: {
     throw new Error('Посилання має вести на файл .xml')
   }
 
-  const known = TORSSEN_FEEDS.find(feed => feed.url === parsed.toString() || feed.url === raw)
+  const known = KNOWN_YML_FEEDS.find(feed => feed.url === parsed.toString() || feed.url === raw)
   return {
     url: parsed.toString(),
     feedId: known?.id ?? null,

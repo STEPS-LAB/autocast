@@ -50,7 +50,7 @@ export default function ProductDetailPanel({
         {categoryName && (
           <Badge variant="muted">{categoryName}</Badge>
         )}
-        {discountPercent !== null && (
+        {discountPercent !== null && discountPercent > 0 && (
           <Badge variant="accent">-{discountPercent}%</Badge>
         )}
       </div>

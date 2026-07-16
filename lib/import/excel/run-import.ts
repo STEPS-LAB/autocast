@@ -1,19 +1,16 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { getSupabaseUrl } from '@/lib/supabase/env'
-import { resolveBrandId } from '@/lib/admin/resolve-brand'
-import { slugify } from '@/lib/utils'
-import { parseDrivexWorkbook } from './parser'
+import { slugify, slugifyName } from '@/lib/utils'
+import { resolveExcelCategoryIds } from './categories'
+import { parseExcelWorkbook } from './parser'
 import {
   DEALER_CODE_SPEC_KEY,
-  DRIVEX_BRAND_NAME,
-  DRIVEX_PRODUCT_SHEETS,
   type ImportPreview,
   type ImportPreviewItem,
   type ImportResult,
-  type ParsedDrivexProduct,
+  type ParsedExcelProduct,
 } from './types'
-import type { Brand } from '@/types'
 
 const BUCKET_NAME = 'product-images'
 const MAX_IMAGES_PER_PRODUCT = 10
@@ -25,7 +22,7 @@ type ProductRow = {
   specs: Record<string, string> | null
 }
 
-function buildSpecs(product: ParsedDrivexProduct): Record<string, string> {
+function buildSpecs(product: ParsedExcelProduct): Record<string, string> {
   const specs: Record<string, string> = {
     [DEALER_CODE_SPEC_KEY]: product.dealerCode,
   }
@@ -80,52 +77,6 @@ async function uploadImage(
   return data.publicUrl
 }
 
-async function resolveCategoryIds(
-  supabase: SupabaseClient,
-  sheetNames: string[]
-): Promise<Map<string, string>> {
-  const map = new Map<string, string>()
-  const { data: existing } = await supabase
-    .from('categories')
-    .select('id,name_ua,slug')
-    .in('name_ua', sheetNames)
-
-  for (const row of existing ?? []) {
-    map.set(row.name_ua, row.id)
-  }
-
-  let sortOrder = 100
-  for (const sheetName of sheetNames) {
-    if (map.has(sheetName)) continue
-    const slug = slugify(sheetName) || `category-${sortOrder}`
-    const { data: inserted, error } = await supabase
-      .from('categories')
-      .insert({
-        slug,
-        name_ua: sheetName,
-        parent_id: null,
-        image_url: null,
-        sort_order: sortOrder,
-      })
-      .select('id,name_ua')
-      .single()
-
-    sortOrder += 1
-    if (error) {
-      const { data: bySlug } = await supabase
-        .from('categories')
-        .select('id,name_ua')
-        .eq('slug', slug)
-        .maybeSingle()
-      if (bySlug) map.set(sheetName, bySlug.id)
-      continue
-    }
-    if (inserted) map.set(inserted.name_ua, inserted.id)
-  }
-
-  return map
-}
-
 async function loadExistingProducts(supabase: SupabaseClient): Promise<{
   byCode: Map<string, ProductRow>
   byName: Map<string, ProductRow>
@@ -150,9 +101,9 @@ async function uniqueSlug(
   excludeId?: string
 ): Promise<string> {
   const candidates = [
-    slugify(baseName),
-    slugify(`${baseName}-${dealerCode}`),
-    slugify(dealerCode),
+    slugifyName(baseName, ''),
+    slugifyName(`${baseName}-${dealerCode}`, ''),
+    slugify(dealerCode) || slugifyName(dealerCode, ''),
   ].filter(Boolean)
 
   for (const candidate of candidates) {
@@ -166,7 +117,7 @@ async function uniqueSlug(
 }
 
 function previewAction(
-  product: ParsedDrivexProduct,
+  product: ParsedExcelProduct,
   byCode: Map<string, ProductRow>
 ): ImportPreviewItem {
   const existing = byCode.get(product.dealerCode)
@@ -181,8 +132,8 @@ function previewAction(
   }
 }
 
-export async function buildImportPreview(buffer: Buffer): Promise<ImportPreview> {
-  const parsed = await parseDrivexWorkbook(buffer)
+export async function buildExcelImportPreview(buffer: Buffer): Promise<ImportPreview> {
+  const parsed = await parseExcelWorkbook(buffer)
   const supabase = await createServerClient()
   const { byCode, byName } = await loadExistingProducts(supabase)
 
@@ -205,23 +156,22 @@ export async function buildImportPreview(buffer: Buffer): Promise<ImportPreview>
     skippedDuplicateCode: parsed.skippedDuplicateCode,
     priceChanges: parsed.priceChanges.length,
     priceChangesMatched,
-    categories: [...DRIVEX_PRODUCT_SHEETS],
+    categories: [...new Set(parsed.products.map(p => p.sheet))].sort((a, b) =>
+      a.localeCompare(b, 'uk')
+    ),
     sample,
   }
 }
 
-export async function runDrivexImport(buffer: Buffer): Promise<ImportResult> {
-  const parsed = await parseDrivexWorkbook(buffer)
+export async function runExcelImport(buffer: Buffer): Promise<ImportResult> {
+  const parsed = await parseExcelWorkbook(buffer)
   const supabase = await createServerClient()
   const serviceClient = await getServiceClient()
   await ensureBucket(serviceClient)
 
-  const categoryIds = await resolveCategoryIds(supabase, [...DRIVEX_PRODUCT_SHEETS])
+  const sheetsUsed = [...new Set(parsed.products.map(p => p.sheet))]
+  const categoryIds = await resolveExcelCategoryIds(supabase, sheetsUsed)
   const { byCode, byName } = await loadExistingProducts(supabase)
-
-  const { data: brands } = await supabase.from('brands').select('id,name,logo_url')
-  const knownBrands = (brands ?? []) as Brand[]
-  const { brandId } = await resolveBrandId(supabase, knownBrands, DRIVEX_BRAND_NAME)
 
   const result: ImportResult = {
     created: 0,
@@ -254,7 +204,6 @@ export async function runDrivexImport(buffer: Buffer): Promise<ImportResult> {
             price: product.price,
             stock: product.stock,
             category_id: categoryId,
-            brand_id: brandId,
             specs,
           })
           .eq('id', existing.id)
@@ -273,7 +222,7 @@ export async function runDrivexImport(buffer: Buffer): Promise<ImportResult> {
             price: product.price,
             stock: product.stock,
             category_id: categoryId,
-            brand_id: brandId,
+            brand_id: null,
             specs,
             images: [],
             sale_price: null,

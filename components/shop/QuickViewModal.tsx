@@ -7,7 +7,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { useCartStore } from '@/lib/store/cart'
-import { formatPrice, getDiscountPercent } from '@/lib/utils'
+import { formatPrice, resolveSalePricing } from '@/lib/utils'
 import type { ProductCard } from '@/types'
 import { applyDiscountToProduct } from '@/lib/discounts'
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
@@ -29,10 +29,11 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
   if (!product) return null
   const discountedProduct = applyDiscountToProduct(product, overrides)
 
-  const discount = discountedProduct.sale_price
-    ? getDiscountPercent(discountedProduct.price, discountedProduct.sale_price)
-    : null
-  const displayPrice = discountedProduct.sale_price ?? discountedProduct.price
+  const pricing = resolveSalePricing(discountedProduct.price, discountedProduct.sale_price)
+  const discount = pricing.discountPercent
+  const displayPrice = pricing.displayPrice
+  const listPrice = pricing.listPrice
+  const hasSale = pricing.salePrice != null
 
   function handleAddToCart() {
     addItem(discountedProduct)
@@ -55,7 +56,7 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
               priority
             />
           )}
-          {discount && (
+          {discount != null && discount > 0 && (
             <div className="absolute top-2 left-2">
               <Badge variant="accent">-{discount}%</Badge>
             </div>
@@ -81,9 +82,9 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
             <span className="text-2xl font-bold text-text-primary price">
               {formatPrice(displayPrice)}
             </span>
-            {discountedProduct.sale_price && (
+            {hasSale && (
               <span className="text-sm text-text-muted line-through price">
-                {formatPrice(discountedProduct.price)}
+                {formatPrice(listPrice)}
               </span>
             )}
           </div>
