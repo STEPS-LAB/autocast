@@ -6,6 +6,8 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import ProductGrid from '@/components/shop/ProductGrid'
 import ProductFilters from '@/components/shop/ProductFilters'
+import ActiveFilters from '@/components/shop/ActiveFilters'
+import CategoryTiles from '@/components/shop/CategoryTiles'
 import SortSelect from '@/components/shop/SortSelect'
 import PageTransition from '@/components/layout/PageTransition'
 import Pagination from '@/components/ui/Pagination'
@@ -14,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
 import { pageRangeLabel } from '@/lib/pagination'
 import { getRootCategories } from '@/lib/shop/category-tree'
+import { countActiveFacetSelections, type Facet } from '@/lib/shop/facets'
 import type { Brand, Category, ProductCard } from '@/types'
 
 interface ShopContentProps {
@@ -34,7 +37,10 @@ interface ShopContentProps {
     minPrice?: number
     maxPrice?: number
     inStock?: boolean
+    specs?: Record<string, string[]>
   }
+  /** Spec-based facets available for the current category (empty on the hub). */
+  facets?: Facet[]
   query?: string
 }
 
@@ -50,6 +56,7 @@ export default function ShopContent({
   rootCategory = null,
   heading,
   filters,
+  facets = [],
   query,
 }: ShopContentProps) {
   const router = useRouter()
@@ -59,12 +66,17 @@ export default function ShopContent({
   const displayProducts = useDiscountedProductCards(products)
   const rootCategories = useMemo(() => getRootCategories(categories), [categories])
 
+  // Filters only exist on a selected-category page, never on the /shop hub.
+  const showFilters = mode === 'category'
+  const specCount = countActiveFacetSelections(filters.specs ?? {})
+
   const hasFilters =
     filters.categories.length > 0 ||
     filters.brands.length > 0 ||
     filters.minPrice !== undefined ||
     filters.maxPrice !== undefined ||
-    !!filters.inStock
+    !!filters.inStock ||
+    specCount > 0
 
   function handlePageChange(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString())
@@ -81,12 +93,21 @@ export default function ShopContent({
       <div className="container-xl py-10">
         <div className="mb-8">
           {mode === 'category' && (
-            <Link
-              href="/shop"
-              className="inline-block text-xs text-text-muted hover:text-accent mb-2 transition-colors"
-            >
-              ← Усі товари
-            </Link>
+            <nav aria-label="Хлібні крихти" className="mb-2 text-xs text-text-muted">
+              <Link href="/" className="hover:text-accent transition-colors">
+                Головна
+              </Link>
+              <span className="mx-1.5 text-border-light">›</span>
+              <Link href="/shop" className="hover:text-accent transition-colors">
+                Магазин
+              </Link>
+              {rootCategory && (
+                <>
+                  <span className="mx-1.5 text-border-light">›</span>
+                  <span className="text-text-secondary">{rootCategory.name_ua}</span>
+                </>
+              )}
+            </nav>
           )}
           <h1 className="text-headline text-text-primary mb-1">{heading}</h1>
           <p className="text-sm text-text-muted">
@@ -102,59 +123,62 @@ export default function ShopContent({
           </p>
         </div>
 
+        {mode === 'hub' && rootCategories.length > 0 && (
+          <CategoryTiles categories={rootCategories} variant="hub" />
+        )}
+
+        {mode === 'category' && rootCategories.length > 0 && (
+          <CategoryTiles
+            categories={rootCategories}
+            variant="compact"
+            activeSlug={rootCategory?.slug}
+          />
+        )}
+
         <div className="flex gap-8">
-          <div className="hidden lg:block w-56 shrink-0">
-            <div className="sticky top-24">
+          {showFilters && (
+            <div className="hidden lg:block w-56 shrink-0 self-start sticky top-24 max-h-[calc(100vh-6.5rem)]">
               <ProductFilters
                 filters={filters}
+                facets={facets}
                 categories={categories}
                 brands={brands}
                 mode={mode}
                 rootCategory={rootCategory}
+                scrollable
               />
             </div>
-          </div>
+          )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3 mb-6">
-              <button
-                type="button"
-                onClick={() => setFiltersOpen(true)}
-                className="lg:hidden flex items-center gap-2 h-9 px-3 bg-bg-surface border border-border rounded text-sm text-text-secondary hover:text-text-primary hover:border-border-light transition-colors"
-              >
-                <SlidersHorizontal size={14} />
-                Фільтри
-                {hasFilters && (
-                  <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">
-                    {filters.categories.length +
-                      filters.brands.length +
-                      (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) +
-                      (filters.inStock ? 1 : 0)}
-                  </span>
-                )}
-              </button>
+              {showFilters && (
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(true)}
+                  className="lg:hidden flex items-center gap-2 h-9 px-3 bg-bg-surface border border-border rounded text-sm text-text-secondary hover:text-text-primary hover:border-border-light transition-colors"
+                >
+                  <SlidersHorizontal size={14} />
+                  Фільтри
+                  {hasFilters && (
+                    <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">
+                      {filters.categories.length +
+                        filters.brands.length +
+                        (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) +
+                        (filters.inStock ? 1 : 0) +
+                        specCount}
+                    </span>
+                  )}
+                </button>
+              )}
               <div className="flex items-center gap-2 ml-auto">
                 <span className="text-xs text-text-muted hidden sm:block">Сортувати:</span>
                 <SortSelect />
               </div>
             </div>
 
-            {mode === 'hub' && rootCategories.length > 0 && (
-              <div className="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {rootCategories.map(cat => (
-                  <Link
-                    key={cat.id}
-                    href={`/shop/${cat.slug}`}
-                    className={cn(
-                      'rounded-md border border-border bg-bg-surface',
-                      'px-4 py-3.5 text-sm font-medium text-text-primary truncate',
-                      'hover:border-accent/40 hover:bg-bg-elevated transition-colors'
-                    )}
-                  >
-                    {cat.name_ua}
-                  </Link>
-                ))}
-              </div>
+            {showFilters && (
+              <ActiveFilters filters={filters} facets={facets} categories={categories} />
             )}
 
             {emptyCatalog ? (
@@ -179,7 +203,7 @@ export default function ShopContent({
       </div>
 
       <AnimatePresence>
-        {filtersOpen && (
+        {showFilters && filtersOpen && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -200,6 +224,7 @@ export default function ShopContent({
             >
               <ProductFilters
                 filters={filters}
+                facets={facets}
                 categories={categories}
                 brands={brands}
                 mode={mode}

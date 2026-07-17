@@ -69,12 +69,14 @@ async function ShopHub({ searchParams }: Props) {
       mode="hub"
       heading={heading}
       query={parsed.q}
+      facets={[]}
       filters={{
         categories: parsed.category,
         brands: parsed.brand,
         minPrice: parsed.minPrice,
         maxPrice: parsed.maxPrice,
         inStock: parsed.inStock,
+        specs: {},
       }}
     />
   )

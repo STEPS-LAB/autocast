@@ -9,7 +9,7 @@ import {
   DEFAULT_SHOP_PRODUCT_SORT,
   type ProductSortKey,
 } from '@/lib/product-sort'
-import type { Brand, Category, Product, ProductCard } from '@/types'
+import type { Brand, Category, Product, ProductCard, ProductCardWithSpecs } from '@/types'
 
 interface DbCategoryRow {
   id: string
@@ -112,6 +112,13 @@ function rowToProductCard(row: DbProductRow): ProductCard {
       ? { name_ua: category.name_ua, slug: category.slug }
       : undefined,
     brand: brand ? { name: brand.name } : undefined,
+  }
+}
+
+function rowToProductCardWithSpecs(row: DbProductRow): ProductCardWithSpecs {
+  return {
+    ...rowToProductCard(row),
+    specs: row.specs ?? {},
   }
 }
 
@@ -391,6 +398,53 @@ export async function getShopProductsPage(query: ShopProductsQuery): Promise<{
   } catch {
     return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
   }
+}
+
+const SHOP_CARD_WITH_SPECS_SELECT = `${SHOP_CARD_SELECT},specs`
+
+/** Max products loaded for in-memory facet filtering on a single category tree. */
+const CATEGORY_FACET_FETCH_LIMIT = 2000
+
+async function fetchCategoryProductsWithSpecs(
+  categoryIds: string[] | null
+): Promise<ProductCardWithSpecs[]> {
+  try {
+    const supabase = createStaticClient()
+    let dataQuery = supabase
+      .from('products')
+      .select(SHOP_CARD_WITH_SPECS_SELECT)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true })
+
+    if (categoryIds) {
+      if (categoryIds.length === 0) return []
+      dataQuery = dataQuery.in('category_id', categoryIds)
+    }
+
+    const { data, error } = await dataQuery.limit(CATEGORY_FACET_FETCH_LIMIT)
+    if (error || !data) return []
+    return (data as DbProductRow[]).map(rowToProductCardWithSpecs)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * All products (lean cards + specs) within a category subtree, cached per
+ * category-id set. Base/spec filtering, sorting and pagination are applied
+ * in memory by the caller so that free-form specs can be normalised into
+ * facets.
+ */
+export async function getCategoryProductsWithSpecs(
+  categoryIds: string[] | null
+): Promise<ProductCardWithSpecs[]> {
+  const cacheKey = categoryIds ? [...categoryIds].sort().join(',') : 'all'
+  const cached = unstable_cache(
+    () => fetchCategoryProductsWithSpecs(categoryIds),
+    ['shop-category-products-specs', cacheKey],
+    { revalidate: 60, tags: ['catalog-products'] }
+  )
+  return cached()
 }
 
 

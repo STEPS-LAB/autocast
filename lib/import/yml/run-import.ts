@@ -417,9 +417,9 @@ export async function runYmlImport(
           slug,
           name_ua: product.name,
           description_ua: product.description || product.name,
-          // YML: <price> = поточна (нижча), <price_old> = була (вища) → list/sale
-          price: product.oldPrice ?? product.price,
-          sale_price: product.oldPrice != null ? product.price : null,
+          // Знижки лише вручну в адмінці — з фіду беремо тільки актуальну ціну.
+          price: product.price,
+          sale_price: null,
           stock: product.stock,
           category_id: categoryId,
           brand_id: brandId,
@@ -462,8 +462,8 @@ export async function runYmlImport(
           .update({
             name_ua: product.name,
             description_ua: product.description || product.name,
-            price: product.oldPrice ?? product.price,
-            sale_price: product.oldPrice != null ? product.price : null,
+            price: product.price,
+            // sale_price не чіпаємо — ручні знижки зберігаються між імпортами
             stock: product.stock,
             category_id: categoryId,
             brand_id: brandId,

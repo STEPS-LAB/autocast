@@ -59,8 +59,10 @@ export default function AdminTable<T extends { id: string }>({
   }
 
   function isInteractiveElement(target: EventTarget | null) {
-    if (!(target instanceof HTMLElement)) return false
-    return Boolean(target.closest('a,button,input,select,textarea,label,[role="button"],[role="link"]'))
+    // Element (not HTMLElement): кліки по SVG-іконках у кнопках (lucide) теж мають блокувати rowHref
+    if (!(target instanceof Element)) return false
+    // Без [role="link"] — сам <tr> має role="link" і інакше блокував би всі кліки по рядку
+    return Boolean(target.closest('a,button,input,select,textarea,label,[role="button"]'))
   }
 
   function openRow(row: T) {

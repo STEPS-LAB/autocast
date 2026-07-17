@@ -1,9 +1,11 @@
+import { getPublicSpecEntries } from '@/lib/product/public-specs'
+
 interface ProductSpecsProps {
   specs: Record<string, string>
 }
 
 export default function ProductSpecs({ specs }: ProductSpecsProps) {
-  const entries = Object.entries(specs)
+  const entries = getPublicSpecEntries(specs)
   if (!entries.length) return null
 
   return (

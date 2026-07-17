@@ -28,6 +28,7 @@ export default function Header() {
   const pathname = usePathname()
   const isAdminPage = pathname.startsWith('/admin')
   const isServiceDetail = /^\/services\/[^/]+$/.test(pathname)
+  const isShopPage = pathname === '/shop' || pathname.startsWith('/shop/')
   const [scrolled, setScrolled] = useState(false)
   /** Avoid scroll-dependent chrome on the first client paint so SSR HTML matches hydration. */
   const [hasMounted, setHasMounted] = useState(false)
@@ -120,8 +121,11 @@ export default function Header() {
     unlockBodyScrollAfterMobileMenu()
   }, [])
 
-  const scrolledForShell = isAdminPage ? scrolled : isServiceDetail || (hasMounted && scrolled)
-  const publicDarkBar = !isAdminPage && (isServiceDetail || (hasMounted && scrolled))
+  const scrolledForShell = isAdminPage
+    ? scrolled
+    : isServiceDetail || (hasMounted && scrolled)
+  const publicDarkBar =
+    !isAdminPage && (isServiceDetail || (hasMounted && scrolled))
 
   return (
     <>
@@ -131,7 +135,9 @@ export default function Header() {
           !scrolledForShell
             ? isAdminPage
               ? 'border-b border-border/70 bg-bg-surface/95 backdrop-blur-xl'
-              : 'bg-transparent'
+              : isShopPage
+                ? 'bg-bg-primary'
+                : 'bg-transparent'
             : isAdminPage
               ? 'border-b border-border/70 bg-bg-surface/95 backdrop-blur-xl shadow-[0_10px_32px_rgba(0,0,0,0.22)]'
               : 'border-b-0 bg-graphite-deep/68 backdrop-blur-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.35)]'

@@ -49,6 +49,11 @@ export interface ProductCard {
   brand?: { name: string }
 }
 
+/** Lean card enriched with raw specs — used for spec-based shop faceting. */
+export interface ProductCardWithSpecs extends ProductCard {
+  specs: Record<string, string>
+}
+
 // ─── Service ───────────────────────────────────────────────────────
 export interface Service {
   id: string

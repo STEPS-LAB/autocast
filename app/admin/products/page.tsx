@@ -145,7 +145,7 @@ function AdminProductsPageInner() {
 
   async function syncCatalogAfterChange() {
     try {
-      await fetch('/api/admin/bootstrap', { method: 'POST' })
+      await fetch('/api/admin/revalidate-catalog', { method: 'POST' })
     } catch {
       // Ignore sync errors to keep CRUD responsive.
     }
@@ -564,7 +564,11 @@ function AdminProductsPageInner() {
         renderActions={(row) => (
           <>
             <button
-              onClick={() => openEditProductModal(row)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                openEditProductModal(row)
+              }}
               className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
               aria-label="Редагувати товар"
               title="Редагувати товар"
@@ -572,7 +576,11 @@ function AdminProductsPageInner() {
               <Pencil size={14} />
             </button>
             <button
-              onClick={() => handleDiscount(row)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDiscount(row)
+              }}
               className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
               aria-label="Додати знижку"
               title="Додати знижку"

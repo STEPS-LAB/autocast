@@ -198,7 +198,7 @@ export default function AdminImportProductsPage() {
 
       setResult(importResult)
       setStep('done')
-      void fetch('/api/admin/bootstrap', { method: 'POST' }).catch(() => {
+      void fetch('/api/admin/revalidate-catalog', { method: 'POST' }).catch(() => {
         // Кеш каталогу оновлюється також на сервері після імпорту.
       })
     } catch (err) {

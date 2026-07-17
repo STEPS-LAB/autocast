@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect, type ReactNode } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { buildCategoryMaps, getDirectChildren } from '@/lib/shop/category-tree'
+import type { Facet } from '@/lib/shop/facets'
 import type { Brand, Category } from '@/types'
 
 interface FiltersState {
@@ -15,16 +16,21 @@ interface FiltersState {
   minPrice?: number
   maxPrice?: number
   inStock?: boolean
+  specs?: Record<string, string[]>
 }
 
 interface ProductFiltersProps {
   filters: FiltersState
+  /** Spec-based facets with option counts for the current category. */
+  facets?: Facet[]
   onClose?: () => void
   categories: Category[]
   brands: Brand[]
   /** hub = /shop; category = /shop/[slug] with subcategory accordions */
   mode: 'hub' | 'category'
   rootCategory?: Category | null
+  /** Desktop sidebar: keep title fixed and scroll filter sections independently. */
+  scrollable?: boolean
 }
 
 const PRICE_RANGES = [
@@ -34,21 +40,111 @@ const PRICE_RANGES = [
   { label: 'Понад 10 000₴', min: 10000, max: 999999 },
 ]
 
+const OPTION_PREVIEW_LIMIT = 3
+
+/** Hover у стилі кнопки «Очистити» — легкий accent-фон. */
+const FILTER_OPTION_HOVER =
+  'hover:bg-accent/15 hover:text-text-primary transition-colors'
+
+function FilterAccordion({
+  id,
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  id: string
+  title: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <div className="mb-1 border-b border-border last:border-b-0">
+      <button
+        type="button"
+        id={`${id}-trigger`}
+        aria-expanded={open}
+        aria-controls={`${id}-panel`}
+        onClick={onToggle}
+        className="no-focus-outline w-full flex items-center justify-between gap-2 py-3 text-left outline-none"
+      >
+        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">{title}</h4>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.18 }}
+          className="text-text-muted shrink-0"
+        >
+          <ChevronDown size={14} />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={`${id}-panel`}
+            role="region"
+            aria-labelledby={`${id}-trigger`}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="pb-3">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function ShowMoreButton({
+  expanded,
+  hiddenCount,
+  onToggle,
+}: {
+  expanded: boolean
+  hiddenCount: number
+  onToggle: () => void
+}) {
+  if (hiddenCount <= 0) return null
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        'w-full flex items-center justify-between px-2 py-1.5 rounded-[10px] text-xs text-text-secondary',
+        FILTER_OPTION_HOVER
+      )}
+    >
+      <span>{expanded ? 'Згорнути' : `Показати більше (${hiddenCount})`}</span>
+      <ChevronDown size={14} className={cn('transition-transform', expanded && 'rotate-180')} />
+    </button>
+  )
+}
+
 export default function ProductFilters({
   filters,
+  facets = [],
   onClose,
   categories,
   brands,
   mode,
   rootCategory = null,
+  scrollable = false,
 }: ProductFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
-  const [brandsOpen, setBrandsOpen] = useState(false)
+  const [subOpenSections, setSubOpenSections] = useState<Record<string, boolean>>({})
+  const [accordionOpen, setAccordionOpen] = useState<Record<string, boolean>>({})
+  const [expandedLists, setExpandedLists] = useState<Record<string, boolean>>({})
   const [minInput, setMinInput] = useState('')
   const [maxInput, setMaxInput] = useState('')
+
+  const specFilters = filters.specs ?? {}
+  const valueFacets = facets.filter(f => f.type !== 'boolean')
+  const booleanFacets = facets.filter(f => f.type === 'boolean')
 
   const createURL = useCallback(
     (mutate: (params: URLSearchParams) => void) => {
@@ -64,23 +160,6 @@ export default function ProductFilters({
   function pushURL(mutate: (params: URLSearchParams) => void) {
     router.push(createURL(mutate), { scroll: false })
   }
-
-  function clearFiltersOnly() {
-    pushURL(params => {
-      params.delete('category')
-      params.delete('brand')
-      params.delete('minPrice')
-      params.delete('maxPrice')
-      params.delete('inStock')
-    })
-  }
-
-  const hasFilters =
-    filters.categories.length > 0 ||
-    filters.brands.length > 0 ||
-    filters.minPrice !== undefined ||
-    filters.maxPrice !== undefined ||
-    !!filters.inStock
 
   useEffect(() => {
     setMinInput(filters.minPrice === undefined ? '' : String(filters.minPrice))
@@ -99,7 +178,7 @@ export default function ProductFilters({
 
   useEffect(() => {
     if (filters.categories.length === 0) return
-    setOpenSections(prev => {
+    setSubOpenSections(prev => {
       const next = { ...prev }
       for (const node of subcategoryTree) {
         if (
@@ -113,6 +192,60 @@ export default function ProductFilters({
     })
   }, [filters.categories, subcategoryTree])
 
+  const valueFacetKeys = valueFacets.map(f => f.key).join(',')
+  const booleanFacetKeys = booleanFacets.map(f => f.key).join(',')
+
+  useEffect(() => {
+    setAccordionOpen(prev => {
+      const next = { ...prev }
+      const ensure = (id: string, forceOpen = false) => {
+        if (forceOpen) next[id] = true
+        else if (next[id] === undefined) next[id] = true
+      }
+
+      if (subcategoryTree.length > 0) ensure('subcategories', filters.categories.length > 0)
+      for (const key of valueFacetKeys.split(',').filter(Boolean)) {
+        ensure(`facet-${key}`, (specFilters[key] ?? []).length > 0)
+      }
+      if (booleanFacetKeys) {
+        ensure(
+          'features',
+          booleanFacetKeys.split(',').some(k => (specFilters[k] ?? []).length > 0)
+        )
+      }
+      ensure('price', filters.minPrice !== undefined || filters.maxPrice !== undefined)
+      ensure('brands', filters.brands.length > 0)
+      ensure('stock', !!filters.inStock)
+      return next
+    })
+  }, [
+    subcategoryTree.length,
+    valueFacetKeys,
+    booleanFacetKeys,
+    specFilters,
+    filters.categories.length,
+    filters.brands.length,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.inStock,
+  ])
+
+  function isAccordionOpen(id: string) {
+    return accordionOpen[id] !== false
+  }
+
+  function toggleAccordion(id: string) {
+    setAccordionOpen(prev => ({ ...prev, [id]: !(prev[id] !== false) }))
+  }
+
+  function isListExpanded(id: string) {
+    return !!expandedLists[id]
+  }
+
+  function toggleList(id: string) {
+    setExpandedLists(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
   function setCategories(next: string[]) {
     const unique = Array.from(new Set(next.map(s => s.trim()).filter(Boolean)))
     pushURL(params => {
@@ -121,7 +254,6 @@ export default function ProductFilters({
     })
   }
 
-  /** Одна підкатегорія за раз; повторний клік знімає вибір. */
   function selectCategory(slug: string) {
     if (filters.categories.length === 1 && filters.categories[0] === slug) {
       setCategories([])
@@ -173,44 +305,80 @@ export default function ProductFilters({
     })
   }
 
+  function isFacetValueOn(facetKey: string, value: string) {
+    return (specFilters[facetKey] ?? []).includes(value)
+  }
+
+  function toggleFacetValue(facetKey: string, value: string) {
+    const current = new Set(specFilters[facetKey] ?? [])
+    if (current.has(value)) current.delete(value)
+    else current.add(value)
+    pushURL(params => {
+      params.delete(facetKey)
+      for (const v of current) params.append(facetKey, v)
+    })
+  }
+
+  const visibleSubcategories = isListExpanded('subcategories')
+    ? subcategoryTree
+    : subcategoryTree.slice(0, OPTION_PREVIEW_LIMIT)
+
+  const visibleBrands = isListExpanded('brands')
+    ? brands
+    : brands.slice(0, OPTION_PREVIEW_LIMIT)
+
+  const visiblePriceRanges = isListExpanded('price-ranges')
+    ? PRICE_RANGES
+    : PRICE_RANGES.slice(0, OPTION_PREVIEW_LIMIT)
+
+  const visibleBooleanFacets = isListExpanded('features')
+    ? booleanFacets
+    : booleanFacets.slice(0, OPTION_PREVIEW_LIMIT)
+
   return (
-    <aside className="w-full">
-      <div className="flex items-center justify-between mb-5">
+    <aside
+      className={cn(
+        'w-full',
+        scrollable && 'flex h-full max-h-[calc(100vh-6.5rem)] flex-col min-h-0'
+      )}
+    >
+      <div
+        className={cn(
+          'flex items-center justify-between mb-3',
+          scrollable && 'shrink-0'
+        )}
+      >
         <div className="flex items-center gap-2">
           <SlidersHorizontal size={16} className="text-accent" />
           <h3 className="text-sm font-semibold text-text-primary">Фільтри</h3>
         </div>
-        <div className="flex items-center gap-2">
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={clearFiltersOnly}
-              className="text-xs text-text-muted hover:text-accent transition-colors"
-            >
-              Очистити
-            </button>
-          )}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 rounded-[10px] text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors lg:hidden"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-[10px] text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors lg:hidden"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
+      <div
+        className={cn(
+          scrollable && 'min-h-0 flex-1 overflow-y-auto overscroll-contain pr-[10px]'
+        )}
+      >
       {mode === 'category' && subcategoryTree.length > 0 && (
-        <div className="mb-6">
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-            Підкатегорії
-          </h4>
+        <FilterAccordion
+          id="subcategories"
+          title="Підкатегорії"
+          open={isAccordionOpen('subcategories')}
+          onToggle={() => toggleAccordion('subcategories')}
+        >
           <ul className="flex flex-col gap-1">
-            {subcategoryTree.map(node => {
+            {visibleSubcategories.map(node => {
               const hasKids = node.children.length > 0
-              const isOpen = !!openSections[node.slug]
+              const isOpen = !!subOpenSections[node.slug]
               const selected = filters.categories[0] === node.slug
               const childSelected = node.children.some(c => filters.categories[0] === c.slug)
 
@@ -220,7 +388,7 @@ export default function ProductFilters({
                     type="button"
                     onClick={() => {
                       if (hasKids) {
-                        setOpenSections(prev => ({ ...prev, [node.slug]: !prev[node.slug] }))
+                        setSubOpenSections(prev => ({ ...prev, [node.slug]: !prev[node.slug] }))
                         return
                       }
                       selectCategory(node.slug)
@@ -232,7 +400,7 @@ export default function ProductFilters({
                       'outline-none ring-0 border-0 shadow-none focus:outline-none focus-visible:outline-none',
                       selected || childSelected
                         ? 'bg-accent/15 text-text-primary font-medium'
-                        : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                        : cn('text-text-secondary', FILTER_OPTION_HOVER)
                     )}
                   >
                     <span className="truncate">{node.name_ua}</span>
@@ -266,7 +434,7 @@ export default function ProductFilters({
                               'outline-none ring-0 border-0 shadow-none focus:outline-none focus-visible:outline-none',
                               selected
                                 ? 'bg-accent/15 text-text-primary font-medium'
-                                : 'text-text-secondary hover:bg-bg-elevated'
+                                : cn('text-text-secondary', FILTER_OPTION_HOVER)
                             )}
                           >
                             Усі з «{node.name_ua}»
@@ -285,7 +453,7 @@ export default function ProductFilters({
                                   'outline-none ring-0 border-0 shadow-none focus:outline-none focus-visible:outline-none',
                                   childOn
                                     ? 'bg-accent/15 text-text-primary font-medium'
-                                    : 'text-text-secondary hover:bg-bg-elevated'
+                                    : cn('text-text-secondary', FILTER_OPTION_HOVER)
                                 )}
                               >
                                 {child.name_ua}
@@ -299,14 +467,113 @@ export default function ProductFilters({
                 </li>
               )
             })}
+            <li>
+              <ShowMoreButton
+                expanded={isListExpanded('subcategories')}
+                hiddenCount={subcategoryTree.length - OPTION_PREVIEW_LIMIT}
+                onToggle={() => toggleList('subcategories')}
+              />
+            </li>
           </ul>
-        </div>
+        </FilterAccordion>
       )}
 
-      <div className="mb-6">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-          Ціна
-        </h4>
+      {valueFacets.map(facet => {
+        const listId = `facet-${facet.key}`
+        const expanded = isListExpanded(listId)
+        const visible = expanded ? facet.options : facet.options.slice(0, OPTION_PREVIEW_LIMIT)
+        return (
+          <FilterAccordion
+            key={facet.key}
+            id={listId}
+            title={facet.label}
+            open={isAccordionOpen(listId)}
+            onToggle={() => toggleAccordion(listId)}
+          >
+            <ul className="flex flex-col gap-1">
+              {visible.map(option => (
+                <li key={option.value}>
+                  <label
+                    className={cn(
+                      'flex items-center justify-between gap-2 px-2 py-1.5 rounded-[10px] cursor-pointer',
+                      FILTER_OPTION_HOVER
+                    )}
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={isFacetValueOn(facet.key, option.value)}
+                        onChange={() => toggleFacetValue(facet.key, option.value)}
+                        className="size-4 accent-accent rounded shrink-0"
+                      />
+                      <span className="text-sm text-text-secondary truncate">{option.label}</span>
+                    </span>
+                    <span className="text-xs text-text-muted shrink-0">{option.count}</span>
+                  </label>
+                </li>
+              ))}
+              <li>
+                <ShowMoreButton
+                  expanded={expanded}
+                  hiddenCount={facet.options.length - OPTION_PREVIEW_LIMIT}
+                  onToggle={() => toggleList(listId)}
+                />
+              </li>
+            </ul>
+          </FilterAccordion>
+        )
+      })}
+
+      {booleanFacets.length > 0 && (
+        <FilterAccordion
+          id="features"
+          title="Можливості"
+          open={isAccordionOpen('features')}
+          onToggle={() => toggleAccordion('features')}
+        >
+          <ul className="flex flex-col gap-1">
+            {visibleBooleanFacets.map(facet => {
+              const option = facet.options[0]
+              if (!option) return null
+              return (
+                <li key={facet.key}>
+                  <label
+                    className={cn(
+                      'flex items-center justify-between gap-2 px-2 py-1.5 rounded-[10px] cursor-pointer',
+                      FILTER_OPTION_HOVER
+                    )}
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={isFacetValueOn(facet.key, option.value)}
+                        onChange={() => toggleFacetValue(facet.key, option.value)}
+                        className="size-4 accent-accent rounded shrink-0"
+                      />
+                      <span className="text-sm text-text-secondary truncate">{facet.label}</span>
+                    </span>
+                    <span className="text-xs text-text-muted shrink-0">{option.count}</span>
+                  </label>
+                </li>
+              )
+            })}
+            <li>
+              <ShowMoreButton
+                expanded={isListExpanded('features')}
+                hiddenCount={booleanFacets.length - OPTION_PREVIEW_LIMIT}
+                onToggle={() => toggleList('features')}
+              />
+            </li>
+          </ul>
+        </FilterAccordion>
+      )}
+
+      <FilterAccordion
+        id="price"
+        title="Ціна"
+        open={isAccordionOpen('price')}
+        onToggle={() => toggleAccordion('price')}
+      >
         <form
           onSubmit={e => {
             e.preventDefault()
@@ -335,9 +602,14 @@ export default function ProductFilters({
           </Button>
         </form>
         <ul className="mt-3 flex flex-col gap-1">
-          {PRICE_RANGES.map(range => (
+          {visiblePriceRanges.map(range => (
             <li key={range.label}>
-              <label className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] hover:bg-bg-elevated cursor-pointer">
+              <label
+                className={cn(
+                  'flex items-center gap-2 px-2 py-1.5 rounded-[10px] cursor-pointer',
+                  FILTER_OPTION_HOVER
+                )}
+              >
                 <input
                   type="checkbox"
                   checked={filters.minPrice === range.min && filters.maxPrice === range.max}
@@ -348,17 +620,31 @@ export default function ProductFilters({
               </label>
             </li>
           ))}
+          <li>
+            <ShowMoreButton
+              expanded={isListExpanded('price-ranges')}
+              hiddenCount={PRICE_RANGES.length - OPTION_PREVIEW_LIMIT}
+              onToggle={() => toggleList('price-ranges')}
+            />
+          </li>
         </ul>
-      </div>
+      </FilterAccordion>
 
-      <div className="mb-6">
-        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-          Бренд
-        </h4>
+      <FilterAccordion
+        id="brands"
+        title="Бренд"
+        open={isAccordionOpen('brands')}
+        onToggle={() => toggleAccordion('brands')}
+      >
         <ul className="flex flex-col gap-1">
-          {brands.slice(0, brandsOpen ? brands.length : 6).map(brand => (
+          {visibleBrands.map(brand => (
             <li key={brand.id}>
-              <label className="flex items-center gap-2 px-2 py-1.5 rounded-[10px] hover:bg-bg-elevated cursor-pointer">
+              <label
+                className={cn(
+                  'flex items-center gap-2 px-2 py-1.5 rounded-[10px] cursor-pointer',
+                  FILTER_OPTION_HOVER
+                )}
+              >
                 <input
                   type="checkbox"
                   checked={filters.brands.includes(brand.name)}
@@ -369,48 +655,35 @@ export default function ProductFilters({
               </label>
             </li>
           ))}
-          {brands.length > 6 && (
-            <li>
-              <button
-                type="button"
-                onClick={() => setBrandsOpen(v => !v)}
-                className="w-full flex items-center justify-between px-2 py-1.5 rounded-[10px] text-xs text-text-secondary hover:bg-bg-elevated"
-              >
-                <span>{brandsOpen ? 'Згорнути' : `Показати ще (${brands.length - 6})`}</span>
-                <ChevronDown
-                  size={14}
-                  className={cn('transition-transform', brandsOpen && 'rotate-180')}
-                />
-              </button>
-            </li>
-          )}
+          <li>
+            <ShowMoreButton
+              expanded={isListExpanded('brands')}
+              hiddenCount={brands.length - OPTION_PREVIEW_LIMIT}
+              onToggle={() => toggleList('brands')}
+            />
+          </li>
         </ul>
+      </FilterAccordion>
+
+      <FilterAccordion
+        id="stock"
+        title="Наявність"
+        open={isAccordionOpen('stock')}
+        onToggle={() => toggleAccordion('stock')}
+      >
+        <label className="flex items-center gap-2.5 cursor-pointer group px-2 py-1.5 rounded-[10px] hover:bg-accent/15 transition-colors">
+          <input
+            type="checkbox"
+            checked={!!filters.inStock}
+            onChange={e => toggleInStock(e.target.checked)}
+            className="size-4 accent-accent rounded"
+          />
+          <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">
+            Тільки в наявності
+          </span>
+        </label>
+      </FilterAccordion>
       </div>
-
-      <label className="flex items-center gap-2.5 cursor-pointer group">
-        <input
-          type="checkbox"
-          checked={!!filters.inStock}
-          onChange={e => toggleInStock(e.target.checked)}
-          className="size-4 accent-accent rounded"
-        />
-        <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors">
-          Тільки в наявності
-        </span>
-      </label>
-
-      {hasFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          fullWidth
-          onClick={clearFiltersOnly}
-          className="mt-6 border border-border"
-        >
-          <X size={14} />
-          Скинути фільтри
-        </Button>
-      )}
     </aside>
   )
 }

@@ -68,7 +68,7 @@ export default function AdminCategoriesPage() {
 
   async function syncCatalogAfterChange() {
     try {
-      await fetch('/api/admin/bootstrap', { method: 'POST' })
+      await fetch('/api/admin/revalidate-catalog', { method: 'POST' })
     } catch {
       // Ignore sync errors to keep CRUD responsive.
     }
@@ -101,19 +101,21 @@ export default function AdminCategoriesPage() {
   async function confirmDelete() {
     if (!deleteCategoryId) return
     const id = deleteCategoryId
-    const supabase = await getSupabase()
-    const { error } = await supabase.from('categories').delete().eq('id', id)
-    if (error) {
-      setDeleteError(
-        error.message?.toLowerCase().includes('violates foreign key constraint')
-          ? 'Неможливо видалити: ця категорія використовується у товарах.'
-          : 'Не вдалося видалити категорію.'
-      )
-      return
+    setDeleteError('')
+    try {
+      const response = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      })
+      const payload = (await response.json()) as { error?: string }
+      if (!response.ok) {
+        setDeleteError(payload.error ?? 'Не вдалося видалити категорію.')
+        return
+      }
+      setCategories(prev => prev.filter(c => c.id !== id))
+      setDeleteCategoryId(null)
+    } catch {
+      setDeleteError('Не вдалося видалити категорію.')
     }
-    setCategories(prev => prev.filter(c => c.id !== id))
-    setDeleteCategoryId(null)
-    await syncCatalogAfterChange()
   }
 
   function openCreateCategoryModal(parentId?: string | null) {

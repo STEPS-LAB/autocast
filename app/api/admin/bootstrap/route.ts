@@ -30,18 +30,16 @@ export async function POST(request: Request) {
 
   // Categories
   // IMPORTANT:
-  // Admin CRUD calls this route after each change. We must NOT overwrite
-  // real catalog data (e.g. renamed categories) with seed defaults.
-  // Therefore we only seed missing categories by slug.
-  const { data: existingCategories } = await supabase
+  // Only seed when the table is empty (first-time setup).
+  // Never re-insert "missing" seed slugs — that would undo intentional deletes
+  // from the admin categories UI.
+  const { count: existingCategoriesCount } = await supabase
     .from('categories')
-    .select('slug')
-  const existingSlugs = new Set((existingCategories ?? []).map(c => c.slug))
-  const missingCategories = CATEGORIES.filter(c => !existingSlugs.has(c.slug))
-  if (missingCategories.length > 0) {
+    .select('*', { count: 'exact', head: true })
+  if ((existingCategoriesCount ?? 0) === 0) {
     await supabase
       .from('categories')
-      .insert(missingCategories.map(category => ({
+      .insert(CATEGORIES.map(category => ({
         slug: category.slug,
         name_ua: category.name_ua,
         parent_id: null,
@@ -59,8 +57,7 @@ export async function POST(request: Request) {
   }
 
   // Intentionally do NOT upsert seed products here.
-  // Admin CRUD calls this route after each change; re-seeding PRODUCTS would
-  // flood the catalog with demo items and undo a real-only shop.
+  // Re-seeding PRODUCTS would flood the catalog with demo items.
 
   // Car makes/models
   for (const make of CAR_MAKES) {

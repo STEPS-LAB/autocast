@@ -205,7 +205,7 @@ function AdminNewProductPageInner() {
 
   async function syncCatalogAfterChange() {
     try {
-      await fetch('/api/admin/bootstrap', { method: 'POST' })
+      await fetch('/api/admin/revalidate-catalog', { method: 'POST' })
     } catch {
       // ignore
     }
