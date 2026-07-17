@@ -5,6 +5,7 @@ import { rateLimit } from '@/lib/security/rateLimit'
 import { shippingInfoSchema } from '@/lib/validators/checkout.schema'
 import { calculateShippingQuote } from '@/lib/shipping/calculateShipping'
 import { validateNovaPoshtaWarehouseAddress } from '@/lib/shipping/novaPoshta'
+import { effectiveUnitPrice } from '@/lib/utils'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
   const itemsTotal = roundMoney(
     normalizedItems.reduce((sum, item) => {
       const p = priceById.get(item.product_id)!
-      const unit = (p.sale_price ?? p.price)
+      const unit = effectiveUnitPrice(p.price, p.sale_price)
       return sum + unit * item.qty
     }, 0)
   )

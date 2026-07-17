@@ -13,10 +13,14 @@ import PageTransition from '@/components/layout/PageTransition'
 import Pagination from '@/components/ui/Pagination'
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
 import { pageRangeLabel } from '@/lib/pagination'
 import { getRootCategories } from '@/lib/shop/category-tree'
 import { countActiveFacetSelections, type Facet } from '@/lib/shop/facets'
+import {
+  countActiveVehicleSelections,
+  type VehicleFacets,
+  type VehicleSelections,
+} from '@/lib/shop/vehicle'
 import type { Brand, Category, ProductCard } from '@/types'
 
 interface ShopContentProps {
@@ -38,9 +42,12 @@ interface ShopContentProps {
     maxPrice?: number
     inStock?: boolean
     specs?: Record<string, string[]>
+    vehicle?: VehicleSelections
   }
   /** Spec-based facets available for the current category (empty on the hub). */
   facets?: Facet[]
+  /** Cascading make → model → year facets (empty when unsupported). */
+  vehicleFacets?: VehicleFacets
   query?: string
 }
 
@@ -57,18 +64,19 @@ export default function ShopContent({
   heading,
   filters,
   facets = [],
+  vehicleFacets = { makes: [], models: [], years: [] },
   query,
 }: ShopContentProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const displayProducts = useDiscountedProductCards(products)
   const rootCategories = useMemo(() => getRootCategories(categories), [categories])
 
   // Filters only exist on a selected-category page, never on the /shop hub.
   const showFilters = mode === 'category'
   const specCount = countActiveFacetSelections(filters.specs ?? {})
+  const vehicleCount = countActiveVehicleSelections(filters.vehicle ?? {})
 
   const hasFilters =
     filters.categories.length > 0 ||
@@ -76,7 +84,8 @@ export default function ShopContent({
     filters.minPrice !== undefined ||
     filters.maxPrice !== undefined ||
     !!filters.inStock ||
-    specCount > 0
+    specCount > 0 ||
+    vehicleCount > 0
 
   function handlePageChange(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString())
@@ -141,6 +150,7 @@ export default function ShopContent({
               <ProductFilters
                 filters={filters}
                 facets={facets}
+                vehicleFacets={vehicleFacets}
                 categories={categories}
                 brands={brands}
                 mode={mode}
@@ -166,7 +176,8 @@ export default function ShopContent({
                         filters.brands.length +
                         (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) +
                         (filters.inStock ? 1 : 0) +
-                        specCount}
+                        specCount +
+                        vehicleCount}
                     </span>
                   )}
                 </button>
@@ -178,7 +189,11 @@ export default function ShopContent({
             </div>
 
             {showFilters && (
-              <ActiveFilters filters={filters} facets={facets} categories={categories} />
+              <ActiveFilters
+                filters={filters}
+                facets={facets}
+                categories={categories}
+              />
             )}
 
             {emptyCatalog ? (
@@ -187,7 +202,7 @@ export default function ShopContent({
               </div>
             ) : (
               <>
-                <ProductGrid products={displayProducts} />
+                <ProductGrid products={products} />
                 {totalPages > 1 && (
                   <Pagination
                     page={page}
@@ -225,6 +240,7 @@ export default function ShopContent({
               <ProductFilters
                 filters={filters}
                 facets={facets}
+                vehicleFacets={vehicleFacets}
                 categories={categories}
                 brands={brands}
                 mode={mode}

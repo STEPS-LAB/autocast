@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown, Pencil, Percent, Plus, Upload } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
-import { cn } from '@/lib/utils'
+import { cn, resolveSalePricing } from '@/lib/utils'
 import { useAdminPrice } from '@/lib/hooks/useAdminPrice'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
@@ -153,9 +153,20 @@ function AdminProductsPageInner() {
 
   async function handleUpdate(id: string, key: string, value: string | number) {
     const supabase = await getSupabase()
-    await supabase.from('products').update({ [key]: value }).eq('id', id)
+    const patch: Record<string, string | number | null> = { [key]: value }
+
+    // Якщо нова ціна ≤ поточної sale_price — знімаємо невалідну знижку.
+    if (key === 'price' && typeof value === 'number') {
+      const row = products.find(p => p.id === id)
+      if (row?.sale_price != null && !(row.sale_price < value)) {
+        patch.sale_price = null
+      }
+    }
+
+    const { error } = await supabase.from('products').update(patch).eq('id', id)
+    if (error) return
     setProducts(prev => prev.map(p =>
-      p.id === id ? { ...p, [key]: value } : p
+      p.id === id ? { ...p, ...patch } : p
     ))
     await syncCatalogAfterChange()
   }
@@ -388,14 +399,21 @@ function AdminProductsPageInner() {
       label: 'Ціна',
       editable: true,
       type: 'number',
-      render: (row) => (
-        <div>
-          <span className="text-sm font-semibold text-text-primary price">{formatDual(row.price)}</span>
-          {row.sale_price && (
-            <p className="text-xs text-accent price">{formatDual(row.sale_price)}</p>
-          )}
-        </div>
-      ),
+      render: (row) => {
+        const pricing = resolveSalePricing(row.price, row.sale_price)
+        return (
+          <div>
+            <span className="text-sm font-semibold text-text-primary price">
+              {formatDual(pricing.displayPrice)}
+            </span>
+            {pricing.salePrice != null && (
+              <p className="text-xs text-text-muted line-through price">
+                {formatDual(pricing.listPrice)}
+              </p>
+            )}
+          </div>
+        )
+      },
     },
     {
       key: 'stock',
@@ -432,9 +450,8 @@ function AdminProductsPageInner() {
       : null
 
   function handleDiscount(row: ProductRow) {
-    const currentPercent = row.sale_price
-      ? Math.round(((row.price - row.sale_price) / row.price) * 100)
-      : 0
+    const pricing = resolveSalePricing(row.price, row.sale_price)
+    const currentPercent = pricing.discountPercent ?? 0
     setDiscountProductId(row.id)
     setDiscountInput(String(currentPercent))
     setDiscountError('')
@@ -451,7 +468,14 @@ function AdminProductsPageInner() {
 
     const percent = clampDiscountPercent(parsed)
     if (percent === 0) {
-      await supabase.from('products').update({ sale_price: null }).eq('id', discountProductId)
+      const { error } = await supabase
+        .from('products')
+        .update({ sale_price: null })
+        .eq('id', discountProductId)
+      if (error) {
+        setDiscountError(error.message || 'Не вдалося зняти знижку.')
+        return
+      }
       setProducts(prev => prev.map(p => (p.id === discountProductId ? { ...p, sale_price: null } : p)))
       clearDiscount(discountProductId)
       setDiscountProductId(null)
@@ -462,7 +486,18 @@ function AdminProductsPageInner() {
     const row = products.find(p => p.id === discountProductId)
     if (!row) return
     const nextSalePrice = salePriceFromPercent(row.price, percent)
-    await supabase.from('products').update({ sale_price: nextSalePrice }).eq('id', discountProductId)
+    if (!(nextSalePrice < row.price)) {
+      setDiscountError('Знижка не змінює ціну. Збільште відсоток.')
+      return
+    }
+    const { error } = await supabase
+      .from('products')
+      .update({ sale_price: nextSalePrice })
+      .eq('id', discountProductId)
+    if (error) {
+      setDiscountError(error.message || 'Не вдалося зберегти знижку.')
+      return
+    }
     setProducts(prev => prev.map(p =>
       p.id === discountProductId
         ? { ...p, sale_price: nextSalePrice }

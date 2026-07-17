@@ -119,11 +119,18 @@ export function truncate(str: string, length: number): string {
 }
 
 /**
- * Нормалізує пару price/sale_price: list = вища, sale = нижча.
- * У фідах інколи місця переплутані — UI завжди показує коректну знижку.
+ * Показує знижку лише коли sale_price явно нижча за price.
+ * Якщо sale_price відсутня, 0 або ≥ price — без знижки.
  */
 export function resolveSalePricing(price: number, salePrice: number | null | undefined) {
-  if (salePrice == null || !Number.isFinite(salePrice) || salePrice <= 0) {
+  if (
+    salePrice == null ||
+    !Number.isFinite(salePrice) ||
+    !Number.isFinite(price) ||
+    salePrice <= 0 ||
+    price <= 0 ||
+    salePrice >= price
+  ) {
     return {
       listPrice: price,
       salePrice: null as number | null,
@@ -131,17 +138,7 @@ export function resolveSalePricing(price: number, salePrice: number | null | und
       discountPercent: null as number | null,
     }
   }
-  const high = Math.max(price, salePrice)
-  const low = Math.min(price, salePrice)
-  if (!(high > low) || high <= 0) {
-    return {
-      listPrice: price,
-      salePrice: null as number | null,
-      displayPrice: price,
-      discountPercent: null as number | null,
-    }
-  }
-  const discountPercent = Math.round(((high - low) / high) * 100)
+  const discountPercent = Math.round(((price - salePrice) / price) * 100)
   if (discountPercent <= 0) {
     return {
       listPrice: price,
@@ -151,11 +148,16 @@ export function resolveSalePricing(price: number, salePrice: number | null | und
     }
   }
   return {
-    listPrice: high,
-    salePrice: low,
-    displayPrice: low,
+    listPrice: price,
+    salePrice,
+    displayPrice: salePrice,
     discountPercent,
   }
+}
+
+/** Ціна до сплати: sale_price якщо валідна знижка, інакше price. */
+export function effectiveUnitPrice(price: number, salePrice: number | null | undefined): number {
+  return resolveSalePricing(price, salePrice).displayPrice
 }
 
 export function getDiscountPercent(price: number, salePrice: number): number {

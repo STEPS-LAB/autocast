@@ -1,4 +1,4 @@
-import type { ProductCardWithSpecs } from '@/types'
+import type { ShopFacetRow } from '@/types'
 
 /**
  * Spec-based faceted filtering for the shop.
@@ -57,6 +57,9 @@ const RESERVED_PARAMS = new Set([
   'inStock',
   'sort',
   'page',
+  'vmake',
+  'vmodel',
+  'vyear',
 ])
 
 const BOOLEAN_YES = 'yes'
@@ -563,7 +566,7 @@ function sortOptions(config: FacetConfig, options: FacetOption[]): FacetOption[]
  * Facets/options with zero matches are omitted.
  */
 export function computeFacets(
-  products: ProductCardWithSpecs[],
+  products: Array<Pick<ShopFacetRow, 'specs'>>,
   configs: FacetConfig[]
 ): Facet[] {
   const facets: Facet[] = []

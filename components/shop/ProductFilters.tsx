@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { buildCategoryMaps, getDirectChildren } from '@/lib/shop/category-tree'
 import type { Facet } from '@/lib/shop/facets'
+import type { VehicleFacets, VehicleSelections } from '@/lib/shop/vehicle'
 import type { Brand, Category } from '@/types'
 
 interface FiltersState {
@@ -17,12 +18,15 @@ interface FiltersState {
   maxPrice?: number
   inStock?: boolean
   specs?: Record<string, string[]>
+  vehicle?: VehicleSelections
 }
 
 interface ProductFiltersProps {
   filters: FiltersState
   /** Spec-based facets with option counts for the current category. */
   facets?: Facet[]
+  /** Cascading make → model → year options (empty when unsupported). */
+  vehicleFacets?: VehicleFacets
   onClose?: () => void
   categories: Category[]
   brands: Brand[]
@@ -126,6 +130,7 @@ function ShowMoreButton({
 export default function ProductFilters({
   filters,
   facets = [],
+  vehicleFacets = { makes: [], models: [], years: [] },
   onClose,
   categories,
   brands,
@@ -143,8 +148,10 @@ export default function ProductFilters({
   const [maxInput, setMaxInput] = useState('')
 
   const specFilters = filters.specs ?? {}
+  const vehicle = filters.vehicle ?? {}
   const valueFacets = facets.filter(f => f.type !== 'boolean')
   const booleanFacets = facets.filter(f => f.type === 'boolean')
+  const showVehicle = vehicleFacets.makes.length > 0
 
   const createURL = useCallback(
     (mutate: (params: URLSearchParams) => void) => {
@@ -204,6 +211,11 @@ export default function ProductFilters({
       }
 
       if (subcategoryTree.length > 0) ensure('subcategories', filters.categories.length > 0)
+      if (showVehicle) {
+        ensure('vmake', !!vehicle.make)
+        if (vehicle.make) ensure('vmodel', !!vehicle.model)
+        if (vehicle.model) ensure('vyear', !!vehicle.year)
+      }
       for (const key of valueFacetKeys.split(',').filter(Boolean)) {
         ensure(`facet-${key}`, (specFilters[key] ?? []).length > 0)
       }
@@ -220,9 +232,13 @@ export default function ProductFilters({
     })
   }, [
     subcategoryTree.length,
+    showVehicle,
     valueFacetKeys,
     booleanFacetKeys,
     specFilters,
+    vehicle.make,
+    vehicle.model,
+    vehicle.year,
     filters.categories.length,
     filters.brands.length,
     filters.minPrice,
@@ -317,6 +333,87 @@ export default function ProductFilters({
       params.delete(facetKey)
       for (const v of current) params.append(facetKey, v)
     })
+  }
+
+  function selectVehicleMake(make: string) {
+    pushURL(params => {
+      if (vehicle.make === make) {
+        params.delete('vmake')
+        params.delete('vmodel')
+        params.delete('vyear')
+        return
+      }
+      params.set('vmake', make)
+      params.delete('vmodel')
+      params.delete('vyear')
+    })
+  }
+
+  function selectVehicleModel(model: string) {
+    pushURL(params => {
+      if (vehicle.model === model) {
+        params.delete('vmodel')
+        params.delete('vyear')
+        return
+      }
+      params.set('vmodel', model)
+      params.delete('vyear')
+    })
+  }
+
+  function selectVehicleYear(year: string) {
+    pushURL(params => {
+      if (vehicle.year === year) {
+        params.delete('vyear')
+        return
+      }
+      params.set('vyear', year)
+    })
+  }
+
+  function renderSingleSelectList(
+    listId: string,
+    options: Array<{ value: string; label: string; count: number }>,
+    selected: string | undefined,
+    onSelect: (value: string) => void
+  ) {
+    const expanded = isListExpanded(listId)
+    const visible = expanded ? options : options.slice(0, OPTION_PREVIEW_LIMIT)
+    return (
+      <ul className="flex flex-col gap-1">
+        {visible.map(option => {
+          const on = selected === option.value
+          return (
+            <li key={option.value}>
+              <label
+                className={cn(
+                  'flex items-center justify-between gap-2 px-2 py-1.5 rounded-[10px] cursor-pointer',
+                  FILTER_OPTION_HOVER
+                )}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => onSelect(option.value)}
+                    className="size-4 accent-accent rounded shrink-0"
+                  />
+                  <span className="text-sm text-text-secondary truncate">{option.label}</span>
+                </span>
+                <span className="text-xs text-text-muted shrink-0">{option.count}</span>
+              </label>
+            </li>
+          )
+        })}
+        <li>
+          <ShowMoreButton
+            expanded={expanded}
+            hiddenCount={options.length - OPTION_PREVIEW_LIMIT}
+            onToggle={() => toggleList(listId)}
+          />
+        </li>
+      </ul>
+    )
   }
 
   const visibleSubcategories = isListExpanded('subcategories')
@@ -476,6 +573,56 @@ export default function ProductFilters({
             </li>
           </ul>
         </FilterAccordion>
+      )}
+
+      {showVehicle && (
+        <>
+          <FilterAccordion
+            id="vmake"
+            title="Марка авто"
+            open={isAccordionOpen('vmake')}
+            onToggle={() => toggleAccordion('vmake')}
+          >
+            {renderSingleSelectList(
+              'vmake',
+              vehicleFacets.makes,
+              vehicle.make,
+              selectVehicleMake
+            )}
+          </FilterAccordion>
+
+          {vehicle.make && vehicleFacets.models.length > 0 && (
+            <FilterAccordion
+              id="vmodel"
+              title="Модель"
+              open={isAccordionOpen('vmodel')}
+              onToggle={() => toggleAccordion('vmodel')}
+            >
+              {renderSingleSelectList(
+                'vmodel',
+                vehicleFacets.models,
+                vehicle.model,
+                selectVehicleModel
+              )}
+            </FilterAccordion>
+          )}
+
+          {vehicle.make && vehicle.model && vehicleFacets.years.length > 0 && (
+            <FilterAccordion
+              id="vyear"
+              title="Рік"
+              open={isAccordionOpen('vyear')}
+              onToggle={() => toggleAccordion('vyear')}
+            >
+              {renderSingleSelectList(
+                'vyear',
+                vehicleFacets.years,
+                vehicle.year,
+                selectVehicleYear
+              )}
+            </FilterAccordion>
+          )}
+        </>
       )}
 
       {valueFacets.map(facet => {

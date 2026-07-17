@@ -1,3 +1,5 @@
+import { effectiveUnitPrice } from '@/lib/utils'
+
 export type ProductSortKey =
   | 'newest'
   | 'oldest'
@@ -26,8 +28,8 @@ export const ADMIN_PRODUCT_SORT_OPTIONS: { value: ProductSortKey; label: string 
   { value: 'stock_desc', label: 'Залишок: спадання' },
 ]
 
-export const DEFAULT_SHOP_PRODUCT_SORT: ProductSortKey = 'price_desc'
-export const DEFAULT_ADMIN_PRODUCT_SORT: ProductSortKey = 'stock_asc'
+export const DEFAULT_SHOP_PRODUCT_SORT: ProductSortKey = 'name_asc'
+export const DEFAULT_ADMIN_PRODUCT_SORT: ProductSortKey = 'name_asc'
 
 export function parseProductSortKey(
   raw: string | null | undefined,
@@ -62,10 +64,16 @@ export function sortProducts<T extends SortableProduct>(products: T[], sortKey: 
       sorted.sort((a, b) => b.name_ua.localeCompare(a.name_ua, 'uk'))
       break
     case 'price_asc':
-      sorted.sort((a, b) => (a.sale_price ?? a.price) - (b.sale_price ?? b.price))
+      sorted.sort(
+        (a, b) =>
+          effectiveUnitPrice(a.price, a.sale_price) - effectiveUnitPrice(b.price, b.sale_price)
+      )
       break
     case 'price_desc':
-      sorted.sort((a, b) => (b.sale_price ?? b.price) - (a.sale_price ?? a.price))
+      sorted.sort(
+        (a, b) =>
+          effectiveUnitPrice(b.price, b.sale_price) - effectiveUnitPrice(a.price, a.sale_price)
+      )
       break
     case 'stock_asc':
       sorted.sort((a, b) => a.stock - b.stock)

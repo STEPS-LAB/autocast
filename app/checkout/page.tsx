@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, ArrowLeft, ArrowRight, ShoppingBag } from 'lucide-react'
 import { useCartStore, selectCartTotal, selectCartCount } from '@/lib/store/cart'
 import { shippingInfoSchema, type ShippingInfoInput } from '@/lib/validators/checkout.schema'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, effectiveUnitPrice } from '@/lib/utils'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import CheckoutStepper from '@/components/checkout/CheckoutStepper'
@@ -299,7 +299,7 @@ export default function CheckoutPage() {
       items: items.map(item => ({
         product_id: item.product.id,
         qty: item.quantity,
-        unit_price: item.product.sale_price ?? item.product.price,
+        unit_price: effectiveUnitPrice(item.product.price, item.product.sale_price),
       })),
     }
     const response = await fetch('/api/orders', {
@@ -374,7 +374,7 @@ export default function CheckoutPage() {
                           <p className="text-xs text-text-muted mt-0.5">{item.quantity} шт.</p>
                         </div>
                         <span className="text-sm font-semibold text-text-primary price shrink-0">
-                          {formatPrice((item.product.sale_price ?? item.product.price) * item.quantity)}
+                          {formatPrice(effectiveUnitPrice(item.product.price, item.product.sale_price) * item.quantity)}
                         </span>
                       </motion.div>
                     ))}

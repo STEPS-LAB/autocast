@@ -3,7 +3,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { CartItem, ProductCard } from '@/types'
-import { generateId } from '@/lib/utils'
+import { generateId, effectiveUnitPrice } from '@/lib/utils'
 
 function closeWishlistDrawer() {
   // Lazy require avoids cart ↔ wishlist circular init while keeping a single drawer open.
@@ -91,7 +91,7 @@ export const useCartStore = create<CartStore>()(
 export const selectCartTotal = (state: CartStoreState) =>
   state.items.reduce(
     (sum, item) =>
-      sum + (item.product.sale_price ?? item.product.price) * item.quantity,
+      sum + effectiveUnitPrice(item.product.price, item.product.sale_price) * item.quantity,
     0
   )
 

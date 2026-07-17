@@ -331,12 +331,18 @@ export default function AdminImportProductsPage() {
             <p className="text-xs text-text-muted">
               Пропущено без наявності: {preview.skippedOutOfStock}, дублікатів коду:{' '}
               {preview.skippedDuplicateCode}.
-              {mode === 'excel' && (
+              {(mode === 'excel' || mode === 'xml') && preview.priceChanges > 0 && (
                 <>
                   {' '}
-                  Змін цін: {preview.priceChanges} (знайдено в каталозі: {preview.priceChangesMatched}
-                  ).
+                  Змін цін: {preview.priceChanges}
+                  {mode === 'excel' && (
+                    <> (знайдено в каталозі: {preview.priceChangesMatched})</>
+                  )}
+                  .
                 </>
+              )}
+              {mode === 'xml' && (
+                <> Незмінені товари з каталогу не оновлюються повторно.</>
               )}
             </p>
             <div>
@@ -382,7 +388,13 @@ export default function AdminImportProductsPage() {
                         <td className="py-2 pr-3">{item.price} ₴</td>
                         <td className="py-2 pr-3">{item.stock}</td>
                         <td className="py-2 pr-3">{item.imageCount}</td>
-                        <td className="py-2">{item.action === 'create' ? 'Створити' : 'Оновити'}</td>
+                        <td className="py-2">
+                          {item.action === 'create'
+                            ? 'Створити'
+                            : item.action === 'skip'
+                              ? 'Без змін'
+                              : 'Оновити'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -433,7 +445,10 @@ export default function AdminImportProductsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <Stat label="Створено" value={result.created} />
               <Stat label="Оновлено" value={result.updated} />
-              {mode === 'excel' && <Stat label="Цін оновлено" value={result.priceUpdates} />}
+              {(mode === 'excel' || result.priceUpdates > 0) && (
+                <Stat label="Цін оновлено" value={result.priceUpdates} />
+              )}
+              <Stat label="Без змін / пропущено" value={result.skipped} />
               <Stat
                 label={mode === 'xml' ? 'Фото (URL)' : 'Фото завантажено'}
                 value={result.imagesUploaded}

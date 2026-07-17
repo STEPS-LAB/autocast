@@ -7,8 +7,6 @@ import { useCartStore } from '@/lib/store/cart'
 import { useWishlistStore, selectIsWished } from '@/lib/store/wishlist'
 import { cn } from '@/lib/utils'
 import type { ProductCard } from '@/types'
-import { applyDiscountToProduct } from '@/lib/discounts'
-import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
 
 interface AddToCartProps {
   product: ProductCard
@@ -21,9 +19,7 @@ export default function AddToCart({ product, sticky, qty: qtyProp, onQtyChange }
   const [qtyInternal, setQtyInternal] = useState(1)
   const [added, setAdded] = useState(false)
   const addItem = useCartStore(s => s.addItem)
-  const overrides = useDiscountStore(selectDiscountOverrides)
-  const displayProduct = applyDiscountToProduct(product, overrides)
-  const wished = useWishlistStore(selectIsWished(displayProduct.id))
+  const wished = useWishlistStore(selectIsWished(product.id))
   const toggleWished = useWishlistStore(s => s.toggle)
   const qty = qtyProp ?? qtyInternal
 
@@ -33,18 +29,18 @@ export default function AddToCart({ product, sticky, qty: qtyProp, onQtyChange }
   }, [qtyProp])
 
   function setQty(next: number) {
-    const clamped = Math.max(1, Math.min(displayProduct.stock, next))
+    const clamped = Math.max(1, Math.min(product.stock, next))
     if (onQtyChange) onQtyChange(clamped)
     if (qtyProp === undefined) setQtyInternal(clamped)
   }
 
   function handleAdd() {
-    addItem(displayProduct, qty)
+    addItem(product, qty)
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }
 
-  if (displayProduct.stock === 0) {
+  if (product.stock === 0) {
     return (
       <div className={cn(
         'flex items-center justify-center h-12 w-full min-w-0 max-w-full rounded border border-border text-text-muted text-sm px-3',
@@ -120,7 +116,7 @@ export default function AddToCart({ product, sticky, qty: qtyProp, onQtyChange }
       {/* Wishlist */}
       <button
         type="button"
-        onClick={() => toggleWished(displayProduct)}
+        onClick={() => toggleWished(product)}
         className={cn(
           'h-12 w-12 rounded border border-border flex items-center justify-center',
           'text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors',

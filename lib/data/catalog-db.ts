@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createStaticClient } from '@/lib/supabase/static'
 import { fetchAllCategories } from '@/lib/data/categories'
@@ -9,7 +10,7 @@ import {
   DEFAULT_SHOP_PRODUCT_SORT,
   type ProductSortKey,
 } from '@/lib/product-sort'
-import type { Brand, Category, Product, ProductCard, ProductCardWithSpecs } from '@/types'
+import type { Brand, Category, Product, ProductCard, ShopFacetRow } from '@/types'
 
 interface DbCategoryRow {
   id: string
@@ -99,13 +100,15 @@ function rowToProduct(row: DbProductRow): Product {
 function rowToProductCard(row: DbProductRow): ProductCard {
   const category = unwrapRelation(row.category)
   const brand = unwrapRelation(row.brand)
+  const images = row.images ?? []
   return {
     id: row.id,
     slug: row.slug,
     name_ua: row.name_ua,
     price: Number(row.price),
     sale_price: row.sale_price === null ? null : Number(row.sale_price),
-    images: row.images ?? [],
+    // Shop cards / quick-view only use the first image; keep the payload lean.
+    images: images.length > 0 ? [images[0]!] : [],
     stock: row.stock,
     created_at: row.created_at,
     category: category
@@ -115,10 +118,18 @@ function rowToProductCard(row: DbProductRow): ProductCard {
   }
 }
 
-function rowToProductCardWithSpecs(row: DbProductRow): ProductCardWithSpecs {
+function rowToShopFacetRow(row: DbProductRow): ShopFacetRow {
+  const brand = unwrapRelation(row.brand)
   return {
-    ...rowToProductCard(row),
+    id: row.id,
+    slug: row.slug,
+    name_ua: row.name_ua,
+    price: Number(row.price),
+    sale_price: row.sale_price === null ? null : Number(row.sale_price),
+    stock: row.stock,
+    created_at: row.created_at,
     specs: row.specs ?? {},
+    brand: brand ? { name: brand.name } : undefined,
   }
 }
 
@@ -400,51 +411,100 @@ export async function getShopProductsPage(query: ShopProductsQuery): Promise<{
   }
 }
 
-const SHOP_CARD_WITH_SPECS_SELECT = `${SHOP_CARD_SELECT},specs`
+/** Slim select for category facet index — no images / category joins. */
+const SHOP_FACET_INDEX_SELECT = `
+  id,slug,name_ua,price,sale_price,stock,created_at,specs,
+  brand:brands(name)
+`
 
-/** Max products loaded for in-memory facet filtering on a single category tree. */
-const CATEGORY_FACET_FETCH_LIMIT = 2000
+/** PostgREST caps each response at ~1000 rows — page through the full set. */
+const FACET_FETCH_PAGE_SIZE = 1000
 
-async function fetchCategoryProductsWithSpecs(
+/**
+ * Soft ceiling so a runaway query cannot blow memory. Multimedia alone is
+ * already >2k SKUs; raise if the catalog grows past this.
+ */
+const CATEGORY_FACET_FETCH_LIMIT = 10_000
+
+async function fetchCategoryFacetIndex(
   categoryIds: string[] | null
-): Promise<ProductCardWithSpecs[]> {
+): Promise<ShopFacetRow[]> {
   try {
     const supabase = createStaticClient()
-    let dataQuery = supabase
-      .from('products')
-      .select(SHOP_CARD_WITH_SPECS_SELECT)
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: true })
+    const rows: ShopFacetRow[] = []
+    let from = 0
 
-    if (categoryIds) {
-      if (categoryIds.length === 0) return []
-      dataQuery = dataQuery.in('category_id', categoryIds)
+    while (from < CATEGORY_FACET_FETCH_LIMIT) {
+      const to = Math.min(from + FACET_FETCH_PAGE_SIZE - 1, CATEGORY_FACET_FETCH_LIMIT - 1)
+      let dataQuery = supabase
+        .from('products')
+        .select(SHOP_FACET_INDEX_SELECT)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to)
+
+      if (categoryIds) {
+        if (categoryIds.length === 0) return []
+        dataQuery = dataQuery.in('category_id', categoryIds)
+      }
+
+      const { data, error } = await dataQuery
+      if (error || !data) break
+
+      rows.push(...(data as DbProductRow[]).map(rowToShopFacetRow))
+      if (data.length < FACET_FETCH_PAGE_SIZE) break
+      from += FACET_FETCH_PAGE_SIZE
     }
 
-    const { data, error } = await dataQuery.limit(CATEGORY_FACET_FETCH_LIMIT)
-    if (error || !data) return []
-    return (data as DbProductRow[]).map(rowToProductCardWithSpecs)
+    return rows
   } catch {
     return []
   }
 }
 
 /**
- * All products (lean cards + specs) within a category subtree, cached per
- * category-id set. Base/spec filtering, sorting and pagination are applied
- * in memory by the caller so that free-form specs can be normalised into
- * facets.
+ * Slim category index (id / name / specs / price…) for in-memory facets.
+ *
+ * Not wrapped in `unstable_cache`: a full multimedia tree can still exceed the
+ * Next.js Data Cache ~2MB limit. React `cache()` dedupes within a request.
+ * Full product cards (with images) are loaded only for the current page via
+ * `getProductCardsByIds`.
  */
-export async function getCategoryProductsWithSpecs(
+const getCategoryFacetIndexCached = cache(
+  async (cacheKey: string): Promise<ShopFacetRow[]> => {
+    const categoryIds =
+      cacheKey === 'all' ? null : cacheKey.split(',').filter(Boolean)
+    return fetchCategoryFacetIndex(categoryIds)
+  }
+)
+
+export async function getCategoryFacetIndex(
   categoryIds: string[] | null
-): Promise<ProductCardWithSpecs[]> {
+): Promise<ShopFacetRow[]> {
   const cacheKey = categoryIds ? [...categoryIds].sort().join(',') : 'all'
-  const cached = unstable_cache(
-    () => fetchCategoryProductsWithSpecs(categoryIds),
-    ['shop-category-products-specs', cacheKey],
-    { revalidate: 60, tags: ['catalog-products'] }
-  )
-  return cached()
+  return getCategoryFacetIndexCached(cacheKey)
+}
+
+/** Full shop cards for a page of IDs, preserving `ids` order. */
+export async function getProductCardsByIds(ids: string[]): Promise<ProductCard[]> {
+  if (ids.length === 0) return []
+
+  try {
+    const supabase = createStaticClient()
+    const { data, error } = await supabase
+      .from('products')
+      .select(SHOP_CARD_SELECT)
+      .in('id', ids)
+
+    if (error || !data) return []
+
+    const byId = new Map(
+      (data as DbProductRow[]).map(row => [row.id, rowToProductCard(row)])
+    )
+    return ids.map(id => byId.get(id)).filter((p): p is ProductCard => !!p)
+  } catch {
+    return []
+  }
 }
 
 

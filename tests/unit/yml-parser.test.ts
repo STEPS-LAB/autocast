@@ -66,6 +66,58 @@ describe('YML / XML catalog parser', () => {
     expect(product?.description).toContain('Опис ламп')
   })
 
+  it('maps feed discount into DB price/sale_price shape', async () => {
+    const { dbPricingFromYmlOffer } = await import('@/lib/import/yml/pricing')
+    expect(dbPricingFromYmlOffer({ price: 2893, oldPrice: 3616 })).toEqual({
+      price: 3616,
+      sale_price: 2893,
+    })
+  })
+
+  it('skips DB update when product payload is unchanged', async () => {
+    const { productNeedsUpdate, pricingNeedsUpdate } = await import(
+      '@/lib/import/yml/product-diff'
+    )
+    const existing = {
+      name_ua: 'Лампи',
+      description_ua: 'Опис',
+      price: '3616',
+      sale_price: '2893',
+      stock: '4',
+      category_id: 'cat-1',
+      brand_id: 'brand-1',
+      specs: { 'Offer ID': '614', Цоколь: 'H11' },
+      images: ['https://example.com/a.jpg'],
+    }
+    const next = {
+      name_ua: 'Лампи',
+      description_ua: 'Опис',
+      price: 3616,
+      sale_price: 2893,
+      stock: 4,
+      category_id: 'cat-1',
+      brand_id: 'brand-1',
+      specs: { 'Offer ID': '614', Цоколь: 'H11' },
+      images: ['https://example.com/a.jpg'],
+    }
+    expect(productNeedsUpdate(existing, next)).toBe(false)
+    expect(pricingNeedsUpdate(existing, next)).toBe(false)
+
+    expect(
+      productNeedsUpdate(existing, { ...next, price: 4000, sale_price: 3200 })
+    ).toBe(true)
+    expect(
+      pricingNeedsUpdate(existing, { ...next, price: 4000, sale_price: 3200 })
+    ).toBe(true)
+    expect(productNeedsUpdate(existing, { ...next, stock: 1 })).toBe(true)
+    expect(
+      productNeedsUpdate(existing, {
+        ...next,
+        specs: { 'Offer ID': '614', Цоколь: 'H7' },
+      })
+    ).toBe(true)
+  })
+
   it('streams whole catalog and skips out of stock', async () => {
     const stream = Readable.from([SAMPLE_YML])
     const parsed = await parseYmlStream(stream)

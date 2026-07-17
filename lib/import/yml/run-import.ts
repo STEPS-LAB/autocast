@@ -4,6 +4,13 @@ import { fetchAllCategories } from '@/lib/data/categories'
 import { slugify, slugifyName } from '@/lib/utils'
 import { buildCategoryImportPlan, formatCategoryPath, resolveFeedCategoryIdAtMaxDepth } from './category-tree'
 import { parseYmlFromUrl } from './parser'
+import { dbPricingFromYmlOffer } from './pricing'
+import {
+  pricingNeedsUpdate,
+  productNeedsUpdate,
+  type ProductDiffRow,
+  type ProductWritePayload,
+} from './product-diff'
 import {
   LEGACY_OFFER_ID_SPEC_KEY,
   YML_OFFER_ID_SPEC_KEY,
@@ -20,12 +27,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 const MAX_IMAGES_PER_PRODUCT = 10
 const WRITE_CONCURRENCY = 8
+const PRODUCT_DIFF_SELECT =
+  'id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images'
 
-type ProductRow = {
+type ProductRow = ProductDiffRow & {
   id: string
   slug: string
-  name_ua: string
-  specs: Record<string, string> | null
 }
 
 function buildSpecs(product: ParsedYmlOffer): Record<string, string> {
@@ -208,7 +215,7 @@ async function loadExistingByOfferId(supabase: SupabaseClient): Promise<Map<stri
   while (true) {
     const { data, error } = await supabase
       .from('products')
-      .select('id,slug,name_ua,specs')
+      .select(PRODUCT_DIFF_SELECT)
       .range(from, from + PAGE - 1)
     if (error) throw new Error(error.message)
     const page = (data ?? []) as ProductRow[]
@@ -221,6 +228,27 @@ async function loadExistingByOfferId(supabase: SupabaseClient): Promise<Map<stri
   }
 
   return byOfferId
+}
+
+function buildWritePayload(
+  product: ParsedYmlOffer,
+  categoryId: string,
+  brandId: string | null,
+  specs: Record<string, string>,
+  images: string[]
+): ProductWritePayload {
+  const pricing = dbPricingFromYmlOffer(product)
+  return {
+    name_ua: product.name,
+    description_ua: product.description || product.name,
+    price: pricing.price,
+    sale_price: pricing.sale_price,
+    stock: product.stock,
+    category_id: categoryId,
+    brand_id: brandId,
+    specs,
+    images,
+  }
 }
 
 function buildSlugCandidates(baseName: string, offerId: string): string[] {
@@ -281,11 +309,32 @@ async function mapPool<T>(
   await Promise.all(runners)
 }
 
+function previewAction(
+  product: ParsedYmlOffer,
+  existing: ProductRow | undefined
+): { action: ImportPreviewItem['action']; reason?: string; priceChanged: boolean } {
+  if (!existing) return { action: 'create', priceChanged: false }
+
+  const specs = buildSpecs(product)
+  const images = product.pictures.slice(0, MAX_IMAGES_PER_PRODUCT)
+  // Preview cannot cheaply resolve category/brand; compare commercial fields.
+  const payload = buildWritePayload(product, existing.category_id ?? '', existing.brand_id, specs, images)
+  const priceChanged = pricingNeedsUpdate(existing, payload)
+  if (
+    !productNeedsUpdate(existing, payload, { ignoreCategoryAndBrand: true })
+  ) {
+    return { action: 'skip', reason: 'без змін', priceChanged: false }
+  }
+  return { action: 'update', priceChanged }
+}
+
 function previewItem(
   product: ParsedYmlOffer,
   byOfferId: Map<string, ProductRow>,
   categoryLabel: string
 ): ImportPreviewItem {
+  const existing = byOfferId.get(product.offerId)
+  const { action, reason } = previewAction(product, existing)
   return {
     dealerCode: product.offerId,
     name: product.name,
@@ -293,7 +342,8 @@ function previewItem(
     price: product.price,
     stock: product.stock,
     imageCount: product.pictures.length,
-    action: byOfferId.has(product.offerId) ? 'update' : 'create',
+    action,
+    reason,
   }
 }
 
@@ -302,11 +352,27 @@ export async function buildYmlImportPreview(url: string): Promise<ImportPreview>
   const supabase = await createServerClient()
   const byOfferId = await loadExistingByOfferId(supabase)
 
+  let toCreate = 0
+  let toUpdate = 0
+  let unchanged = 0
+  let priceChanges = 0
+  let priceChangesMatched = 0
+
+  for (const product of parsed.products) {
+    const existing = byOfferId.get(product.offerId)
+    const { action, priceChanged } = previewAction(product, existing)
+    if (action === 'create') toCreate += 1
+    else if (action === 'update') toUpdate += 1
+    else unchanged += 1
+    if (priceChanged) {
+      priceChanges += 1
+      if (existing) priceChangesMatched += 1
+    }
+  }
+
   const sample = parsed.products.slice(0, 20).map(product =>
     previewItem(product, byOfferId, formatCategoryPath(parsed.categories, product.categoryId))
   )
-  const toCreate = parsed.products.filter(product => !byOfferId.has(product.offerId)).length
-  const toUpdate = parsed.products.length - toCreate
 
   const usedLeafIds = [...new Set(parsed.products.map(p => p.categoryId))]
   const categories = [
@@ -317,11 +383,15 @@ export async function buildYmlImportPreview(url: string): Promise<ImportPreview>
     totalParsed: parsed.products.length,
     toCreate,
     toUpdate,
-    skipped: parsed.skippedOutOfStock + parsed.skippedDuplicateId + parsed.skippedInvalid,
+    skipped:
+      parsed.skippedOutOfStock +
+      parsed.skippedDuplicateId +
+      parsed.skippedInvalid +
+      unchanged,
     skippedOutOfStock: parsed.skippedOutOfStock,
     skippedDuplicateCode: parsed.skippedDuplicateId,
-    priceChanges: 0,
-    priceChangesMatched: 0,
+    priceChanges,
+    priceChangesMatched,
     categories,
     sample,
   }
@@ -411,15 +481,15 @@ export async function runYmlImport(
 
     for (let attempt = 0; attempt < 4; attempt++) {
       const slug = await uniqueSlug(supabase, product.name, product.offerId, reservedSlugs)
+      const pricing = dbPricingFromYmlOffer(product)
       const { data: inserted, error } = await supabase
         .from('products')
         .insert({
           slug,
           name_ua: product.name,
           description_ua: product.description || product.name,
-          // Знижки лише вручну в адмінці — з фіду беремо тільки актуальну ціну.
-          price: product.price,
-          sale_price: null,
+          price: pricing.price,
+          sale_price: pricing.sale_price,
           stock: product.stock,
           category_id: categoryId,
           brand_id: brandId,
@@ -427,7 +497,7 @@ export async function runYmlImport(
           images,
           is_featured: false,
         })
-        .select('id,slug,name_ua,specs')
+        .select(PRODUCT_DIFF_SELECT)
         .single()
 
       if (!error && inserted) return inserted as ProductRow
@@ -455,24 +525,31 @@ export async function runYmlImport(
       const specs = buildSpecs(product)
       const images = product.pictures.slice(0, MAX_IMAGES_PER_PRODUCT)
       const existing = byOfferId.get(product.offerId)
+      const payload = buildWritePayload(product, categoryId, brandId, specs, images)
 
       if (existing) {
+        if (!productNeedsUpdate(existing, payload)) {
+          result.skipped += 1
+          return
+        }
+
         const { error } = await supabase
           .from('products')
           .update({
-            name_ua: product.name,
-            description_ua: product.description || product.name,
-            price: product.price,
-            // sale_price не чіпаємо — ручні знижки зберігаються між імпортами
-            stock: product.stock,
-            category_id: categoryId,
-            brand_id: brandId,
-            specs,
-            images,
+            name_ua: payload.name_ua,
+            description_ua: payload.description_ua,
+            price: payload.price,
+            sale_price: payload.sale_price,
+            stock: payload.stock,
+            category_id: payload.category_id,
+            brand_id: payload.brand_id,
+            specs: payload.specs,
+            images: payload.images,
           })
           .eq('id', existing.id)
 
         if (error) throw new Error(error.message)
+        if (pricingNeedsUpdate(existing, payload)) result.priceUpdates += 1
         result.updated += 1
         result.imagesUploaded += images.length
         return

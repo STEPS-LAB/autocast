@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Heart, ShoppingCart, Trash2, X } from 'lucide-react'
 import { useWishlistStore, selectWishlistCount } from '@/lib/store/wishlist'
 import { useCartStore } from '@/lib/store/cart'
-import { formatPrice, cn } from '@/lib/utils'
+import { formatPrice, resolveSalePricing, cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import DocumentBodyPortal, { DRAWER_BACKDROP_Z, DRAWER_PANEL_Z } from '@/components/layout/DocumentBodyPortal'
 import {
@@ -134,7 +134,9 @@ export default function WishlistDrawer() {
               ) : (
                 <ul className="flex flex-col gap-4">
                   <AnimatePresence initial={false}>
-                    {items.map(product => (
+                    {items.map(product => {
+                      const pricing = resolveSalePricing(product.price, product.sale_price)
+                      return (
                       <motion.li
                         key={product.id}
                         initial={{ opacity: 0, x: 12 }}
@@ -176,11 +178,11 @@ export default function WishlistDrawer() {
 
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-sm font-semibold text-accent price">
-                              {formatPrice(product.sale_price ?? product.price)}
+                              {formatPrice(pricing.displayPrice)}
                             </span>
-                            {product.sale_price && (
+                            {pricing.salePrice != null && (
                               <span className="text-xs text-text-muted line-through">
-                                {formatPrice(product.price)}
+                                {formatPrice(pricing.listPrice)}
                               </span>
                             )}
                           </div>
@@ -207,7 +209,8 @@ export default function WishlistDrawer() {
                           </div>
                         </div>
                       </motion.li>
-                    ))}
+                      )
+                    })}
                   </AnimatePresence>
                 </ul>
               )}

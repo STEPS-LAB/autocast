@@ -54,6 +54,22 @@ export interface ProductCardWithSpecs extends ProductCard {
   specs: Record<string, string>
 }
 
+/**
+ * Slim category index row for in-memory facets / filters / sort.
+ * No images or category joins — full cards are fetched only for the current page.
+ */
+export interface ShopFacetRow {
+  id: string
+  slug: string
+  name_ua: string
+  price: number
+  sale_price: number | null
+  stock: number
+  created_at?: string
+  specs: Record<string, string>
+  brand?: { name: string }
+}
+
 // ─── Service ───────────────────────────────────────────────────────
 export interface Service {
   id: string

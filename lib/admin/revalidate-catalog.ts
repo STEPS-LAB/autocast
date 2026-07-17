@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 export function revalidateCatalogCache() {
   revalidateTag('catalog-products', 'max')
   revalidateTag('catalog-categories', 'max')
-  revalidatePath('/shop')
+  revalidatePath('/shop', 'layout')
+  revalidatePath('/product', 'layout')
   revalidatePath('/admin/products')
 }

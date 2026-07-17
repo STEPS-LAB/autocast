@@ -2,7 +2,12 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import ShopContent from '@/components/shop/ShopContent'
-import { getBrands, getCategories, getCategoryProductsWithSpecs } from '@/lib/data/catalog-db'
+import {
+  getBrands,
+  getCategories,
+  getCategoryFacetIndex,
+  getProductCardsByIds,
+} from '@/lib/data/catalog-db'
 import { resolveShopCategoryIds } from '@/lib/shop/category-tree'
 import { parseShopSearchParams } from '@/lib/shop/search-params'
 import {
@@ -11,9 +16,15 @@ import {
   matchesFacets,
   parseFacetSelections,
 } from '@/lib/shop/facets'
+import {
+  buildVehicleFacets,
+  matchesVehicle,
+  parseVehicle,
+  parseVehicleSelections,
+  rootSupportsVehicleFilters,
+} from '@/lib/shop/vehicle'
 import { sortProducts } from '@/lib/product-sort'
 import { clampPage, getTotalPages, SHOP_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
-import type { ProductCard } from '@/types'
 import {
   categoryDescriptionFallback,
   categoryNameFallback,
@@ -64,11 +75,14 @@ async function CategoryShop({ params, searchParams }: Props) {
   const categoryIds = resolveShopCategoryIds(categories, root.slug, parsed.category)
   const facetConfigs = getFacetConfigs(root.slug)
   const facetSelections = parseFacetSelections(sp, facetConfigs)
+  const vehicleEnabled = rootSupportsVehicleFilters(facetConfigs)
+  const vehicleSelected = vehicleEnabled ? parseVehicleSelections(sp) : {}
 
-  const allProducts = await getCategoryProductsWithSpecs(categoryIds)
+  // Slim index (no images) for facets / filters / sort; full cards only for this page.
+  const index = await getCategoryFacetIndex(categoryIds)
 
   const brandNamesInCategory = new Set(
-    allProducts.map(p => p.brand?.name).filter((name): name is string => !!name)
+    index.map(p => p.brand?.name).filter((name): name is string => !!name)
   )
   const categoryBrands = brands.filter(b => brandNamesInCategory.has(b.name))
 
@@ -76,7 +90,7 @@ async function CategoryShop({ params, searchParams }: Props) {
   // options can be derived from the same normalised spec data.
   const brandSet = new Set(parsed.brand)
   const q = parsed.q?.toLowerCase()
-  const baseFiltered = allProducts.filter(p => {
+  const baseFiltered = index.filter(p => {
     if (brandSet.size > 0 && !(p.brand && brandSet.has(p.brand.name))) return false
     if (parsed.minPrice !== undefined && p.price < parsed.minPrice) return false
     if (parsed.maxPrice !== undefined && p.price > parsed.maxPrice) return false
@@ -87,11 +101,26 @@ async function CategoryShop({ params, searchParams }: Props) {
 
   // Facet options reflect everything matching the base filters (not narrowed by
   // the facet selection itself, so users can keep multi-selecting).
-  const facets = computeFacets(baseFiltered, facetConfigs)
-
-  const filtered = baseFiltered.filter(p =>
-    matchesFacets(p.specs, facetSelections, facetConfigs)
+  // When the vehicle cascade is active, hide the flat `carmake` facet — make
+  // selection is handled by vmake → vmodel → vyear instead.
+  const facets = computeFacets(baseFiltered, facetConfigs).filter(
+    f => !(vehicleEnabled && f.key === 'carmake')
   )
+
+  const vehicleFacets = vehicleEnabled
+    ? buildVehicleFacets(baseFiltered, vehicleSelected)
+    : { makes: [], models: [], years: [] }
+
+  const filtered = baseFiltered.filter(p => {
+    if (!matchesFacets(p.specs, facetSelections, facetConfigs)) return false
+    if (
+      vehicleEnabled &&
+      !matchesVehicle(parseVehicle(p.name_ua, p.specs), vehicleSelected)
+    ) {
+      return false
+    }
+    return true
+  })
 
   const sorted = sortProducts(filtered, parsed.sort)
   const total = sorted.length
@@ -99,18 +128,8 @@ async function CategoryShop({ params, searchParams }: Props) {
   const totalPages = getTotalPages(total, pageSize)
   const page = clampPage(parsed.page, totalPages)
   const from = (page - 1) * pageSize
-  const products: ProductCard[] = sorted.slice(from, from + pageSize).map(p => ({
-    id: p.id,
-    slug: p.slug,
-    name_ua: p.name_ua,
-    price: p.price,
-    sale_price: p.sale_price,
-    images: p.images,
-    stock: p.stock,
-    created_at: p.created_at,
-    category: p.category,
-    brand: p.brand,
-  }))
+  const pageIds = sorted.slice(from, from + pageSize).map(p => p.id)
+  const products = await getProductCardsByIds(pageIds)
 
   return (
     <ShopContent
@@ -126,6 +145,7 @@ async function CategoryShop({ params, searchParams }: Props) {
       heading={root.name_ua}
       query={parsed.q}
       facets={facets}
+      vehicleFacets={vehicleFacets}
       filters={{
         categories: parsed.category,
         brands: parsed.brand,
@@ -133,6 +153,7 @@ async function CategoryShop({ params, searchParams }: Props) {
         maxPrice: parsed.maxPrice,
         inStock: parsed.inStock,
         specs: facetSelections,
+        vehicle: vehicleSelected,
       }}
     />
   )

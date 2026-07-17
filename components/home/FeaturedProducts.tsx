@@ -6,8 +6,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Clock3 } from 'lucide-react'
 import ProductCard from '@/components/shop/ProductCard'
 import { getFeaturedProducts } from '@/lib/data/seed'
-import { formatPrice } from '@/lib/utils'
-import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
+import { formatPrice, resolveSalePricing } from '@/lib/utils'
 import {
   imageAltProduct,
   imageTitleProduct,
@@ -15,8 +14,24 @@ import {
   linkTitleProduct,
 } from '@/lib/seo/accessibility'
 
+function OfferPrice({ price, salePrice }: { price: number; salePrice: number | null }) {
+  const pricing = resolveSalePricing(price, salePrice)
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-bold text-text-primary font-sans tabular-nums">
+        {formatPrice(pricing.displayPrice)}
+      </span>
+      {pricing.salePrice != null && (
+        <span className="text-[11px] text-text-muted line-through font-sans tabular-nums">
+          {formatPrice(pricing.listPrice)}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export default function FeaturedProducts() {
-  const products = useDiscountedProductCards(getFeaturedProducts()).slice(0, 8)
+  const products = getFeaturedProducts().slice(0, 8)
   const offerProducts = products.slice(0, 4)
 
   return (
@@ -64,16 +79,7 @@ export default function FeaturedProducts() {
                   </span>
                 </div>
                 <p className="text-xs text-text-muted line-clamp-2 mb-1">{product.name_ua}</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-text-primary font-sans tabular-nums">
-                    {formatPrice(product.sale_price ?? product.price)}
-                  </span>
-                  {product.sale_price && (
-                    <span className="text-[11px] text-text-muted line-through font-sans tabular-nums">
-                      {formatPrice(product.price)}
-                    </span>
-                  )}
-                </div>
+                <OfferPrice price={product.price} salePrice={product.sale_price} />
               </Link>
             ))}
           </div>

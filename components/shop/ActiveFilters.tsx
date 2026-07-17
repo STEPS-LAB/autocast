@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import type { Facet } from '@/lib/shop/facets'
+import type { VehicleSelections } from '@/lib/shop/vehicle'
 import type { Category } from '@/types'
 
 export interface ActiveFiltersState {
@@ -15,6 +16,7 @@ export interface ActiveFiltersState {
   maxPrice?: number
   inStock?: boolean
   specs?: Record<string, string[]>
+  vehicle?: VehicleSelections
 }
 
 interface ActiveFilterChip {
@@ -37,6 +39,7 @@ function buildChips(
   const chips: ActiveFilterChip[] = []
   const categoryBySlug = new Map(categories.map(c => [c.slug, c]))
   const facetByKey = new Map(facets.map(f => [f.key, f]))
+  const vehicle = filters.vehicle ?? {}
 
   for (const slug of filters.categories) {
     const name = categoryBySlug.get(slug)?.name_ua ?? slug
@@ -47,6 +50,37 @@ function buildChips(
         const next = params.getAll('category').filter(v => v !== slug)
         params.delete('category')
         for (const v of next) params.append('category', v)
+      },
+    })
+  }
+
+  if (vehicle.make) {
+    chips.push({
+      id: 'vehicle:make',
+      label: `Марка: ${vehicle.make}`,
+      remove: params => {
+        params.delete('vmake')
+        params.delete('vmodel')
+        params.delete('vyear')
+      },
+    })
+  }
+  if (vehicle.model) {
+    chips.push({
+      id: 'vehicle:model',
+      label: `Модель: ${vehicle.model}`,
+      remove: params => {
+        params.delete('vmodel')
+        params.delete('vyear')
+      },
+    })
+  }
+  if (vehicle.year) {
+    chips.push({
+      id: 'vehicle:year',
+      label: `Рік: ${vehicle.year}`,
+      remove: params => {
+        params.delete('vyear')
       },
     })
   }
@@ -151,6 +185,9 @@ export default function ActiveFilters({
       params.delete('minPrice')
       params.delete('maxPrice')
       params.delete('inStock')
+      params.delete('vmake')
+      params.delete('vmodel')
+      params.delete('vyear')
       for (const facet of facets) params.delete(facet.key)
       for (const key of Object.keys(filters.specs ?? {})) params.delete(key)
     })
