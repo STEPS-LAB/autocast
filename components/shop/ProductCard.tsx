@@ -19,9 +19,10 @@ import type { ProductCard as ProductCardType } from '@/types'
 
 interface ProductCardProps {
   product: ProductCardType
+  className?: string
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, className }: ProductCardProps) {
   const [imgError, setImgError] = useState(false)
   const router = useRouter()
   const addItem = useCartStore(s => s.addItem)
@@ -56,7 +57,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       className={cn(
         'group relative bg-bg-surface border border-border rounded-[10px] overflow-hidden flex flex-col cursor-pointer',
         'shadow-[0_10px_22px_rgba(0,0,0,0.10)] hover:shadow-[0_14px_32px_rgba(0,0,0,0.16)] transition-shadow',
-        product.stock === 0 && 'opacity-60 saturate-0'
+        product.stock === 0 && 'opacity-60 saturate-0',
+        className
       )}
     >
       {/* Image */}
