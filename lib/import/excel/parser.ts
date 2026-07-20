@@ -49,7 +49,7 @@ function extractSheetImages(
   const byRow = new Map<number, ExcelImage[]>()
 
   for (const image of worksheet.getImages()) {
-    const media = workbook.getImage(image.imageId)
+    const media = workbook.getImage(Number(image.imageId))
     if (!media?.buffer) continue
 
     const excelRow = image.range.tl.nativeRow + 1
@@ -194,7 +194,8 @@ function findPriceChangesWorksheet(workbook: ExcelJS.Workbook): ExcelJS.Workshee
  */
 export async function parseExcelWorkbook(buffer: Buffer): Promise<ExcelParseResult> {
   const workbook = new ExcelJS.Workbook()
-  await workbook.xlsx.load(buffer)
+  // ExcelJS Buffer typings disagree with Node's Buffer<ArrayBufferLike>
+  await workbook.xlsx.load(buffer as never)
 
   let allProducts: ParsedExcelProduct[] = []
   let skippedOutOfStock = 0
