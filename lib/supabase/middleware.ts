@@ -40,7 +40,10 @@ export async function updateSession(request: NextRequest) {
   // Admin UI: require a non-expired session cookie. Role check in app/admin/layout.tsx.
   if (request.nextUrl.pathname.startsWith('/admin') && !user) {
     const url = request.nextUrl.clone()
+    const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`
     url.pathname = '/login'
+    url.search = ''
+    url.searchParams.set('next', nextPath)
     return NextResponse.redirect(url)
   }
 

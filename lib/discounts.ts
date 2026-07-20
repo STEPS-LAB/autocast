@@ -13,7 +13,12 @@ export function clampDiscountPercent(value: number): number {
 
 export function salePriceFromPercent(price: number, percent: number): number {
   const safePercent = clampDiscountPercent(percent)
-  const sale = Math.round(price * (1 - safePercent / 100))
+  if (safePercent <= 0 || !Number.isFinite(price) || price <= 0) return 0
+  const sale = Math.round(price * (1 - safePercent / 100) * 100) / 100
+  // Гарантуємо sale_price < price, інакше UI не покаже знижку.
+  if (sale >= price) {
+    return Math.max(0, Math.round((price - 0.01) * 100) / 100)
+  }
   return Math.max(0, sale)
 }
 
@@ -23,6 +28,9 @@ export function applyDiscountToProduct<T extends Product | ProductCard>(
 ): T {
   const percent = overrides[product.id]
   if (percent === undefined) return product
+  if (percent <= 0) {
+    return { ...product, sale_price: null }
+  }
   return {
     ...product,
     sale_price: salePriceFromPercent(product.price, percent),

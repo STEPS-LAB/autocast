@@ -1,11 +1,10 @@
 'use client'
 
-import { type ChangeEvent, useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
+import { useEffect, useMemo, useState } from 'react'
 import type { Category } from '@/types'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { generateId, slugify } from '@/lib/utils'
+import { generateId, slugifyName } from '@/lib/utils'
 import { Check, ChevronDown, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import CategoryCombobox from '@/components/admin/CategoryCombobox'
@@ -30,11 +29,6 @@ export default function AdminCategoriesPage() {
   const [addingError, setAddingError] = useState('')
   const [addingSaving, setAddingSaving] = useState(false)
   const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null)
-  const [photoEditCategoryId, setPhotoEditCategoryId] = useState<string | null>(null)
-  const [photoEditDataUrl, setPhotoEditDataUrl] = useState('')
-  const [photoEditFileName, setPhotoEditFileName] = useState('')
-  const [photoEditError, setPhotoEditError] = useState('')
-  const [photoSaving, setPhotoSaving] = useState(false)
 
   async function getSupabase() {
     const mod = await import('@/lib/supabase/client')
@@ -44,15 +38,27 @@ export default function AdminCategoriesPage() {
   useEffect(() => {
     let isMounted = true
     async function loadCategories() {
-      const supabase = await getSupabase()
-      const { data } = await supabase
-        .from('categories')
-        .select('id,slug,name_ua,parent_id,image_url,sort_order')
-        .order('sort_order', { ascending: true })
-      if (isMounted && data) {
-        setCategories(data)
+      try {
+        const response = await fetch('/api/admin/categories', { cache: 'no-store' })
+        const payload = (await response.json()) as {
+          error?: string
+          categories?: Category[]
+        }
+        if (!isMounted) return
+        if (!response.ok) {
+          console.error(payload.error ?? 'Не вдалося завантажити категорії')
+          setCategories([])
+        } else {
+          setCategories(payload.categories ?? [])
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error(err)
+          setCategories([])
+        }
+      } finally {
+        if (isMounted) setLoading(false)
       }
-      if (isMounted) setLoading(false)
     }
     void loadCategories()
     return () => {
@@ -62,7 +68,7 @@ export default function AdminCategoriesPage() {
 
   async function syncCatalogAfterChange() {
     try {
-      await fetch('/api/admin/bootstrap', { method: 'POST' })
+      await fetch('/api/admin/revalidate-catalog', { method: 'POST' })
     } catch {
       // Ignore sync errors to keep CRUD responsive.
     }
@@ -74,7 +80,7 @@ export default function AdminCategoriesPage() {
     const isTempSlug = !!row?.slug && row.slug.startsWith('temp-')
     const payload: Record<string, string | number | null> = { [key]: value as any }
     if (key === 'name_ua' && typeof value === 'string' && isTempSlug) {
-      const nextSlug = slugify(value.trim())
+      const nextSlug = slugifyName(value.trim(), '')
       if (nextSlug) payload['slug'] = nextSlug
     }
     await supabase.from('categories').update(payload).eq('id', id)
@@ -95,19 +101,21 @@ export default function AdminCategoriesPage() {
   async function confirmDelete() {
     if (!deleteCategoryId) return
     const id = deleteCategoryId
-    const supabase = await getSupabase()
-    const { error } = await supabase.from('categories').delete().eq('id', id)
-    if (error) {
-      setDeleteError(
-        error.message?.toLowerCase().includes('violates foreign key constraint')
-          ? 'Неможливо видалити: ця категорія використовується у товарах.'
-          : 'Не вдалося видалити категорію.'
-      )
-      return
+    setDeleteError('')
+    try {
+      const response = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      })
+      const payload = (await response.json()) as { error?: string }
+      if (!response.ok) {
+        setDeleteError(payload.error ?? 'Не вдалося видалити категорію.')
+        return
+      }
+      setCategories(prev => prev.filter(c => c.id !== id))
+      setDeleteCategoryId(null)
+    } catch {
+      setDeleteError('Не вдалося видалити категорію.')
     }
-    setCategories(prev => prev.filter(c => c.id !== id))
-    setDeleteCategoryId(null)
-    await syncCatalogAfterChange()
   }
 
   function openCreateCategoryModal(parentId?: string | null) {
@@ -123,7 +131,7 @@ export default function AdminCategoriesPage() {
     const parentId = newCategoryParentId
     const siblings = categories.filter(c => (c.parent_id ?? null) === parentId)
     const nextSort = siblings.length > 0 ? Math.max(...siblings.map(c => c.sort_order)) + 1 : 1
-    const slug = slugify(name) || `temp-${generateId()}`
+    const slug = slugifyName(name, `temp-${generateId()}`)
     const sortOrder = nextSort
     const supabase = await getSupabase()
     const { data } = await supabase
@@ -159,7 +167,7 @@ export default function AdminCategoriesPage() {
     setAddingSaving(true)
     const siblings = categories.filter(c => c.parent_id === parentId)
     const nextSort = siblings.length > 0 ? Math.max(...siblings.map(c => c.sort_order)) + 1 : 1
-    const slug = slugify(name) || `temp-${generateId()}`
+    const slug = slugifyName(name, `temp-${generateId()}`)
     const supabase = await getSupabase()
     const { data, error } = await supabase
       .from('categories')
@@ -339,59 +347,6 @@ export default function AdminCategoriesPage() {
     setAddingError('')
   }
 
-  async function onCategoryPhotoFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setPhotoEditError('Оберіть файл зображення.')
-      return
-    }
-    setPhotoEditFileName(file.name)
-    const reader = new FileReader()
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      reader.onload = () => (typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('read')))
-      reader.onerror = () => reject(new Error('read'))
-      reader.readAsDataURL(file)
-    })
-    setPhotoEditDataUrl(dataUrl)
-    setPhotoEditError('')
-  }
-
-  function openPhotoEditModal(row: Category) {
-    setPhotoEditCategoryId(row.id)
-    setPhotoEditDataUrl(row.image_url ?? '')
-    setPhotoEditFileName('')
-    setPhotoEditError('')
-  }
-
-  async function saveCategoryPhoto() {
-    if (!photoEditCategoryId) return
-    setPhotoSaving(true)
-    setPhotoEditError('')
-    try {
-      let imageUrl: string | null = photoEditDataUrl.trim() || null
-      if (photoEditDataUrl.startsWith('data:image/')) {
-        const uploadResponse = await fetch('/api/admin/upload-category-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ categoryId: photoEditCategoryId, dataUrl: photoEditDataUrl }),
-        })
-        const uploadResult = (await uploadResponse.json()) as { publicUrl?: string; error?: string }
-        if (!uploadResponse.ok || !uploadResult.publicUrl) {
-          throw new Error(uploadResult.error ?? 'Не вдалося завантажити зображення.')
-        }
-        imageUrl = uploadResult.publicUrl
-      }
-      await handleUpdate(photoEditCategoryId, 'image_url', imageUrl)
-      setPhotoEditCategoryId(null)
-    } catch (e) {
-      setPhotoEditError(e instanceof Error ? e.message : 'Не вдалося зберегти фото категорії.')
-    } finally {
-      setPhotoSaving(false)
-    }
-  }
-
   // No fade/opacity effects — only layout shifts + height animation on enter/exit.
 
   return (
@@ -399,7 +354,11 @@ export default function AdminCategoriesPage() {
       <div className="mb-6 fade-up-in flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Категорії</h1>
-          <p className="text-sm text-text-muted">{categories.length} категорій</p>
+          <p className="text-sm text-text-muted">
+            {loading
+              ? 'Завантаження...'
+              : `${categories.length} категорій · ${(byParent.get(null) ?? []).length} верхнього рівня`}
+          </p>
         </div>
         <Button size="sm" onClick={() => openCreateCategoryModal(null)} className="shrink-0">
           + Додати категорію
@@ -408,11 +367,8 @@ export default function AdminCategoriesPage() {
 
       <div className="bg-bg-surface border border-border rounded-md overflow-hidden transition-shadow duration-300 hover:shadow-sm">
         <div className="overflow-x-auto">
-          <div className="min-w-[740px] text-sm">
-            <div className="grid grid-cols-[120px_1fr_120px] border-b border-border">
-              <div className="text-left px-4 py-3 text-xs font-bold text-text-primary uppercase tracking-wider whitespace-nowrap">
-                Фото
-              </div>
+          <div className="min-w-[620px] text-sm">
+            <div className="grid grid-cols-[1fr_120px] border-b border-border">
               <div className="text-left px-4 py-3 text-xs font-bold text-text-primary uppercase tracking-wider whitespace-nowrap">
                 Назва
               </div>
@@ -442,8 +398,7 @@ export default function AdminCategoriesPage() {
                       transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                       className="bg-bg-surface/40 overflow-hidden will-change-[height,transform]"
                     >
-                      <div className="grid grid-cols-[120px_1fr_120px]">
-                        <div className="px-4 py-3" />
+                      <div className="grid grid-cols-[1fr_120px]">
                         <div className="px-4 py-3">
                           <div className="flex flex-col gap-1" style={{ paddingLeft: `${r.depth * 14}px` }}>
                           <div className="flex items-center gap-2">
@@ -516,24 +471,7 @@ export default function AdminCategoriesPage() {
                       'will-change-[height,transform]'
                     )}
                   >
-                    <div className="grid grid-cols-[120px_1fr_120px]">
-                    <div className="px-4 py-3 flex items-center">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openPhotoEditModal(row)
-                        }}
-                        className="relative size-12 overflow-hidden rounded border border-border bg-bg-elevated"
-                        title="Змінити фото"
-                      >
-                        {row.image_url ? (
-                          <Image src={row.image_url} alt={row.name_ua} fill className="object-cover" sizes="48px" />
-                        ) : (
-                          <div className="size-12 bg-bg-elevated" />
-                        )}
-                      </button>
-                    </div>
+                    <div className="grid grid-cols-[1fr_120px]">
                     <div className="px-4 py-3 flex items-center">
                       {isEditingName ? (
                         <div className="flex items-center gap-1">
@@ -719,56 +657,6 @@ export default function AdminCategoriesPage() {
             <Button onClick={createCategory}>
               Створити
             </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={!!photoEditCategoryId}
-        onClose={() => {
-          if (photoSaving) return
-          setPhotoEditCategoryId(null)
-          setPhotoEditError('')
-        }}
-        title="Фото категорії"
-        description="Завантажте нове зображення або видаліть поточне."
-        size="md"
-      >
-        <div className="space-y-3">
-          <label className="block">
-            <span className="text-xs text-text-muted">Зображення</span>
-            <div className="mt-1 h-10 w-full rounded border border-border bg-bg-elevated px-2 flex items-center gap-2">
-              <label htmlFor="category-image-upload" className="inline-flex h-7 items-center rounded border border-border px-2.5 text-xs text-text-primary bg-bg-surface hover:bg-bg-primary cursor-pointer shrink-0">Вибрати файл</label>
-              <span className="text-sm text-text-secondary truncate">{photoEditFileName || (photoEditDataUrl ? 'Поточне зображення збережено' : 'Файл не вибрано')}</span>
-              <input id="category-image-upload" type="file" accept="image/*" onChange={onCategoryPhotoFileChange} className="sr-only" />
-            </div>
-            {photoEditDataUrl && (
-              <div className="mt-2 relative size-14 rounded overflow-hidden border border-border bg-bg-elevated">
-                <Image src={photoEditDataUrl} alt="Превʼю фото категорії" fill className="object-cover" sizes="56px" />
-              </div>
-            )}
-          </label>
-          {photoEditError && <p className="text-xs text-error">{photoEditError}</p>}
-          <div className="flex justify-between gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setPhotoEditDataUrl('')
-                setPhotoEditFileName('')
-                setPhotoEditError('')
-              }}
-              disabled={photoSaving}
-            >
-              Видалити фото
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setPhotoEditCategoryId(null)} disabled={photoSaving}>
-                Скасувати
-              </Button>
-              <Button onClick={saveCategoryPhoto} loading={photoSaving}>
-                Зберегти
-              </Button>
-            </div>
           </div>
         </div>
       </Modal>

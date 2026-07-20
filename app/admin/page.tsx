@@ -1,7 +1,7 @@
 import { ShoppingCart, Package, Users, TrendingUp } from 'lucide-react'
 import AnalyticsCard from '@/components/admin/AnalyticsCard'
 import Badge from '@/components/ui/Badge'
-import { formatPrice } from '@/lib/utils'
+import { getServerAdminPriceFormatter } from '@/lib/currency/server'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
@@ -39,6 +39,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'warning' | 'accen
 }
 
 export default async function AdminDashboard() {
+  const { formatDual } = await getServerAdminPriceFormatter()
   const supabase = await createClient()
   const { startOfPreviousMonth, startOfCurrentMonth, startOfNextMonth } = getMonthBounds()
   const [productsResult, categoriesResult, ordersResult, profilesResult, currentMonthOrdersResult, previousMonthOrdersResult] = await Promise.all([
@@ -87,7 +88,7 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <AnalyticsCard
           title="Дохід"
-          value={formatPrice(totalRevenue)}
+          value={formatDual(totalRevenue)}
           change={revenueChange?.change}
           positive={revenueChange?.positive}
           icon={TrendingUp}
@@ -139,7 +140,7 @@ export default async function AdminDashboard() {
                   </div>
                   <Badge variant={s.variant}>{s.label}</Badge>
                   <span className="text-sm font-semibold text-text-primary price shrink-0">
-                    {formatPrice(order.total)}
+                    {formatDual(order.total)}
                   </span>
                 </Link>
               )
@@ -167,7 +168,7 @@ export default async function AdminDashboard() {
                     <p className="text-xs text-text-muted">{product.stock} шт. залишок</p>
                   </div>
                   <span className="text-sm font-semibold text-text-primary price shrink-0">
-                    {formatPrice(product.sale_price ?? product.price)}
+                    {formatDual(product.sale_price ?? product.price)}
                   </span>
                 </Link>
               ))

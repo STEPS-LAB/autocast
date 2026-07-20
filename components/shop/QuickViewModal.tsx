@@ -7,10 +7,8 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { useCartStore } from '@/lib/store/cart'
-import { formatPrice, getDiscountPercent } from '@/lib/utils'
+import { formatPrice, resolveSalePricing } from '@/lib/utils'
 import type { ProductCard } from '@/types'
-import { applyDiscountToProduct } from '@/lib/discounts'
-import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
 import {
   imageAltProduct,
   imageTitleProduct,
@@ -24,18 +22,17 @@ interface QuickViewModalProps {
 
 export default function QuickViewModal({ product, onClose }: QuickViewModalProps) {
   const addItem = useCartStore(s => s.addItem)
-  const overrides = useDiscountStore(selectDiscountOverrides)
 
   if (!product) return null
-  const discountedProduct = applyDiscountToProduct(product, overrides)
 
-  const discount = discountedProduct.sale_price
-    ? getDiscountPercent(discountedProduct.price, discountedProduct.sale_price)
-    : null
-  const displayPrice = discountedProduct.sale_price ?? discountedProduct.price
+  const pricing = resolveSalePricing(product.price, product.sale_price)
+  const discount = pricing.discountPercent
+  const displayPrice = pricing.displayPrice
+  const listPrice = pricing.listPrice
+  const hasSale = pricing.salePrice != null
 
   function handleAddToCart() {
-    addItem(discountedProduct)
+    addItem(product)
     onClose()
   }
 
@@ -44,18 +41,18 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
       <div className="flex flex-col sm:flex-row gap-6 mt-2">
         {/* Image */}
         <div className="relative w-full sm:w-64 aspect-square rounded-md overflow-hidden bg-bg-elevated shrink-0">
-          {discountedProduct.images[0] && (
+          {product.images[0] && (
             <Image
-              src={discountedProduct.images[0]}
-              alt={imageAltProduct(discountedProduct.name_ua, discountedProduct.category?.name_ua)}
-              title={imageTitleProduct(discountedProduct.name_ua)}
+              src={product.images[0]}
+              alt={imageAltProduct(product.name_ua, product.category?.name_ua)}
+              title={imageTitleProduct(product.name_ua)}
               fill
               className="object-cover"
               sizes="(max-width: 640px) 100vw, 256px"
               priority
             />
           )}
-          {discount && (
+          {discount != null && discount > 0 && (
             <div className="absolute top-2 left-2">
               <Badge variant="accent">-{discount}%</Badge>
             </div>
@@ -64,26 +61,26 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
 
         {/* Info */}
         <div className="flex flex-col gap-3 flex-1 min-w-0">
-          {discountedProduct.brand && (
+          {product.brand && (
             <span className="text-xs text-text-muted uppercase tracking-wider">
-              {discountedProduct.brand.name}
+              {product.brand.name}
             </span>
           )}
-          {discountedProduct.category && (
-            <span className="text-xs text-accent">{discountedProduct.category.name_ua}</span>
+          {product.category && (
+            <span className="text-xs text-accent">{product.category.name_ua}</span>
           )}
 
           <h3 className="text-base font-semibold text-text-primary leading-snug">
-            {discountedProduct.name_ua}
+            {product.name_ua}
           </h3>
 
           <div className="flex items-center gap-3">
             <span className="text-2xl font-bold text-text-primary price">
               {formatPrice(displayPrice)}
             </span>
-            {discountedProduct.sale_price && (
+            {hasSale && (
               <span className="text-sm text-text-muted line-through price">
-                {formatPrice(discountedProduct.price)}
+                {formatPrice(listPrice)}
               </span>
             )}
           </div>
@@ -91,13 +88,13 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
           <div className="flex items-center gap-2">
             <span
               className={
-                discountedProduct.stock > 0
+                product.stock > 0
                   ? 'text-xs text-success'
                   : 'text-xs text-error'
               }
             >
-              {discountedProduct.stock > 0
-                ? `✓ В наявності (${discountedProduct.stock} шт.)`
+              {product.stock > 0
+                ? `✓ В наявності (${product.stock} шт.)`
                 : '✗ Немає в наявності'}
             </span>
           </div>
@@ -106,15 +103,15 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
             <Button
               fullWidth
               onClick={handleAddToCart}
-              disabled={discountedProduct.stock === 0}
+              disabled={product.stock === 0}
               className="gap-2"
             >
               <ShoppingCart size={16} />
               Додати в кошик
             </Button>
             <Link
-              href={`/product/${discountedProduct.slug}`}
-              title={linkTitleProduct(discountedProduct.name_ua)}
+              href={`/product/${product.slug}`}
+              title={linkTitleProduct(product.name_ua)}
               onClick={onClose}
               className="flex items-center justify-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors py-2"
             >

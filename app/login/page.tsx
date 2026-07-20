@@ -43,42 +43,26 @@ function LoginForm() {
   async function onSubmit(data: LoginInput) {
     setLoading(true)
     setError('')
+    const email = data.email.trim().toLowerCase()
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      const email = data.email.trim().toLowerCase()
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password: data.password,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password: data.password,
+        }),
       })
-      if (authError) {
-        const code = 'code' in authError ? String(authError.code ?? '') : ''
-        if (code === 'email_not_confirmed' || /email not confirmed/i.test(authError.message)) {
-          setError('Підтвердіть email за посиланням у листі, потім увійдіть знову.')
-        } else if (
-          code === 'invalid_credentials' ||
-          /invalid login credentials/i.test(authError.message)
-        ) {
-          setError('Невірний email або пароль')
-        } else {
-          setError(authError.message || 'Невірний email або пароль')
-        }
+
+      const result = (await response.json()) as { error?: string; role?: string }
+      if (!response.ok) {
+        setError(result.error ?? 'Невірний email або пароль')
         return
       }
 
-      const userId = authData.user?.id
-      let role: string | undefined
-      if (userId) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle()
-        role = profile?.role
-      }
-
-      const destination = resolvePostLoginPath(role, searchParams.get('next'))
+      const destination = resolvePostLoginPath(result.role, searchParams.get('next'))
       router.replace(destination)
+      router.refresh()
     } catch {
       setError('Щось пішло не так. Спробуйте ще раз.')
     } finally {

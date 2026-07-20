@@ -6,25 +6,23 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPrice(price: number): string {
-  // Deterministic formatting to avoid hydration mismatches between server/client.
-  // We intentionally do NOT use `Intl.NumberFormat(..., { style: 'currency' })`
-  // because its output (e.g. `₴` vs `грн`) can differ across environments/locales.
   const rounded = Math.round(price)
   const sign = rounded < 0 ? '-' : ''
   const abs = Math.abs(rounded)
   const digits = abs.toString()
-
-  // Thousands separator as NBSP (typography-friendly and stable).
   const withSeparators = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0')
   return `${sign}${withSeparators}\u00A0₴`
 }
 
 export function formatDate(date: string | Date): string {
+  const parsed = date instanceof Date ? date : new Date(date)
+  if (Number.isNaN(parsed.getTime())) return '—'
+
   return new Intl.DateTimeFormat('uk-UA', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(new Date(date))
+  }).format(parsed)
 }
 
 export function slugify(str: string): string {
@@ -33,6 +31,70 @@ export function slugify(str: string): string {
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+/** Ukrainian + Russian Cyrillic → Latin for SEO-friendly slugs. */
+const CYRILLIC_TO_LATIN: Record<string, string> = {
+  а: 'a',
+  б: 'b',
+  в: 'v',
+  г: 'h',
+  ґ: 'g',
+  д: 'd',
+  е: 'e',
+  є: 'ye',
+  ж: 'zh',
+  з: 'z',
+  и: 'y',
+  і: 'i',
+  ї: 'yi',
+  й: 'y',
+  к: 'k',
+  л: 'l',
+  м: 'm',
+  н: 'n',
+  о: 'o',
+  п: 'p',
+  р: 'r',
+  с: 's',
+  т: 't',
+  у: 'u',
+  ф: 'f',
+  х: 'kh',
+  ц: 'ts',
+  ч: 'ch',
+  ш: 'sh',
+  щ: 'shch',
+  ь: '',
+  ю: 'yu',
+  я: 'ya',
+  ы: 'y',
+  э: 'e',
+  ё: 'yo',
+  ъ: '',
+}
+
+export function transliterateCyrillic(str: string): string {
+  let out = ''
+  for (const char of str) {
+    const lower = char.toLowerCase()
+    const mapped = CYRILLIC_TO_LATIN[lower]
+    if (mapped !== undefined) {
+      out += mapped
+    } else {
+      out += char
+    }
+  }
+  return out
+}
+
+/**
+ * Slug for category/product names that may contain Cyrillic.
+ * Transliterates first so Ukrainian titles become readable Latin slugs.
+ */
+export function slugifyName(str: string, fallback = 'item'): string {
+  const slug = slugify(transliterateCyrillic(str.trim()))
+  return slug || fallback
 }
 
 /** SEO service URL slugs: lowercase letters, digits, hyphens only. */
@@ -56,8 +118,50 @@ export function truncate(str: string, length: number): string {
   return str.slice(0, length) + '…'
 }
 
+/**
+ * Показує знижку лише коли sale_price явно нижча за price.
+ * Якщо sale_price відсутня, 0 або ≥ price — без знижки.
+ */
+export function resolveSalePricing(price: number, salePrice: number | null | undefined) {
+  if (
+    salePrice == null ||
+    !Number.isFinite(salePrice) ||
+    !Number.isFinite(price) ||
+    salePrice <= 0 ||
+    price <= 0 ||
+    salePrice >= price
+  ) {
+    return {
+      listPrice: price,
+      salePrice: null as number | null,
+      displayPrice: price,
+      discountPercent: null as number | null,
+    }
+  }
+  const discountPercent = Math.round(((price - salePrice) / price) * 100)
+  if (discountPercent <= 0) {
+    return {
+      listPrice: price,
+      salePrice: null as number | null,
+      displayPrice: price,
+      discountPercent: null as number | null,
+    }
+  }
+  return {
+    listPrice: price,
+    salePrice,
+    displayPrice: salePrice,
+    discountPercent,
+  }
+}
+
+/** Ціна до сплати: sale_price якщо валідна знижка, інакше price. */
+export function effectiveUnitPrice(price: number, salePrice: number | null | undefined): number {
+  return resolveSalePricing(price, salePrice).displayPrice
+}
+
 export function getDiscountPercent(price: number, salePrice: number): number {
-  return Math.round(((price - salePrice) / price) * 100)
+  return resolveSalePricing(price, salePrice).discountPercent ?? 0
 }
 
 export function generateId(): string {

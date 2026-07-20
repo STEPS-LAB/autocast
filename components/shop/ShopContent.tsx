@@ -1,206 +1,224 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import ProductGrid from '@/components/shop/ProductGrid'
 import ProductFilters from '@/components/shop/ProductFilters'
+import ActiveFilters from '@/components/shop/ActiveFilters'
+import CategoryTiles from '@/components/shop/CategoryTiles'
 import SortSelect from '@/components/shop/SortSelect'
 import PageTransition from '@/components/layout/PageTransition'
+import Pagination from '@/components/ui/Pagination'
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDiscountedProductCards } from '@/lib/hooks/useDiscountedProducts'
+import { pageRangeLabel } from '@/lib/pagination'
+import { getRootCategories } from '@/lib/shop/category-tree'
+import { countActiveFacetSelections, type Facet } from '@/lib/shop/facets'
+import {
+  countActiveVehicleSelections,
+  type VehicleFacets,
+  type VehicleSelections,
+} from '@/lib/shop/vehicle'
 import type { Brand, Category, ProductCard } from '@/types'
 
 interface ShopContentProps {
   products: ProductCard[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
   categories: Category[]
   brands: Brand[]
+  mode: 'hub' | 'category'
+  rootCategory?: Category | null
+  heading: string
+  /** Current filter selection from URL (already parsed on server). */
+  filters: {
+    categories: string[]
+    brands: string[]
+    minPrice?: number
+    maxPrice?: number
+    inStock?: boolean
+    specs?: Record<string, string[]>
+    vehicle?: VehicleSelections
+  }
+  /** Spec-based facets available for the current category (empty on the hub). */
+  facets?: Facet[]
+  /** Cascading make → model → year facets (empty when unsupported). */
+  vehicleFacets?: VehicleFacets
+  query?: string
 }
 
-export default function ShopContent({ products, categories, brands }: ShopContentProps) {
+export default function ShopContent({
+  products,
+  total,
+  page,
+  pageSize,
+  totalPages,
+  categories,
+  brands,
+  mode,
+  rootCategory = null,
+  heading,
+  filters,
+  facets = [],
+  vehicleFacets = { makes: [], models: [], years: [] },
+  query,
+}: ShopContentProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const rootCategories = useMemo(() => getRootCategories(categories), [categories])
 
-  const query = searchParams.get('q') ?? ''
-  const categoriesSelected = useMemo(() => {
-    const raw = searchParams.getAll('category').map(s => s.trim()).filter(Boolean)
-    return Array.from(new Set(raw))
-  }, [searchParams])
-  const brandsSelected = useMemo(() => {
-    const raw = searchParams.getAll('brand').map(s => s.trim()).filter(Boolean)
-    return Array.from(new Set(raw))
-  }, [searchParams])
-  const minPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined
-  const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined
-  const inStock = searchParams.get('inStock') === '1'
-  const sortRaw = searchParams.get('sort')
-  const sort = !sortRaw || sortRaw === 'default' ? 'sale' : sortRaw
-  const make = searchParams.get('make') ?? ''
+  // Filters only exist on a selected-category page, never on the /shop hub.
+  const showFilters = mode === 'category'
+  const specCount = countActiveFacetSelections(filters.specs ?? {})
+  const vehicleCount = countActiveVehicleSelections(filters.vehicle ?? {})
 
-  const filters = { categories: categoriesSelected, brands: brandsSelected, minPrice, maxPrice, inStock }
+  const hasFilters =
+    filters.categories.length > 0 ||
+    filters.brands.length > 0 ||
+    filters.minPrice !== undefined ||
+    filters.maxPrice !== undefined ||
+    !!filters.inStock ||
+    specCount > 0 ||
+    vehicleCount > 0
 
-  const allProducts = useDiscountedProductCards(products)
+  function handlePageChange(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextPage <= 1) params.delete('page')
+    else params.set('page', String(nextPage))
+    const next = params.toString()
+    router.push(next ? `${pathname}?${next}` : pathname)
+  }
 
-  const categoryDescendants = useMemo(() => {
-    const idBySlug = new Map(categories.map(c => [c.slug, c.id]))
-    const slugById = new Map(categories.map(c => [c.id, c.slug]))
-    const childrenById = new Map<string, string[]>()
-    for (const c of categories) {
-      if (!c.parent_id) continue
-      const list = childrenById.get(c.parent_id) ?? []
-      list.push(c.id)
-      childrenById.set(c.parent_id, list)
-    }
-
-    function collectSlugs(rootSlug: string): Set<string> {
-      const rootId = idBySlug.get(rootSlug)
-      const out = new Set<string>()
-      if (!rootId) return out
-      out.add(rootSlug)
-      const stack = [...(childrenById.get(rootId) ?? [])]
-      while (stack.length > 0) {
-        const id = stack.pop()
-        if (!id) break
-        const slug = slugById.get(id)
-        if (slug) out.add(slug)
-        const kids = childrenById.get(id) ?? []
-        for (const k of kids) stack.push(k)
-      }
-      return out
-    }
-
-    return { collectSlugs }
-  }, [categories])
-
-  const filtered = useMemo(() => {
-    let products = allProducts
-
-    if (query) {
-      const q = query.toLowerCase()
-      products = products.filter(p => p.name_ua.toLowerCase().includes(q))
-    }
-    if (categoriesSelected.length > 0) {
-      const allowedSets = categoriesSelected.map(slug => categoryDescendants.collectSlugs(slug))
-      products = products.filter(p => {
-        const slug = p.category?.slug
-        if (!slug) return false
-        return allowedSets.some(set => set.has(slug))
-      })
-    }
-    if (brandsSelected.length > 0) {
-      const allowed = new Set(brandsSelected)
-      products = products.filter(p => {
-        const name = p.brand?.name
-        return !!name && allowed.has(name)
-      })
-    }
-    if (minPrice !== undefined) {
-      products = products.filter(p => (p.sale_price ?? p.price) >= minPrice)
-    }
-    if (maxPrice !== undefined) {
-      products = products.filter(p => (p.sale_price ?? p.price) <= maxPrice)
-    }
-    if (inStock) {
-      products = products.filter(p => p.stock > 0)
-    }
-
-    switch (sort) {
-      case 'price_asc':
-        products = [...products].sort((a, b) => (a.sale_price ?? a.price) - (b.sale_price ?? b.price))
-        break
-      case 'price_desc':
-        products = [...products].sort((a, b) => (b.sale_price ?? b.price) - (a.sale_price ?? a.price))
-        break
-      case 'sale':
-        products = [...products].sort((a, b) => {
-          const aDisc = a.sale_price ? 1 : 0
-          const bDisc = b.sale_price ? 1 : 0
-          return bDisc - aDisc
-        })
-        break
-      case 'newest':
-        // Default DB order is created_at desc; keep current order after filtering.
-        break
-    }
-
-    return products
-  }, [
-    allProducts,
-    query,
-    categoriesSelected,
-    brandsSelected,
-    minPrice,
-    maxPrice,
-    inStock,
-    sort,
-    categoryDescendants,
-  ])
-
-  const hasFilters = Object.values(filters).some(Boolean)
-  const showCatalogNotReady = allProducts.length === 0 && !query && !hasFilters
-
-  const headingText = categoriesSelected.length === 1
-    ? allProducts.find(p => p.category?.slug === categoriesSelected[0])?.category?.name_ua ?? 'Каталог'
-    : make
-    ? `Запчастини для ${make}`
-    : query
-    ? `Результати: «${query}»`
-    : 'Магазин'
+  const emptyCatalog = total === 0 && !query && !hasFilters
 
   return (
     <PageTransition>
       <div className="container-xl py-10">
         <div className="mb-8">
-          <h1 className="text-headline text-text-primary mb-1">{headingText}</h1>
+          {mode === 'category' && (
+            <nav aria-label="Хлібні крихти" className="mb-2 text-xs text-text-muted">
+              <Link href="/" className="hover:text-accent transition-colors">
+                Головна
+              </Link>
+              <span className="mx-1.5 text-border-light">›</span>
+              <Link href="/shop" className="hover:text-accent transition-colors">
+                Магазин
+              </Link>
+              {rootCategory && (
+                <>
+                  <span className="mx-1.5 text-border-light">›</span>
+                  <span className="text-text-secondary">{rootCategory.name_ua}</span>
+                </>
+              )}
+            </nav>
+          )}
+          <h1 className="text-headline text-text-primary mb-1">{heading}</h1>
           <p className="text-sm text-text-muted">
-            {filtered.length} товар{filtered.length === 1 ? '' : filtered.length < 5 ? 'и' : 'ів'}
+            {total === 0
+              ? 'Товари відсутні'
+              : `${total} товар${total === 1 ? '' : total < 5 ? 'и' : 'ів'}`}
+            {total > pageSize && (
+              <span>
+                {' '}
+                · {pageRangeLabel(page, pageSize, total)}
+              </span>
+            )}
           </p>
         </div>
 
+        {mode === 'hub' && rootCategories.length > 0 && (
+          <CategoryTiles categories={rootCategories} variant="hub" />
+        )}
+
+        {mode === 'category' && rootCategories.length > 0 && (
+          <CategoryTiles
+            categories={rootCategories}
+            variant="compact"
+            activeSlug={rootCategory?.slug}
+          />
+        )}
+
         <div className="flex gap-8">
-          <div className="hidden lg:block w-56 shrink-0">
-            <div className="sticky top-24">
-              <ProductFilters filters={filters} categories={categories} brands={brands} />
+          {showFilters && (
+            <div className="hidden lg:block w-56 shrink-0 self-start sticky top-24 max-h-[calc(100vh-6.5rem)]">
+              <ProductFilters
+                filters={filters}
+                facets={facets}
+                vehicleFacets={vehicleFacets}
+                categories={categories}
+                brands={brands}
+                mode={mode}
+                rootCategory={rootCategory}
+                scrollable
+              />
             </div>
-          </div>
+          )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3 mb-6">
-              <button
-                onClick={() => setFiltersOpen(true)}
-                className="lg:hidden flex items-center gap-2 h-9 px-3 bg-bg-surface border border-border rounded text-sm text-text-secondary hover:text-text-primary hover:border-border-light transition-colors"
-              >
-                <SlidersHorizontal size={14} />
-                Фільтри
-                {hasFilters && (
-                  <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">
-                    {filters.categories.length + filters.brands.length + (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) + (filters.inStock ? 1 : 0)}
-                  </span>
-                )}
-              </button>
+              {showFilters && (
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(true)}
+                  className="lg:hidden flex items-center gap-2 h-9 px-3 bg-bg-surface border border-border rounded text-sm text-text-secondary hover:text-text-primary hover:border-border-light transition-colors"
+                >
+                  <SlidersHorizontal size={14} />
+                  Фільтри
+                  {hasFilters && (
+                    <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">
+                      {filters.categories.length +
+                        filters.brands.length +
+                        (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) +
+                        (filters.inStock ? 1 : 0) +
+                        specCount +
+                        vehicleCount}
+                    </span>
+                  )}
+                </button>
+              )}
               <div className="flex items-center gap-2 ml-auto">
                 <span className="text-xs text-text-muted hidden sm:block">Сортувати:</span>
                 <SortSelect />
               </div>
             </div>
 
-            {showCatalogNotReady ? (
+            {showFilters && (
+              <ActiveFilters
+                filters={filters}
+                facets={facets}
+                categories={categories}
+              />
+            )}
+
+            {emptyCatalog ? (
               <div className="rounded-md border border-border bg-bg-surface p-8 text-center">
-                <h3 className="text-base font-semibold text-text-primary mb-1">Каталог порожній</h3>
-                <p className="text-sm text-text-muted">
-                  У базі немає товарів або запит не повернув дані. Перевірте таблицю products і RLS у Supabase.
-                </p>
+                <p className="text-sm text-text-muted">Товари відсутні</p>
               </div>
             ) : (
-              <ProductGrid products={filtered} />
+              <>
+                <ProductGrid products={products} />
+                {totalPages > 1 && (
+                  <Pagination
+                    page={page}
+                    totalItems={total}
+                    pageSize={pageSize}
+                    onPageChange={handlePageChange}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
       </div>
 
       <AnimatePresence>
-        {filtersOpen && (
+        {showFilters && filtersOpen && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -221,8 +239,12 @@ export default function ShopContent({ products, categories, brands }: ShopConten
             >
               <ProductFilters
                 filters={filters}
+                facets={facets}
+                vehicleFacets={vehicleFacets}
                 categories={categories}
                 brands={brands}
+                mode={mode}
+                rootCategory={rootCategory}
                 onClose={() => setFiltersOpen(false)}
               />
             </motion.div>

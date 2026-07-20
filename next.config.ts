@@ -35,27 +35,48 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'via.placeholder.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'torssen.com',
+        pathname: '/image/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.torssen.com',
+        pathname: '/image/**',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
   },
+  serverExternalPackages: ['exceljs'],
   experimental: {
     // framer-motion не додаємо: optimizePackageImports може зламати AnimatePresence / exit.
     optimizePackageImports: ['lucide-react'],
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+    proxyClientMaxBodySize: '50mb',
   },
 
   async headers() {
-    return [
-      // ─── Hashed Next.js build output (JS / CSS chunks) ─────────────────
-      {
-        source: '/_next/static/:path*',
-        headers: [{ key: 'Cache-Control', value: IMMUTABLE_ONE_YEAR }],
-      },
+    // Immutable hashed chunks break Turbopack HMR in development (stale module factories).
+    const isDev = process.env.NODE_ENV === 'development'
 
-      // ─── Optimized images (URL includes width/quality params = natural cache key) ─
-      {
-        source: '/_next/image/:path*',
-        headers: [{ key: 'Cache-Control', value: IMMUTABLE_ONE_YEAR }],
-      },
+    const productionAssetHeaders = isDev
+      ? []
+      : [
+          {
+            source: '/_next/static/:path*',
+            headers: [{ key: 'Cache-Control', value: IMMUTABLE_ONE_YEAR }],
+          },
+          {
+            source: '/_next/image/:path*',
+            headers: [{ key: 'Cache-Control', value: IMMUTABLE_ONE_YEAR }],
+          },
+        ]
+
+    return [
+      ...productionAssetHeaders,
 
       // ─── Public static assets (no hash in path — moderate TTL) ───────────
       {

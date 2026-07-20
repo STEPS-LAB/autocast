@@ -25,7 +25,11 @@ export async function POST(request: Request) {
   }
 
   const cookieStore = await cookies()
-  let response = NextResponse.json({ success: true })
+  const cookieUpdates: Array<{
+    name: string
+    value: string
+    options: Parameters<typeof cookieStore.set>[2]
+  }> = []
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -33,10 +37,9 @@ export async function POST(request: Request) {
         return cookieStore.getAll()
       },
       setAll(cookiesToSet) {
-        response = NextResponse.json({ success: true })
         cookiesToSet.forEach(({ name, value, options }) => {
           cookieStore.set(name, value, options)
-          response.cookies.set(name, value, options)
+          cookieUpdates.push({ name, value, options })
         })
       },
     },
@@ -51,15 +54,41 @@ export async function POST(request: Request) {
       )
     }
 
-    const { error } = await supabase.auth.signInWithPassword(parsed.data)
+    const email = parsed.data.email.trim().toLowerCase()
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: parsed.data.password,
+    })
 
     if (error) {
+      const code = 'code' in error ? String(error.code ?? '') : ''
+      if (code === 'email_not_confirmed' || /email not confirmed/i.test(error.message)) {
+        return NextResponse.json(
+          { error: 'Підтвердіть email за посиланням у листі, потім увійдіть знову.' },
+          { status: 400 }
+        )
+      }
       return NextResponse.json(
-        { error: error.message || 'Невірний email або пароль' },
+        { error: 'Невірний email або пароль' },
         { status: 400 }
       )
     }
 
+    let role: string | undefined
+    const userId = authData.user?.id
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle()
+      role = profile?.role
+    }
+
+    const response = NextResponse.json({ success: true, role })
+    cookieUpdates.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options)
+    })
     return response
   } catch {
     return NextResponse.json(

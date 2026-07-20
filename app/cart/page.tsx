@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { useCartStore, selectCartTotal, selectCartCount } from '@/lib/store/cart'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, effectiveUnitPrice } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import PageTransition from '@/components/layout/PageTransition'
 import {
@@ -113,7 +113,7 @@ export default function CartPage() {
 
                       <div className="flex items-center gap-3">
                         <span className="text-base font-bold text-text-primary price">
-                          {formatPrice((item.product.sale_price ?? item.product.price) * item.quantity)}
+                          {formatPrice(effectiveUnitPrice(item.product.price, item.product.sale_price) * item.quantity)}
                         </span>
                         <button
                           onClick={() => removeItem(item.id)}

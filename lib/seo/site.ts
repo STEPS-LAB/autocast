@@ -31,7 +31,7 @@ export const BUSINESS = {
   foundingYear: 2016,
   social: {
     instagram: 'https://www.instagram.com/autocast.com.ua/',
-    facebook: 'https://autocast.com.ua/about-us/',
+    facebook: 'https://www.facebook.com/autocast.com.ua/',
   },
 } as const
 

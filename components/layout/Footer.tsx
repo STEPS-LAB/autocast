@@ -135,7 +135,7 @@ export default function Footer() {
                 Instagram
               </a>
               <a
-                href="https://autocast.com.ua/about-us/"
+                href="https://www.facebook.com/autocast.com.ua/"
                 target="_blank"
                 rel="noopener noreferrer"
                 title={linkTitleFacebook()}

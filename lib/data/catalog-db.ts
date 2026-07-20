@@ -1,9 +1,16 @@
 import 'server-only'
 
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createStaticClient } from '@/lib/supabase/static'
+import { fetchAllCategories } from '@/lib/data/categories'
 import { unstable_cache } from 'next/cache'
-import type { Brand, Category, Product, ProductCard } from '@/types'
+import { clampPage, getTotalPages, SHOP_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
+import {
+  DEFAULT_SHOP_PRODUCT_SORT,
+  type ProductSortKey,
+} from '@/lib/product-sort'
+import type { Brand, Category, Product, ProductCard, ShopFacetRow } from '@/types'
 
 interface DbCategoryRow {
   id: string
@@ -93,14 +100,17 @@ function rowToProduct(row: DbProductRow): Product {
 function rowToProductCard(row: DbProductRow): ProductCard {
   const category = unwrapRelation(row.category)
   const brand = unwrapRelation(row.brand)
+  const images = row.images ?? []
   return {
     id: row.id,
     slug: row.slug,
     name_ua: row.name_ua,
     price: Number(row.price),
     sale_price: row.sale_price === null ? null : Number(row.sale_price),
-    images: row.images ?? [],
+    // Shop cards / quick-view only use the first image; keep the payload lean.
+    images: images.length > 0 ? [images[0]!] : [],
     stock: row.stock,
+    created_at: row.created_at,
     category: category
       ? { name_ua: category.name_ua, slug: category.slug }
       : undefined,
@@ -108,15 +118,26 @@ function rowToProductCard(row: DbProductRow): ProductCard {
   }
 }
 
+function rowToShopFacetRow(row: DbProductRow): ShopFacetRow {
+  const brand = unwrapRelation(row.brand)
+  return {
+    id: row.id,
+    slug: row.slug,
+    name_ua: row.name_ua,
+    price: Number(row.price),
+    sale_price: row.sale_price === null ? null : Number(row.sale_price),
+    stock: row.stock,
+    created_at: row.created_at,
+    specs: row.specs ?? {},
+    brand: brand ? { name: brand.name } : undefined,
+  }
+}
+
 async function fetchCategories(_dbOnly: boolean): Promise<Category[]> {
   try {
     const supabase = createStaticClient()
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id,slug,name_ua,parent_id,image_url,sort_order')
-      .order('sort_order', { ascending: true })
-
-    if (error || !data || data.length === 0) return []
+    const { data, error } = await fetchAllCategories(supabase)
+    if (error || data.length === 0) return []
     return (data as DbCategoryRow[]).map(rowToCategory)
   } catch {
     return []
@@ -126,13 +147,13 @@ async function fetchCategories(_dbOnly: boolean): Promise<Category[]> {
 const getCategoriesCached = unstable_cache(
   () => fetchCategories(false),
   ['catalog-categories', 'db-only'],
-  { revalidate: 120 }
+  { revalidate: 120, tags: ['catalog-categories'] }
 )
 
 const getCategoriesDbOnlyCached = unstable_cache(
   () => fetchCategories(true),
   ['catalog-categories-dbonly', 'db-only'],
-  { revalidate: 120 }
+  { revalidate: 120, tags: ['catalog-categories'] }
 )
 
 export async function getCategories(options?: CatalogReadOptions): Promise<Category[]> {
@@ -170,7 +191,7 @@ async function fetchProductCards(_dbOnly: boolean): Promise<ProductCard[]> {
     const { data, error } = await supabase
       .from('products')
       .select(`
-        id,slug,name_ua,price,sale_price,stock,images,category_id,brand_id,created_at,is_featured,description_ua,specs,
+        id,slug,name_ua,price,sale_price,stock,images,category_id,brand_id,created_at,
         category:categories(id,slug,name_ua,parent_id,image_url,sort_order),
         brand:brands(id,name,logo_url)
       `)
@@ -186,7 +207,7 @@ async function fetchProductCards(_dbOnly: boolean): Promise<ProductCard[]> {
 const getProductCardsCached = unstable_cache(
   () => fetchProductCards(false),
   ['catalog-product-cards', 'db-only'],
-  { revalidate: 60 }
+  { revalidate: 60, tags: ['catalog-products'] }
 )
 
 export async function getProductCardsFromDb(options?: CatalogReadOptions): Promise<ProductCard[]> {
@@ -258,4 +279,232 @@ export async function getProductBySlugFromDb(slug: string): Promise<Product | un
     return undefined
   }
 }
+
+const SHOP_CARD_SELECT = `
+  id,slug,name_ua,price,sale_price,stock,images,category_id,brand_id,created_at,
+  category:categories(id,slug,name_ua,parent_id,image_url,sort_order),
+  brand:brands(id,name,logo_url)
+`
+
+export type ShopProductsQuery = {
+  categoryIds?: string[] | null
+  brandNames?: string[]
+  minPrice?: number
+  maxPrice?: number
+  inStock?: boolean
+  q?: string
+  sort?: ProductSortKey
+  page?: number
+  pageSize?: number
+}
+
+function shopSortOrder(sort: ProductSortKey): {
+  column: string
+  ascending: boolean
+} {
+  switch (sort) {
+    case 'oldest':
+      return { column: 'created_at', ascending: true }
+    case 'name_asc':
+      return { column: 'name_ua', ascending: true }
+    case 'name_desc':
+      return { column: 'name_ua', ascending: false }
+    case 'price_asc':
+      return { column: 'price', ascending: true }
+    case 'price_desc':
+      return { column: 'price', ascending: false }
+    case 'newest':
+    default:
+      return { column: 'created_at', ascending: false }
+  }
+}
+
+/** Server-paginated shop listing — only one page of lean cards crosses the wire. */
+export async function getShopProductsPage(query: ShopProductsQuery): Promise<{
+  products: ProductCard[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}> {
+  const pageSize =
+    Number.isFinite(query.pageSize) && (query.pageSize ?? 0) > 0
+      ? Math.min(48, Math.floor(query.pageSize!))
+      : SHOP_PRODUCTS_PAGE_SIZE
+  const sort = query.sort ?? DEFAULT_SHOP_PRODUCT_SORT
+  const { column, ascending } = shopSortOrder(sort)
+
+  try {
+    const supabase = createStaticClient()
+
+    let countQuery = supabase.from('products').select('id', { count: 'exact', head: true })
+    let dataQuery = supabase
+      .from('products')
+      .select(SHOP_CARD_SELECT)
+      .order(column, { ascending })
+      .order('id', { ascending: true })
+
+    if (query.categoryIds) {
+      if (query.categoryIds.length === 0) {
+        return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
+      }
+      countQuery = countQuery.in('category_id', query.categoryIds)
+      dataQuery = dataQuery.in('category_id', query.categoryIds)
+    }
+
+    if (query.brandNames && query.brandNames.length > 0) {
+      const { data: brandRows } = await supabase
+        .from('brands')
+        .select('id,name')
+        .in('name', query.brandNames)
+      const brandIds = (brandRows ?? []).map(b => b.id)
+      if (brandIds.length === 0) {
+        return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
+      }
+      countQuery = countQuery.in('brand_id', brandIds)
+      dataQuery = dataQuery.in('brand_id', brandIds)
+    }
+
+    if (query.minPrice !== undefined && Number.isFinite(query.minPrice)) {
+      countQuery = countQuery.gte('price', query.minPrice)
+      dataQuery = dataQuery.gte('price', query.minPrice)
+    }
+    if (query.maxPrice !== undefined && Number.isFinite(query.maxPrice)) {
+      countQuery = countQuery.lte('price', query.maxPrice)
+      dataQuery = dataQuery.lte('price', query.maxPrice)
+    }
+    if (query.inStock) {
+      countQuery = countQuery.gt('stock', 0)
+      dataQuery = dataQuery.gt('stock', 0)
+    }
+    if (query.q?.trim()) {
+      const q = query.q.trim().replace(/[%_,.()"'\\]/g, ' ').slice(0, 80)
+      countQuery = countQuery.ilike('name_ua', `%${q}%`)
+      dataQuery = dataQuery.ilike('name_ua', `%${q}%`)
+    }
+
+    const { count, error: countError } = await countQuery
+    if (countError) {
+      return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
+    }
+
+    const total = Number(count ?? 0)
+    const totalPages = getTotalPages(total, pageSize)
+    const page = clampPage(query.page ?? 1, totalPages)
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, error } = await dataQuery.range(from, to)
+    if (error || !data) {
+      return { products: [], total, page, pageSize, totalPages }
+    }
+
+    return {
+      products: (data as DbProductRow[]).map(rowToProductCard),
+      total,
+      page,
+      pageSize,
+      totalPages,
+    }
+  } catch {
+    return { products: [], total: 0, page: 1, pageSize, totalPages: 1 }
+  }
+}
+
+/** Slim select for category facet index — no images / category joins. */
+const SHOP_FACET_INDEX_SELECT = `
+  id,slug,name_ua,price,sale_price,stock,created_at,specs,
+  brand:brands(name)
+`
+
+/** PostgREST caps each response at ~1000 rows — page through the full set. */
+const FACET_FETCH_PAGE_SIZE = 1000
+
+/**
+ * Soft ceiling so a runaway query cannot blow memory. Multimedia alone is
+ * already >2k SKUs; raise if the catalog grows past this.
+ */
+const CATEGORY_FACET_FETCH_LIMIT = 10_000
+
+async function fetchCategoryFacetIndex(
+  categoryIds: string[] | null
+): Promise<ShopFacetRow[]> {
+  try {
+    const supabase = createStaticClient()
+    const rows: ShopFacetRow[] = []
+    let from = 0
+
+    while (from < CATEGORY_FACET_FETCH_LIMIT) {
+      const to = Math.min(from + FACET_FETCH_PAGE_SIZE - 1, CATEGORY_FACET_FETCH_LIMIT - 1)
+      let dataQuery = supabase
+        .from('products')
+        .select(SHOP_FACET_INDEX_SELECT)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to)
+
+      if (categoryIds) {
+        if (categoryIds.length === 0) return []
+        dataQuery = dataQuery.in('category_id', categoryIds)
+      }
+
+      const { data, error } = await dataQuery
+      if (error || !data) break
+
+      rows.push(...(data as DbProductRow[]).map(rowToShopFacetRow))
+      if (data.length < FACET_FETCH_PAGE_SIZE) break
+      from += FACET_FETCH_PAGE_SIZE
+    }
+
+    return rows
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Slim category index (id / name / specs / price…) for in-memory facets.
+ *
+ * Not wrapped in `unstable_cache`: a full multimedia tree can still exceed the
+ * Next.js Data Cache ~2MB limit. React `cache()` dedupes within a request.
+ * Full product cards (with images) are loaded only for the current page via
+ * `getProductCardsByIds`.
+ */
+const getCategoryFacetIndexCached = cache(
+  async (cacheKey: string): Promise<ShopFacetRow[]> => {
+    const categoryIds =
+      cacheKey === 'all' ? null : cacheKey.split(',').filter(Boolean)
+    return fetchCategoryFacetIndex(categoryIds)
+  }
+)
+
+export async function getCategoryFacetIndex(
+  categoryIds: string[] | null
+): Promise<ShopFacetRow[]> {
+  const cacheKey = categoryIds ? [...categoryIds].sort().join(',') : 'all'
+  return getCategoryFacetIndexCached(cacheKey)
+}
+
+/** Full shop cards for a page of IDs, preserving `ids` order. */
+export async function getProductCardsByIds(ids: string[]): Promise<ProductCard[]> {
+  if (ids.length === 0) return []
+
+  try {
+    const supabase = createStaticClient()
+    const { data, error } = await supabase
+      .from('products')
+      .select(SHOP_CARD_SELECT)
+      .in('id', ids)
+
+    if (error || !data) return []
+
+    const byId = new Map(
+      (data as DbProductRow[]).map(row => [row.id, rowToProductCard(row)])
+    )
+    return ids.map(id => byId.get(id)).filter((p): p is ProductCard => !!p)
+  } catch {
+    return []
+  }
+}
+
 

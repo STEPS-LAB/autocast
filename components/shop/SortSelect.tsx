@@ -2,29 +2,45 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
+import {
+  DEFAULT_SHOP_PRODUCT_SORT,
+  parseProductSortKey,
+  type ProductSortKey,
+} from '@/lib/product-sort'
+import { useClientMounted } from '@/lib/hooks/useClientMounted'
 
-const SORT_OPTIONS = [
-  { value: 'sale', label: 'Акційні товари' },
-  { value: 'price_asc', label: 'Ціна: від низької' },
-  { value: 'price_desc', label: 'Ціна: від високої' },
-  { value: 'newest', label: 'Нові надходження' },
+/** Зафіксовано тут, щоб HMR не підміняв список на ADMIN_PRODUCT_SORT_OPTIONS. */
+const OPTIONS: { value: ProductSortKey; label: string }[] = [
+  { value: 'name_asc', label: 'Назва: А → Я' },
+  { value: 'name_desc', label: 'Назва: Я → А' },
+  { value: 'price_asc', label: 'Ціна: зростання' },
+  { value: 'price_desc', label: 'Ціна: спадання' },
 ]
 
 export default function SortSelect() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const raw = searchParams.get('sort')
-  const current = raw === null || raw === 'default' ? 'sale' : raw
+  const mounted = useClientMounted()
+
+  const fromUrl = parseProductSortKey(
+    searchParams.get('sort'),
+    OPTIONS,
+    DEFAULT_SHOP_PRODUCT_SORT
+  )
+  // До mount тримаємо дефолт, щоб SSR і перший клієнтський прохід збігались.
+  const current: ProductSortKey = mounted ? fromUrl : DEFAULT_SHOP_PRODUCT_SORT
 
   function handleChange(value: string) {
     const params = new URLSearchParams(searchParams.toString())
-    if (value === 'sale') {
+    params.delete('page')
+    if (value === DEFAULT_SHOP_PRODUCT_SORT) {
       params.delete('sort')
     } else {
       params.set('sort', value)
     }
-    router.push(`${pathname}?${params.toString()}`)
+    const next = params.toString()
+    router.push(next ? `${pathname}?${next}` : pathname)
   }
 
   return (
@@ -32,10 +48,13 @@ export default function SortSelect() {
       <select
         value={current}
         onChange={e => handleChange(e.target.value)}
+        suppressHydrationWarning
         className="h-9 pl-3 pr-8 bg-bg-surface border border-border rounded text-sm text-text-secondary appearance-none cursor-pointer focus:outline-none focus:border-accent transition-colors hover:border-border-light"
       >
-        {SORT_OPTIONS.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+        {OPTIONS.map(o => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
         ))}
       </select>
       <ChevronDown

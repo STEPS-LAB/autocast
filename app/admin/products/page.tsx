@@ -1,36 +1,55 @@
 'use client'
 
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Pencil, Percent, Plus } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ChevronDown, Pencil, Percent, Plus, Upload } from 'lucide-react'
 import AdminTable from '@/components/admin/AdminTable'
-import { cn, formatPrice } from '@/lib/utils'
+import { cn, resolveSalePricing } from '@/lib/utils'
+import { useAdminPrice } from '@/lib/hooks/useAdminPrice'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import type { Column } from '@/components/admin/AdminTable'
-import type { Brand, Product } from '@/types'
+import type { Product } from '@/types'
 import Image from 'next/image'
 import { applyDiscountToProduct, clampDiscountPercent, salePriceFromPercent } from '@/lib/discounts'
 import { selectDiscountOverrides, useDiscountStore } from '@/lib/store/discounts'
-import type { Category } from '@/types'
 import ImageCropModal from '@/components/admin/ImageCropModal'
+import Pagination from '@/components/ui/Pagination'
+import { clampPage, pageRangeLabel, ADMIN_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
+import {
+  ADMIN_PRODUCT_SORT_OPTIONS,
+  DEFAULT_ADMIN_PRODUCT_SORT,
+  type ProductSortKey,
+} from '@/lib/product-sort'
 
 type ProductRow = Product & { id: string }
 
 export default function AdminProductsPage() {
+  return (
+    <Suspense fallback={<p className="p-8 text-sm text-text-muted">Завантаження товарів...</p>}>
+      <AdminProductsPageInner />
+    </Suspense>
+  )
+}
+
+function AdminProductsPageInner() {
   const MAX_IMAGES = 10
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const importRefreshKey = searchParams.get('imported')
   const [products, setProducts] = useState<ProductRow[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [brands, setBrands] = useState<Brand[]>([])
+  const [totalItems, setTotalItems] = useState(0)
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
   const [discountProductId, setDiscountProductId] = useState<string | null>(null)
   const [discountInput, setDiscountInput] = useState('')
   const [discountError, setDiscountError] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortKey, setSortKey] = useState<ProductSortKey>(DEFAULT_ADMIN_PRODUCT_SORT)
   const [editingImageProductId, setEditingImageProductId] = useState<string | null>(null)
   const [pendingImages, setPendingImages] = useState<string[]>([])
   const [selectedFileName, setSelectedFileName] = useState('')
@@ -39,9 +58,12 @@ export default function AdminProductsPage() {
   const [imageError, setImageError] = useState('')
   const imageCropQueueRef = useRef<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [page, setPage] = useState(1)
   const overrides = useDiscountStore(selectDiscountOverrides)
   const setDiscountPercent = useDiscountStore(s => s.setDiscountPercent)
   const clearDiscount = useDiscountStore(s => s.clearDiscount)
+  const { formatDual } = useAdminPrice()
 
   async function getSupabase() {
     const mod = await import('@/lib/supabase/client')
@@ -49,32 +71,73 @@ export default function AdminProductsPage() {
   }
 
   useEffect(() => {
-    let isMounted = true
-    async function loadData() {
-      const supabase = await getSupabase()
-      const [{ data: productsData }, { data: categoriesData }, { data: brandsData }] = await Promise.all([
-        supabase
-          .from('products')
-          .select('id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('categories')
-          .select('id,slug,name_ua,parent_id,image_url,sort_order')
-          .order('sort_order', { ascending: true }),
-        supabase.from('brands').select('id,name,logo_url').order('name', { ascending: true }),
-      ])
+    const timer = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim())
+      setPage(1)
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchInput])
 
-      if (!isMounted) return
-      setProducts((productsData as ProductRow[]) ?? [])
-      setCategories((categoriesData as Category[]) ?? [])
-      setBrands((brandsData as Brand[]) ?? [])
-      setLoading(false)
+  useEffect(() => {
+    let isMounted = true
+    const controller = new AbortController()
+
+    async function loadData() {
+      setLoading(true)
+      setLoadError('')
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: String(ADMIN_PRODUCTS_PAGE_SIZE),
+          sort: sortKey,
+        })
+        if (searchQuery) params.set('q', searchQuery)
+
+        const response = await fetch(`/api/admin/products?${params.toString()}`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        const payload = (await response.json()) as {
+          error?: string
+          products?: ProductRow[]
+          total?: number
+          page?: number
+          totalPages?: number
+        }
+
+        if (!isMounted) return
+
+        if (!response.ok) {
+          setLoadError(payload.error ?? 'Не вдалося завантажити товари.')
+          setProducts([])
+          setTotalItems(0)
+          return
+        }
+
+        const rows = (payload.products ?? []).map(p => applyDiscountToProduct(p, overrides))
+        setProducts(rows)
+        setTotalItems(Number(payload.total ?? 0))
+        if (typeof payload.page === 'number' && payload.page !== page) {
+          setPage(payload.page)
+        }
+      } catch (error) {
+        if (!isMounted) return
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setLoadError(error instanceof Error ? error.message : 'Не вдалося завантажити товари.')
+        setProducts([])
+        setTotalItems(0)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
     }
     void loadData()
     return () => {
       isMounted = false
+      controller.abort()
     }
-  }, [])
+    // overrides applied in a separate effect after load
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [importRefreshKey, pathname, page, searchQuery, sortKey])
 
   useEffect(() => {
     setProducts(prev => prev.map(p => applyDiscountToProduct(p, overrides)))
@@ -82,7 +145,7 @@ export default function AdminProductsPage() {
 
   async function syncCatalogAfterChange() {
     try {
-      await fetch('/api/admin/bootstrap', { method: 'POST' })
+      await fetch('/api/admin/revalidate-catalog', { method: 'POST' })
     } catch {
       // Ignore sync errors to keep CRUD responsive.
     }
@@ -90,9 +153,20 @@ export default function AdminProductsPage() {
 
   async function handleUpdate(id: string, key: string, value: string | number) {
     const supabase = await getSupabase()
-    await supabase.from('products').update({ [key]: value }).eq('id', id)
+    const patch: Record<string, string | number | null> = { [key]: value }
+
+    // Якщо нова ціна ≤ поточної sale_price — знімаємо невалідну знижку.
+    if (key === 'price' && typeof value === 'number') {
+      const row = products.find(p => p.id === id)
+      if (row?.sale_price != null && !(row.sale_price < value)) {
+        patch.sale_price = null
+      }
+    }
+
+    const { error } = await supabase.from('products').update(patch).eq('id', id)
+    if (error) return
     setProducts(prev => prev.map(p =>
-      p.id === id ? { ...p, [key]: value } : p
+      p.id === id ? { ...p, ...patch } : p
     ))
     await syncCatalogAfterChange()
   }
@@ -107,7 +181,12 @@ export default function AdminProductsPage() {
     const supabase = await getSupabase()
     await supabase.from('products').delete().eq('id', id)
     setProducts(prev => prev.filter(p => p.id !== id))
+    setTotalItems(prev => Math.max(0, prev - 1))
     setDeleteProductId(null)
+    // If we deleted the last row on this page, go back one page (triggers reload).
+    if (products.length <= 1 && page > 1) {
+      setPage(prev => Math.max(1, prev - 1))
+    }
     await syncCatalogAfterChange()
   }
 
@@ -311,8 +390,8 @@ export default function AdminProductsPage() {
       key: 'category_id',
       label: 'Категорія',
       render: (row) => {
-        const cat = categories.find(c => c.id === row.category_id)
-        return <span className="text-sm text-text-secondary">{cat?.name_ua ?? '—'}</span>
+        const categoryName = row.category?.name_ua
+        return <span className="text-sm text-text-secondary">{categoryName ?? '—'}</span>
       },
     },
     {
@@ -320,14 +399,21 @@ export default function AdminProductsPage() {
       label: 'Ціна',
       editable: true,
       type: 'number',
-      render: (row) => (
-        <div>
-          <span className="text-sm font-semibold text-text-primary price">{formatPrice(row.price)}</span>
-          {row.sale_price && (
-            <p className="text-xs text-accent price">{formatPrice(row.sale_price)}</p>
-          )}
-        </div>
-      ),
+      render: (row) => {
+        const pricing = resolveSalePricing(row.price, row.sale_price)
+        return (
+          <div>
+            <span className="text-sm font-semibold text-text-primary price">
+              {formatDual(pricing.displayPrice)}
+            </span>
+            {pricing.salePrice != null && (
+              <p className="text-xs text-text-muted line-through price">
+                {formatDual(pricing.listPrice)}
+              </p>
+            )}
+          </div>
+        )
+      },
     },
     {
       key: 'stock',
@@ -342,21 +428,12 @@ export default function AdminProductsPage() {
     },
   ]
 
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    if (!query) return products
+  const totalPages = Math.max(1, Math.ceil(totalItems / ADMIN_PRODUCTS_PAGE_SIZE) || 1)
+  const currentPage = clampPage(page, totalPages)
 
-    return products.filter((product) => {
-      const categoryName = categories.find(c => c.id === product.category_id)?.name_ua ?? ''
-      const brandName = brands.find(b => b.id === product.brand_id)?.name ?? ''
-      return (
-        product.name_ua.toLowerCase().includes(query)
-        || product.description_ua.toLowerCase().includes(query)
-        || categoryName.toLowerCase().includes(query)
-        || brandName.toLowerCase().includes(query)
-      )
-    })
-  }, [brands, categories, products, searchQuery])
+  useEffect(() => {
+    if (page !== currentPage) setPage(currentPage)
+  }, [currentPage, page])
 
   const productForDiscount = useMemo(
     () => products.find(p => p.id === discountProductId) ?? null,
@@ -373,9 +450,8 @@ export default function AdminProductsPage() {
       : null
 
   function handleDiscount(row: ProductRow) {
-    const currentPercent = row.sale_price
-      ? Math.round(((row.price - row.sale_price) / row.price) * 100)
-      : 0
+    const pricing = resolveSalePricing(row.price, row.sale_price)
+    const currentPercent = pricing.discountPercent ?? 0
     setDiscountProductId(row.id)
     setDiscountInput(String(currentPercent))
     setDiscountError('')
@@ -392,7 +468,14 @@ export default function AdminProductsPage() {
 
     const percent = clampDiscountPercent(parsed)
     if (percent === 0) {
-      await supabase.from('products').update({ sale_price: null }).eq('id', discountProductId)
+      const { error } = await supabase
+        .from('products')
+        .update({ sale_price: null })
+        .eq('id', discountProductId)
+      if (error) {
+        setDiscountError(error.message || 'Не вдалося зняти знижку.')
+        return
+      }
       setProducts(prev => prev.map(p => (p.id === discountProductId ? { ...p, sale_price: null } : p)))
       clearDiscount(discountProductId)
       setDiscountProductId(null)
@@ -403,7 +486,18 @@ export default function AdminProductsPage() {
     const row = products.find(p => p.id === discountProductId)
     if (!row) return
     const nextSalePrice = salePriceFromPercent(row.price, percent)
-    await supabase.from('products').update({ sale_price: nextSalePrice }).eq('id', discountProductId)
+    if (!(nextSalePrice < row.price)) {
+      setDiscountError('Знижка не змінює ціну. Збільште відсоток.')
+      return
+    }
+    const { error } = await supabase
+      .from('products')
+      .update({ sale_price: nextSalePrice })
+      .eq('id', discountProductId)
+    if (error) {
+      setDiscountError(error.message || 'Не вдалося зберегти знижку.')
+      return
+    }
     setProducts(prev => prev.map(p =>
       p.id === discountProductId
         ? { ...p, sale_price: nextSalePrice }
@@ -423,35 +517,80 @@ export default function AdminProductsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Товари</h1>
-          <p className="text-sm text-text-muted">{filteredProducts.length} товарів</p>
+          <p className="text-sm text-text-muted">
+            {loading
+              ? 'Завантаження...'
+              : totalItems > ADMIN_PRODUCTS_PAGE_SIZE
+                ? `${totalItems} товарів · ${pageRangeLabel(currentPage, ADMIN_PRODUCTS_PAGE_SIZE, totalItems)}`
+                : `${totalItems} товарів`}
+          </p>
+          {loadError && (
+            <p className="text-sm text-red-500 mt-1">{loadError}</p>
+          )}
         </div>
-        <div className="flex-1 max-w-md">
+        <div className="flex-1 max-w-xl flex items-center gap-2">
           <label className="sr-only" htmlFor="products-search">Пошук товарів</label>
           <input
             id="products-search"
             type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Пошук товарів..."
             className="w-full h-9 rounded border border-border bg-bg-input px-3 text-sm text-text-primary transition-all duration-300 focus:border-border-light"
           />
+          <div className="relative shrink-0">
+            <label className="sr-only" htmlFor="products-sort">Сортування</label>
+            <select
+              id="products-sort"
+              value={sortKey}
+              onChange={(e) => {
+                setSortKey(e.target.value as ProductSortKey)
+                setPage(1)
+              }}
+              className="h-9 pl-3 pr-8 bg-bg-surface border border-border rounded text-sm text-text-secondary appearance-none cursor-pointer focus:outline-none focus:border-accent transition-colors hover:border-border-light"
+            >
+              {ADMIN_PRODUCT_SORT_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={13}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            />
+          </div>
         </div>
-        <Link
-          href="/admin/products/new"
-          className={cn(
-            'inline-flex items-center justify-center font-medium rounded transition-all duration-150',
-            'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
-            'bg-accent text-text-primary hover:bg-accent-hover active:scale-[0.98] shadow-sm',
-            'h-8 px-3 text-sm gap-1.5 shrink-0'
-          )}
-        >
-          <Plus size={14} />
-          Додати товар
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/admin/products/import"
+            className={cn(
+              'inline-flex items-center justify-center font-medium rounded transition-all duration-150',
+              'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
+              'border border-border bg-bg-surface text-text-primary hover:bg-bg-elevated',
+              'h-8 px-3 text-sm gap-1.5'
+            )}
+          >
+            <Upload size={14} />
+            Імпорт
+          </Link>
+          <Link
+            href="/admin/products/new"
+            className={cn(
+              'inline-flex items-center justify-center font-medium rounded transition-all duration-150',
+              'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2',
+              'bg-accent text-text-primary hover:bg-accent-hover active:scale-[0.98] shadow-sm',
+              'h-8 px-3 text-sm gap-1.5'
+            )}
+          >
+            <Plus size={14} />
+            Додати товар
+          </Link>
+        </div>
       </div>
 
       <AdminTable
-        data={filteredProducts}
+        data={products}
         columns={columns}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
@@ -460,7 +599,11 @@ export default function AdminProductsPage() {
         renderActions={(row) => (
           <>
             <button
-              onClick={() => openEditProductModal(row)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                openEditProductModal(row)
+              }}
               className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
               aria-label="Редагувати товар"
               title="Редагувати товар"
@@ -468,7 +611,11 @@ export default function AdminProductsPage() {
               <Pencil size={14} />
             </button>
             <button
-              onClick={() => handleDiscount(row)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDiscount(row)
+              }}
               className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
               aria-label="Додати знижку"
               title="Додати знижку"
@@ -478,8 +625,14 @@ export default function AdminProductsPage() {
           </>
         )}
       />
+      <Pagination
+        page={currentPage}
+        totalItems={totalItems}
+        pageSize={ADMIN_PRODUCTS_PAGE_SIZE}
+        onPageChange={setPage}
+      />
       {loading && (
-        <p className="text-sm text-text-muted mt-3">Завантаження...</p>
+        <p className="text-sm text-text-muted mt-3">Завантаження сторінки...</p>
       )}
 
       <Modal
@@ -529,7 +682,7 @@ export default function AdminProductsPage() {
                 className="flex-1 h-full px-3 text-sm text-text-primary placeholder:text-text-muted bg-transparent border-0 focus:outline-none focus:border-accent"
               />
               <div className="px-3 border-l border-border flex items-center text-sm text-text-muted whitespace-nowrap">
-                Після: {discountedPriceForUi !== null ? formatPrice(discountedPriceForUi) : '—'}
+                Після: {discountedPriceForUi !== null ? formatDual(discountedPriceForUi) : '—'}
               </div>
             </div>
           </label>
