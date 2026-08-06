@@ -35,7 +35,7 @@ export async function fetchAllCategories<
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) return { data: [], error: { message: error.message } }
-    const page = (data ?? []) as T[]
+    const page = (data ?? []) as unknown as T[]
     rows.push(...page)
     if (page.length < PAGE_SIZE) break
     from += PAGE_SIZE

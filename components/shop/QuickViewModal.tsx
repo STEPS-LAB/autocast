@@ -25,14 +25,15 @@ export default function QuickViewModal({ product, onClose }: QuickViewModalProps
 
   if (!product) return null
 
-  const pricing = resolveSalePricing(product.price, product.sale_price)
+  const item = product
+  const pricing = resolveSalePricing(item.price, item.sale_price)
   const discount = pricing.discountPercent
   const displayPrice = pricing.displayPrice
   const listPrice = pricing.listPrice
   const hasSale = pricing.salePrice != null
 
   function handleAddToCart() {
-    addItem(product)
+    addItem(item)
     onClose()
   }
 
