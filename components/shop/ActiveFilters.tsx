@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { X } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
@@ -29,6 +29,7 @@ interface ActiveFiltersProps {
   filters: ActiveFiltersState
   facets: Facet[]
   categories: Category[]
+  onVehicleOptimistic?: (next: VehicleSelections | null) => void
 }
 
 function buildChips(
@@ -158,10 +159,12 @@ export default function ActiveFilters({
   filters,
   facets,
   categories,
+  onVehicleOptimistic,
 }: ActiveFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [, startTransition] = useTransition()
 
   const chips = useMemo(
     () => buildChips(filters, facets, categories),
@@ -175,10 +178,28 @@ export default function ActiveFilters({
     mutate(params)
     params.delete('page')
     const qs = params.toString()
-    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    const href = qs ? `${pathname}?${qs}` : pathname
+    startTransition(() => {
+      router.replace(href, { scroll: false })
+    })
+  }
+
+  function clearVehicleOptimisticIfNeeded(chipId: string) {
+    if (chipId.startsWith('vehicle:')) {
+      if (chipId === 'vehicle:make') onVehicleOptimistic?.({})
+      else if (chipId === 'vehicle:model') {
+        onVehicleOptimistic?.({ make: filters.vehicle?.make })
+      } else if (chipId === 'vehicle:year') {
+        onVehicleOptimistic?.({
+          make: filters.vehicle?.make,
+          model: filters.vehicle?.model,
+        })
+      }
+    }
   }
 
   function clearAll() {
+    onVehicleOptimistic?.({})
     push(params => {
       params.delete('category')
       params.delete('brand')
@@ -201,7 +222,10 @@ export default function ActiveFilters({
           <button
             key={chip.id}
             type="button"
-            onClick={() => push(chip.remove)}
+            onClick={() => {
+              clearVehicleOptimisticIfNeeded(chip.id)
+              push(chip.remove)
+            }}
             className="inline-flex items-center gap-1.5 max-w-full h-8 pl-2.5 pr-2 rounded-[10px] border border-border bg-bg-surface text-xs text-text-primary hover:border-accent hover:bg-accent/15 transition-colors"
           >
             <span className="truncate">{chip.label}</span>

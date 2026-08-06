@@ -17,11 +17,12 @@ import {
   parseFacetSelections,
 } from '@/lib/shop/facets'
 import {
-  buildVehicleFacets,
+  buildVehicleFacetsFromParsed,
   matchesVehicle,
   parseVehicle,
   parseVehicleSelections,
   rootSupportsVehicleFilters,
+  type VehicleInfo,
 } from '@/lib/shop/vehicle'
 import { sortProducts } from '@/lib/product-sort'
 import { clampPage, getTotalPages, SHOP_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
@@ -107,15 +108,20 @@ async function CategoryShop({ params, searchParams }: Props) {
     f => !(vehicleEnabled && f.key === 'carmake')
   )
 
-  const vehicleFacets = vehicleEnabled
-    ? buildVehicleFacets(baseFiltered, vehicleSelected)
-    : { makes: [], models: [], years: [] }
+  // Parse vehicle once per product — reused for facets and filtering.
+  const parsedVehicles: VehicleInfo[] | null = vehicleEnabled
+    ? baseFiltered.map(p => parseVehicle(p.name_ua, p.specs))
+    : null
 
-  const filtered = baseFiltered.filter(p => {
+  const vehicleFacets = parsedVehicles
+    ? buildVehicleFacetsFromParsed(parsedVehicles, vehicleSelected)
+    : { makes: [], models: [], years: [], cascade: {} }
+
+  const filtered = baseFiltered.filter((p, i) => {
     if (!matchesFacets(p.specs, facetSelections, facetConfigs)) return false
     if (
-      vehicleEnabled &&
-      !matchesVehicle(parseVehicle(p.name_ua, p.specs), vehicleSelected)
+      parsedVehicles &&
+      !matchesVehicle(parsedVehicles[i]!, vehicleSelected)
     ) {
       return false
     }
