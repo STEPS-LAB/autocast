@@ -1,4 +1,7 @@
 import { slugifyName } from '@/lib/utils'
+import { canonicalizeImportCategoryName } from '@/lib/import/yml/category-locale'
+import { findBestCategoryMatch } from '@/lib/import/yml/category-match'
+import { fetchAllCategories } from '@/lib/data/categories'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 async function uniqueCategorySlug(
@@ -27,8 +30,7 @@ async function uniqueCategorySlug(
 
 /**
  * Ensure top-level categories exist for each Excel sheet name.
- * Matching is by (name_ua, parent_id = null) so we never attach to a YML subcategory
- * that happens to share the same label.
+ * Reuses any existing equivalent category/subcategory by name — never duplicates.
  */
 export async function resolveExcelCategoryIds(
   supabase: SupabaseClient,
@@ -38,64 +40,65 @@ export async function resolveExcelCategoryIds(
   const map = new Map<string, string>()
   if (uniqueNames.length === 0) return map
 
-  const { data: existingRows } = await supabase
-    .from('categories')
-    .select('id,name_ua,slug,parent_id,sort_order')
-    .is('parent_id', null)
+  const { data: existingRows, error } = await fetchAllCategories(
+    supabase,
+    'id,name_ua,slug,parent_id,sort_order'
+  )
+  if (error) throw new Error(error.message)
 
-  const byName = new Map<string, { id: string; slug: string }>()
-  const reservedSlugs = new Set<string>()
+  const matchCandidates = (existingRows ?? []).map(row => ({
+    id: String(row.id),
+    nameUa: String(row.name_ua),
+    parentId: (row.parent_id as string | null) ?? null,
+    slug: String(row.slug),
+  }))
+  const reservedSlugs = new Set(matchCandidates.map(c => c.slug).filter(Boolean) as string[])
   let nextSort = 100
 
   for (const row of existingRows ?? []) {
-    reservedSlugs.add(row.slug)
-    byName.set(row.name_ua.trim().toLowerCase(), { id: row.id, slug: row.slug })
     if (typeof row.sort_order === 'number' && row.sort_order >= nextSort) {
       nextSort = row.sort_order + 1
     }
   }
 
   for (const sheetName of uniqueNames) {
-    const key = sheetName.toLowerCase()
-    const existing = byName.get(key)
+    const nameUa = canonicalizeImportCategoryName(sheetName)
+    const existing = findBestCategoryMatch(nameUa, null, matchCandidates)
     if (existing) {
       map.set(sheetName, existing.id)
       continue
     }
 
-    const slug = await uniqueCategorySlug(supabase, sheetName, reservedSlugs)
+    const slug = await uniqueCategorySlug(supabase, nameUa, reservedSlugs)
     const sortOrder = nextSort
     nextSort += 1
 
-    const { data: inserted, error } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from('categories')
       .insert({
         slug,
-        name_ua: sheetName,
+        name_ua: nameUa,
         parent_id: null,
         image_url: null,
         sort_order: sortOrder,
       })
-      .select('id,name_ua,slug')
+      .select('id,name_ua,slug,parent_id')
       .single()
 
-    if (error) {
-      const { data: retry } = await supabase
-        .from('categories')
-        .select('id,name_ua,slug')
-        .eq('name_ua', sheetName)
-        .is('parent_id', null)
-        .maybeSingle()
-      if (retry) {
-        map.set(sheetName, retry.id)
-        byName.set(key, { id: retry.id, slug: retry.slug })
-      }
+    if (insertError) {
+      const retry = findBestCategoryMatch(nameUa, null, matchCandidates)
+      if (retry) map.set(sheetName, retry.id)
       continue
     }
 
     if (inserted) {
       map.set(sheetName, inserted.id)
-      byName.set(key, { id: inserted.id, slug: inserted.slug })
+      matchCandidates.push({
+        id: inserted.id,
+        nameUa: inserted.name_ua,
+        parentId: inserted.parent_id ?? null,
+        slug: inserted.slug,
+      })
     }
   }
 

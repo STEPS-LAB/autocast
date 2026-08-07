@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<yml_catalog date="2026-08-05 23:00">
+  <shop>
+    <name>ON-LINE</name>
+    <company>Caralarm</company>
+    <url>https://www.caralarm.com.ua/</url>
+    <currencies>
+      <currency id="USD" rate="1.0000"/>
+      <currency id="UAH" rate="0.0223"/>
+    </currencies>
+    <categories>
+      <category id="87">Автосигналізації</category>
+      <category id="90" parentId="87">Іммобілайзери</category>
+      <category id="142">Рекламна продукція</category>
+      <category id="143" parentId="142">Брошури</category>
+    </categories>
+    <offers>
+      <offer id="1001" available="true">
+        <url>https://www.caralarm.com.ua/p-1001.html</url>
+        <name>Тестовий іммобілайзер (повний)</name>
+        <model>CODE-1001</model>
+        <priceUSD>10</priceUSD>
+        <priceUAH>450</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>560</priceMinUAH>
+        <priceOld>9</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>90</categoryID>
+        <categoryName>Іммобілайзери</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/img/1001a.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/img/1001b.jpg</picture>
+        <vendor>TESTBRAND</vendor>
+        <description_short><![CDATA[Короткий HTML опис]]></description_short>
+        <description><![CDATA[<p><strong>Повний</strong> опис товару</p>]]></description>
+        <param name="Тип">Біометричний</param>
+      </offer>
+      <offer id="1002" available="false">
+        <url>https://www.caralarm.com.ua/p-1002.html</url>
+        <name>Постачання 1-2 дні (export false)</name>
+        <model>CODE-1002</model>
+        <priceUSD>20</priceUSD>
+        <priceUAH>900</priceUAH>
+        <priceMinUSD>25</priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>18</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>90</categoryID>
+        <categoryName>Іммобілайзери</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/img/1002.jpg</picture>
+        <vendor>TESTBRAND</vendor>
+        <description><![CDATA[Опис export]]></description>
+      </offer>
+    </offers>
+  </shop>
+</yml_catalog>

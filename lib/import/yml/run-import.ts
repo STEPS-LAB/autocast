@@ -2,8 +2,13 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { resolveBrandId } from '@/lib/admin/resolve-brand'
 import { fetchAllCategories } from '@/lib/data/categories'
 import { slugify, slugifyName } from '@/lib/utils'
-import { buildCategoryImportPlan, formatCategoryPath, resolveFeedCategoryIdAtMaxDepth } from './category-tree'
+import { ensureNamedCategory, importCategoryTree } from './category-import'
+import {
+  type CategoryMatchCandidate,
+} from './category-match'
+import { formatCategoryPath, resolveFeedCategoryIdAtMaxDepth } from './category-tree'
 import { parseYmlFromUrl } from './parser'
+import { fetchPdfText } from './pdf-text'
 import { dbPricingFromYmlOffer } from './pricing'
 import {
   pricingNeedsUpdate,
@@ -14,19 +19,23 @@ import {
 import {
   LEGACY_OFFER_ID_SPEC_KEY,
   YML_OFFER_ID_SPEC_KEY,
+  YML_PDF_SPEC_KEY,
   YML_SOURCE_URL_SPEC_KEY,
   YML_VENDOR_CODE_SPEC_KEY,
   type ImportPreview,
   type ImportPreviewItem,
   type ImportResult,
   type ParsedYmlOffer,
-  type YmlCategory,
 } from './types'
 import type { Brand } from '@/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+export { ensureNamedCategory, importCategoryTree } from './category-import'
+
 const MAX_IMAGES_PER_PRODUCT = 10
 const WRITE_CONCURRENCY = 8
+const PDF_ENRICH_CONCURRENCY = 3
+const MAX_PDF_ENRICH = 40
 const PRODUCT_DIFF_SELECT =
   'id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images'
 
@@ -42,6 +51,7 @@ function buildSpecs(product: ParsedYmlOffer): Record<string, string> {
   }
   if (product.vendorCode) specs[YML_VENDOR_CODE_SPEC_KEY] = product.vendorCode
   if (product.url) specs[YML_SOURCE_URL_SPEC_KEY] = product.url
+  if (product.pdfUrls.length > 0) specs[YML_PDF_SPEC_KEY] = product.pdfUrls[0] ?? ''
   return specs
 }
 
@@ -50,161 +60,22 @@ function offerIdFromSpecs(specs: Record<string, string> | null): string | undefi
   return specs[YML_OFFER_ID_SPEC_KEY] || specs[LEGACY_OFFER_ID_SPEC_KEY]
 }
 
-function categoryMatchKey(nameUa: string, parentId: string | null): string {
-  return `${parentId ?? 'null'}::${nameUa.trim().toLowerCase()}`
-}
+/** Fill empty descriptions from linked PDF datasheets (best-effort). */
+async function enrichDescriptionsFromPdfs(products: ParsedYmlOffer[]): Promise<void> {
+  const targets = products
+    .filter(p => !p.description.trim() && p.pdfUrls.length > 0)
+    .slice(0, MAX_PDF_ENRICH)
+  if (targets.length === 0) return
 
-async function uniqueCategorySlug(
-  supabase: SupabaseClient,
-  baseName: string,
-  reserved: Set<string>
-): Promise<string> {
-  const base = slugifyName(baseName, 'category')
-  let candidate = base
-  let suffix = 2
-
-  while (true) {
-    if (!reserved.has(candidate)) {
-      reserved.add(candidate)
-      const { data } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('slug', candidate)
-        .maybeSingle()
-      if (!data) return candidate
-    }
-    candidate = `${base}-${suffix}`
-    suffix += 1
-  }
-}
-
-/**
- * Upsert the feed category tree (used leaves + ancestors) and return
- * feedCategoryId → dbCategoryId. Matching is by (name_ua, parent_id).
- */
-async function importCategoryTree(
-  supabase: SupabaseClient,
-  categories: YmlCategory[],
-  usedLeafIds: string[]
-): Promise<Map<string, string>> {
-  const plan = buildCategoryImportPlan(categories, usedLeafIds)
-  const feedToDb = new Map<string, string>()
-  if (plan.length === 0) return feedToDb
-
-  const { data: existingRows, error: existingError } = await fetchAllCategories(
-    supabase,
-    'id,name_ua,slug,parent_id'
-  )
-  if (existingError) throw new Error(existingError.message)
-
-  const byNameParent = new Map<string, { id: string; slug: string }>()
-  const reservedSlugs = new Set<string>()
-  for (const row of existingRows) {
-    byNameParent.set(categoryMatchKey(String(row.name_ua), (row.parent_id as string | null) ?? null), {
-      id: String(row.id),
-      slug: String(row.slug),
-    })
-    reservedSlugs.add(String(row.slug))
-  }
-
-  for (const node of plan) {
-    const parentDbId = node.parentFeedId ? (feedToDb.get(node.parentFeedId) ?? null) : null
-    if (node.parentFeedId && !parentDbId) {
-      // Parent failed earlier — skip child to avoid orphaned hierarchy.
-      continue
-    }
-
-    const matchKey = categoryMatchKey(node.name, parentDbId)
-    const existing = byNameParent.get(matchKey)
-    if (existing) {
-      feedToDb.set(node.feedId, existing.id)
-      continue
-    }
-
-    const slug = await uniqueCategorySlug(supabase, node.name, reservedSlugs)
-    const { data: inserted, error } = await supabase
-      .from('categories')
-      .insert({
-        slug,
-        name_ua: node.name,
-        parent_id: parentDbId,
-        image_url: null,
-        sort_order: node.sortOrder,
-      })
-      .select('id,name_ua,slug,parent_id')
-      .single()
-
-    if (error) {
-      // Race / unique slug collision — try resolve by name+parent again.
-      let retryQuery = supabase
-        .from('categories')
-        .select('id,name_ua,slug,parent_id')
-        .eq('name_ua', node.name)
-      retryQuery =
-        parentDbId == null ? retryQuery.is('parent_id', null) : retryQuery.eq('parent_id', parentDbId)
-      const { data: retry } = await retryQuery.maybeSingle()
-
-      if (retry) {
-        feedToDb.set(node.feedId, retry.id)
-        byNameParent.set(categoryMatchKey(retry.name_ua, retry.parent_id ?? null), {
-          id: retry.id,
-          slug: retry.slug,
-        })
+  await mapPool(targets, PDF_ENRICH_CONCURRENCY, async product => {
+    for (const pdfUrl of product.pdfUrls.slice(0, 2)) {
+      const text = await fetchPdfText(pdfUrl)
+      if (text.trim().length >= 40) {
+        product.description = text.trim()
+        return
       }
-      continue
     }
-
-    if (inserted) {
-      feedToDb.set(node.feedId, inserted.id)
-      byNameParent.set(categoryMatchKey(inserted.name_ua, inserted.parent_id ?? null), {
-        id: inserted.id,
-        slug: inserted.slug,
-      })
-    }
-  }
-
-  return feedToDb
-}
-
-/** Ensure a flat fallback category exists for unrecognized feed leaf IDs. */
-async function ensureFallbackCategory(
-  supabase: SupabaseClient,
-  feedCategoryId: string,
-  cache: Map<string, string>
-): Promise<string | null> {
-  if (cache.has(feedCategoryId)) return cache.get(feedCategoryId) ?? null
-
-  const name = `Категорія ${feedCategoryId}`
-  const { data: existing } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('name_ua', name)
-    .is('parent_id', null)
-    .maybeSingle()
-
-  if (existing?.id) {
-    cache.set(feedCategoryId, existing.id)
-    return existing.id
-  }
-
-  const slug = await uniqueCategorySlug(supabase, name, new Set())
-  const numericId = Number.parseInt(feedCategoryId, 10)
-  const sortOrder = Number.isFinite(numericId) ? 900 + numericId : 900
-  const { data: inserted, error } = await supabase
-    .from('categories')
-    .insert({
-      slug,
-      name_ua: name,
-      parent_id: null,
-      image_url: null,
-      sort_order: sortOrder,
-    })
-    .select('id')
-    .single()
-
-  if (error || !inserted) return null
-  cache.set(feedCategoryId, inserted.id)
-  return inserted.id
+  })
 }
 
 async function loadExistingByOfferId(supabase: SupabaseClient): Promise<Map<string, ProductRow>> {
@@ -349,6 +220,7 @@ function previewItem(
 
 export async function buildYmlImportPreview(url: string): Promise<ImportPreview> {
   const parsed = await parseYmlFromUrl(url)
+  await enrichDescriptionsFromPdfs(parsed.products)
   const supabase = await createServerClient()
   const byOfferId = await loadExistingByOfferId(supabase)
 
@@ -377,7 +249,9 @@ export async function buildYmlImportPreview(url: string): Promise<ImportPreview>
   const usedLeafIds = [...new Set(parsed.products.map(p => p.categoryId))]
   const categories = [
     ...new Set(usedLeafIds.map(id => formatCategoryPath(parsed.categories, id))),
-  ].sort((a, b) => a.localeCompare(b, 'uk'))
+  ]
+    .filter(label => !/^категорія\s+\d+$/i.test(label))
+    .sort((a, b) => a.localeCompare(b, 'uk'))
 
   return {
     totalParsed: parsed.products.length,
@@ -410,12 +284,19 @@ export async function runYmlImport(
   options?: { onProgress?: (progress: YmlImportProgress) => void }
 ): Promise<ImportResult> {
   const parsed = await parseYmlFromUrl(url)
+  await enrichDescriptionsFromPdfs(parsed.products)
   const supabase = await createServerClient()
   const byOfferId = await loadExistingByOfferId(supabase)
 
   const usedLeafIds = parsed.products.map(product => product.categoryId)
   const categoryIds = await importCategoryTree(supabase, parsed.categories, usedLeafIds)
   const fallbackCache = new Map<string, string>()
+  const { data: allCats } = await fetchAllCategories(supabase, 'id,name_ua,parent_id')
+  const matchCandidates: CategoryMatchCandidate[] = (allCats ?? []).map(row => ({
+    id: String(row.id),
+    nameUa: String(row.name_ua),
+    parentId: (row.parent_id as string | null) ?? null,
+  }))
 
   const { data: brands } = await supabase.from('brands').select('id,name,logo_url')
   let knownBrands = (brands ?? []) as Brand[]
@@ -467,7 +348,12 @@ export async function runYmlImport(
       resolveFeedCategoryIdAtMaxDepth(parsed.categories, product.categoryId) ?? product.categoryId
     const fromTree = categoryIds.get(feedId)
     if (fromTree) return fromTree
-    return ensureFallbackCategory(supabase, feedId, fallbackCache)
+    return ensureNamedCategory(
+      supabase,
+      product.categoryName || 'Інше',
+      fallbackCache,
+      matchCandidates
+    )
   }
 
   async function insertProduct(

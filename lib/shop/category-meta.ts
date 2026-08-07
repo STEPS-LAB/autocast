@@ -1,15 +1,17 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  BatteryCharging,
   Camera,
   CircuitBoard,
+  Droplets,
   LayoutGrid,
   Lightbulb,
   MonitorSmartphone,
   ParkingSquare,
   Shield,
   Speaker,
+  Thermometer,
   Video,
+  Wrench,
 } from 'lucide-react'
 
 /** Icon + short blurb for root shop categories (by slug). */
@@ -21,17 +23,39 @@ const CATEGORY_META: Record<
     icon: Speaker,
     blurb: 'Акустика, сабвуфери, підсилювачі',
   },
+  avtokhimiya: {
+    icon: Droplets,
+    blurb: 'Шампуні, очисники, віск',
+  },
+  avtomahnitoly: {
+    icon: MonitorSmartphone,
+    blurb: 'Головні пристрої, рамки, роз\'єми',
+  },
+  // Legacy slug before rename Автомагнітоли та мультимедіа → Автомагнітоли
+  'avtomahnitoly-ta-multymedia': {
+    icon: MonitorSmartphone,
+    blurb: 'Головні пристрої, рамки, роз\'єми',
+  },
   avtosvitlo: {
     icon: Lightbulb,
-    blurb: 'Лампи, лінзи, додаткове світло',
+    blurb: 'LED/HID лампи, фари, додаткове світло',
+  },
+  'parkuvalni-kamery-ta-radary': {
+    icon: Camera,
+    blurb: 'Камери, парктроніки, відеопаркування',
+  },
+  // Legacy slugs before merge
+  'parkuvalni-kamery': {
+    icon: Camera,
+    blurb: 'Камери, парктроніки, відеопаркування',
   },
   'kamery-parkuvalni': {
     icon: Camera,
-    blurb: 'Камери заднього та кругового огляду',
+    blurb: 'Камери, парктроніки, відеопаркування',
   },
   multymedia: {
-    icon: MonitorSmartphone,
-    blurb: 'Головні пристрої, CarPlay, Android',
+    icon: Thermometer,
+    blurb: 'Клімат-панелі, захисне скло',
   },
   videoreyestratory: {
     icon: Video,
@@ -41,21 +65,25 @@ const CATEGORY_META: Record<
     icon: ParkingSquare,
     blurb: 'Парктроніки та датчики',
   },
+  'parkuvalni-radary-ta-systemy-videoparkuvannya': {
+    icon: ParkingSquare,
+    blurb: 'Парктроніки, датчики, відеопаркування',
+  },
   'okhoronni-systemy': {
     icon: Shield,
-    blurb: 'Сигналізації, іммобілайзери',
+    blurb: 'Сигналізації, GSM, іммобілайзери',
   },
   'zakhyst-vid-uhonu': {
     icon: Shield,
     blurb: 'Сигналізації та трекери',
   },
-  'rezervne-zhyvlennya': {
-    icon: BatteryCharging,
-    blurb: 'Інвертори, АКБ, зарядка',
+  'vse-dlya-montazhu': {
+    icon: Wrench,
+    blurb: 'Адаптери, інвертори, запобіжники',
   },
   avtoelektronika: {
     icon: CircuitBoard,
-    blurb: 'Гаджети та електроніка для авто',
+    blurb: 'ISO, адаптери, TPMS',
   },
 }
 

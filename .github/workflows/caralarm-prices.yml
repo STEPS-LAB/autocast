@@ -1,0 +1,68 @@
+# Caralarm price/stock sync around 09:20 / 12:20 / 15:20 / 17:20 Europe/Kyiv.
+# Dual UTC schedules cover winter (UTC+2) and summer (UTC+3); gate on Kyiv hour.
+name: Caralarm prices sync
+
+on:
+  schedule:
+    # Winter (EET UTC+2): 07:20, 10:20, 13:20, 15:20 UTC
+    - cron: '20 7 * * *'
+    - cron: '20 10 * * *'
+    - cron: '20 13 * * *'
+    - cron: '20 15 * * *'
+    # Summer (EEST UTC+3): 06:20, 09:20, 12:20, 14:20 UTC
+    - cron: '20 6 * * *'
+    - cron: '20 9 * * *'
+    - cron: '20 12 * * *'
+    - cron: '20 14 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run even if Kyiv hour is not in the allowed set'
+        required: false
+        default: 'true'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Guard Kyiv hour
+        if: ${{ github.event_name == 'schedule' }}
+        env:
+          ALLOWED: '09 12 15 17'
+        run: |
+          H=$(TZ=Europe/Kyiv date +%H)
+          echo "Kyiv hour=$H"
+          if [[ " ${ALLOWED} " != *" $H "* ]]; then
+            echo "Skipping — not an allowed Kyiv hour"
+            exit 0
+          fi
+          echo "GUARD_OK=1" >> "$GITHUB_ENV"
+
+      - name: Mark force run
+        if: ${{ github.event_name != 'schedule' }}
+        run: echo "GUARD_OK=1" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v4
+        if: ${{ env.GUARD_OK == '1' }}
+
+      - uses: actions/setup-node@v4
+        if: ${{ env.GUARD_OK == '1' }}
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        if: ${{ env.GUARD_OK == '1' }}
+        run: npm ci
+
+      - name: Run prices sync
+        if: ${{ env.GUARD_OK == '1' }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CARALARM_LOGIN: ${{ secrets.CARALARM_LOGIN }}
+          CARALARM_PASSWORD: ${{ secrets.CARALARM_PASSWORD }}
+          REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: npx tsx scripts/caralarm-sync.ts --mode=prices

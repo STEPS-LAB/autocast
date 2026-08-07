@@ -13,7 +13,12 @@ export function buildCategoryMaps(categories: Category[]) {
   }
 
   for (const list of childrenByParentId.values()) {
-    list.sort((a, b) => a.sort_order - b.sort_order || a.name_ua.localeCompare(b.name_ua, 'uk'))
+    list.sort(
+      (a, b) =>
+        a.sort_order - b.sort_order ||
+        a.slug.localeCompare(b.slug, 'en') ||
+        a.name_ua.localeCompare(b.name_ua, 'uk')
+    )
   }
 
   return { byId, bySlug, childrenByParentId }
@@ -83,12 +88,22 @@ export function getRootCategories(categories: Category[]): Category[] {
   return categories
     .filter(c => !c.parent_id)
     .slice()
-    .sort((a, b) => a.sort_order - b.sort_order || a.name_ua.localeCompare(b.name_ua, 'uk'))
+    .sort(
+      (a, b) =>
+        a.sort_order - b.sort_order ||
+        a.slug.localeCompare(b.slug, 'en') ||
+        a.name_ua.localeCompare(b.name_ua, 'uk')
+    )
 }
 
 export function getDirectChildren(categories: Category[], parentId: string): Category[] {
   return categories
     .filter(c => c.parent_id === parentId)
     .slice()
-    .sort((a, b) => a.sort_order - b.sort_order || a.name_ua.localeCompare(b.name_ua, 'uk'))
+    .sort(
+      (a, b) =>
+        a.sort_order - b.sort_order ||
+        a.slug.localeCompare(b.slug, 'en') ||
+        a.name_ua.localeCompare(b.name_ua, 'uk')
+    )
 }

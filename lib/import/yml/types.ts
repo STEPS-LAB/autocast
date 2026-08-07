@@ -10,11 +10,14 @@ export const YML_OFFER_ID_SPEC_KEY = 'Offer ID'
 export const LEGACY_OFFER_ID_SPEC_KEY = 'Torssen ID'
 export const YML_VENDOR_CODE_SPEC_KEY = 'Артикул'
 export const YML_SOURCE_URL_SPEC_KEY = 'Джерело'
+export const YML_PDF_SPEC_KEY = 'PDF'
 
 export interface YmlCategory {
   id: string
   name: string
   parentId: string | null
+  /** Optional category page URL from the feed (`url="…"`). */
+  url: string | null
 }
 
 export interface ParsedYmlOffer {
@@ -30,6 +33,8 @@ export interface ParsedYmlOffer {
   stock: number
   description: string
   pictures: string[]
+  /** PDF datasheet / manual URLs found on the offer. */
+  pdfUrls: string[]
   params: Record<string, string>
   url: string | null
 }

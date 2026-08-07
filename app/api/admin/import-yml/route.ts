@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   try {
     resolved = resolveYmlFeedUrl(body)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Некоректне посилання на XML.'
+    const message = error instanceof Error ? error.message : 'Некоректне посилання на XML/YML.'
     return NextResponse.json({ error: message }, { status: 400 })
   }
 
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       }
 
       try {
-        send({ type: 'status', message: 'Завантаження та розбір XML…' })
+        send({ type: 'status', message: 'Завантаження та розбір XML/YML…' })
         const result = await runYmlImport(resolved.url, {
           onProgress: progress => {
             send({

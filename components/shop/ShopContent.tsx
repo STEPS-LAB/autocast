@@ -14,7 +14,6 @@ import Pagination from '@/components/ui/Pagination'
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { pageRangeLabel } from '@/lib/pagination'
-import { getRootCategories } from '@/lib/shop/category-tree'
 import { countActiveFacetSelections, type Facet } from '@/lib/shop/facets'
 import {
   countActiveVehicleSelections,
@@ -75,7 +74,6 @@ export default function ShopContent({
   const [optimisticVehicle, setOptimisticVehicle] = useState<VehicleSelections | null>(
     null
   )
-  const rootCategories = useMemo(() => getRootCategories(categories), [categories])
 
   const serverVehicle = filters.vehicle ?? {}
   useEffect(() => {
@@ -151,13 +149,13 @@ export default function ShopContent({
           </p>
         </div>
 
-        {mode === 'hub' && rootCategories.length > 0 && (
-          <CategoryTiles categories={rootCategories} variant="hub" />
+        {mode === 'hub' && categories.length > 0 && (
+          <CategoryTiles categories={categories} variant="hub" />
         )}
 
-        {mode === 'category' && rootCategories.length > 0 && (
+        {mode === 'category' && categories.length > 0 && (
           <CategoryTiles
-            categories={rootCategories}
+            categories={categories}
             variant="compact"
             activeSlug={rootCategory?.slug}
           />

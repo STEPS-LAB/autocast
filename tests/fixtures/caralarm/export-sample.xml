@@ -1,0 +1,660 @@
+<?xml version="1.0" encoding="utf-8"?>
+<yml_catalog date="2026-08-05 23:00">
+  <shop>
+    <name>ON-LINE</name>
+    <company>Caralarm</company>
+    <url>https://www.caralarm.com.ua/</url>
+    <currencies>
+      <currency id="USD" rate="1.0000"/>
+      <currency id="UAH" rate="0.0223"/>
+      <currency id="EUR" rate="0.0256"/>
+    </currencies>
+    <categories>
+      <category id="87">Автосигналізації</category>
+      <category id="278">Автосвітло</category>
+      <category id="84">Головні пристрої</category>
+      <category id="137">Шумо- та віброізоляція автомобіля</category>
+      <category id="371">Аксесуари до головних пристроїв</category>
+      <category id="176">Автозвук</category>
+      <category id="372">Відео та TV</category>
+      <category id="646">АКБ, зарядні пристрої та перетворювачі</category>
+      <category id="200">Паркувальні радари та системи відеопаркування</category>
+      <category id="128">Додаткове автомобільне обладнання</category>
+      <category id="247">Відеореєстратори</category>
+      <category id="139">Клеми та монтажні матеріали</category>
+      <category id="202">Мех. засоби захисту</category>
+      <category id="282">GPS навігація</category>
+      <category id="519">GSM-сигналізації для дому</category>
+      <category id="142">Рекламна продукція</category>
+      <category id="384">Знижені в ціні товари</category>
+      <category id="262" parentId="83">Без приводу</category>
+      <category id="103" parentId="83">CD/MP3-ресивери</category>
+      <category id="263" parentId="83">DVD-ресивери</category>
+      <category id="83" parentId="84">Автомагнітоли 1-DIN</category>
+      <category id="105" parentId="84">Автомагнітоли 2-DIN</category>
+      <category id="114" parentId="84">1-DIN мультимедіа</category>
+      <category id="112" parentId="84">2-DIN мультимедіа</category>
+      <category id="645" parentId="84">Мультимедіа 9–10&quot;</category>
+      <category id="595" parentId="84">Морські головні пристрої</category>
+      <category id="274" parentId="84">Штатні головні пристрої</category>
+      <category id="279" parentId="85">Безкорпусні</category>
+      <category id="280" parentId="85">Корпусні активні</category>
+      <category id="281" parentId="85">Корпусні пасивні</category>
+      <category id="89" parentId="87">Односторонні сигналізації</category>
+      <category id="88" parentId="87">Двосторонні сигналізації</category>
+      <category id="93" parentId="87">GSM-сигналізації</category>
+      <category id="91" parentId="87">Безбрелкові сигналізації</category>
+      <category id="245" parentId="87">Мотосигналізації</category>
+      <category id="90" parentId="87">Іммобілайзери</category>
+      <category id="367" parentId="87">Трекери та пошуково-охоронні системи</category>
+      <category id="94" parentId="87">Аксесуари для автосигналізацій</category>
+      <category id="254" parentId="88">Діалогові</category>
+      <category id="225" parentId="88">З автозапуском двигуна</category>
+      <category id="92" parentId="88">З CAN-модулем</category>
+      <category id="368" parentId="94">Датчики</category>
+      <category id="96" parentId="94">Модулі обходу імобілайзера</category>
+      <category id="369" parentId="94">CAN-модулі</category>
+      <category id="370" parentId="94">GPS/GSM-модулі</category>
+      <category id="95" parentId="94">Брелоки та мітки</category>
+      <category id="97" parentId="94">Сирени</category>
+      <category id="98" parentId="94">Чохли для брелоків</category>
+      <category id="256" parentId="94">Інші аксесуари</category>
+      <category id="243" parentId="103">CD/MP3-ресивери з USB</category>
+      <category id="244" parentId="103">CD/MP3-ресивери з Bluetooth</category>
+      <category id="377" parentId="112">2-DIN без приводу</category>
+      <category id="378" parentId="112">2-DIN з DVD-приводом</category>
+      <category id="330" parentId="112">з GPS - навігацією</category>
+      <category id="425" parentId="112">на Android OC</category>
+      <category id="315" parentId="114">Без приводу</category>
+      <category id="264" parentId="114">DVD-ресивери з монітором</category>
+      <category id="110" parentId="114">DVD-ресивери з виїзджаючим монітором</category>
+      <category id="283" parentId="126">Комплекти ксенон</category>
+      <category id="284" parentId="126">Комплекти біксенон</category>
+      <category id="520" parentId="126">Лампи біксенонові</category>
+      <category id="285" parentId="126">Лампи ксенонові</category>
+      <category id="380" parentId="126">Блоки розпалу</category>
+      <category id="436" parentId="128">Емблеми та орнаменти</category>
+      <category id="253" parentId="128">Карти пам&#039;яті (Flash-пам&#039;ять)</category>
+      <category id="287" parentId="128">Батарейки</category>
+      <category id="667" parentId="128">Дотягувачі дверей</category>
+      <category id="314" parentId="128">Холодильники</category>
+      <category id="587" parentId="128">Двірники</category>
+      <category id="143" parentId="128">Системи Hands Free</category>
+      <category id="424" parentId="128">Звукові сигнали</category>
+      <category id="288" parentId="128">Компресори</category>
+      <category id="419" parentId="128">Тримачі</category>
+      <category id="141" parentId="128">Бортові комп&#039;ютери</category>
+      <category id="538" parentId="128">Пилососи автомобільні</category>
+      <category id="133" parentId="128">Системи обігріву</category>
+      <category id="621" parentId="128">Електроприводи кришки багажника</category>
+      <category id="130" parentId="128">Електросклопідіймачі</category>
+      <category id="129" parentId="128">Радар-детектори</category>
+      <category id="131" parentId="128">Центральні замки</category>
+      <category id="539" parentId="128">Ліхтарі</category>
+      <category id="383" parentId="128">Проектори декоративного підсвічування</category>
+      <category id="138" parentId="128">Інші товари</category>
+      <category id="618" parentId="137">Віброізоляційні матеріали</category>
+      <category id="619" parentId="137">Шумоізоляційні матеріали</category>
+      <category id="620" parentId="137">Прокладкові матеріали</category>
+      <category id="290" parentId="139">Кабелі</category>
+      <category id="292" parentId="139">Клеми, термоусадка та трубки</category>
+      <category id="585" parentId="139">Запобіжники</category>
+      <category id="583" parentId="139">Кнопки, вимикачі, кінцевики</category>
+      <category id="291" parentId="139">Монтаж автозвуку</category>
+      <category id="293" parentId="139">Інші товари</category>
+      <category id="177" parentId="176">Коаксіальна акустика</category>
+      <category id="178" parentId="176">Компонентна акустика</category>
+      <category id="615" parentId="176">Портативна акустика</category>
+      <category id="85" parentId="176">Сабвуфери</category>
+      <category id="199" parentId="176">Підсилювачі</category>
+      <category id="541" parentId="176">Аудіопроцесори</category>
+      <category id="120" parentId="176">Конденсатори</category>
+      <category id="277" parentId="176">Аксесуари для автозвуку</category>
+      <category id="249" parentId="176">Морська аудіоелектроніка</category>
+      <category id="162" parentId="177">10 см(4&quot;)</category>
+      <category id="163" parentId="177">13 см (5.25&quot;)</category>
+      <category id="164" parentId="177">16-17 см(6.5-7&quot;)</category>
+      <category id="616" parentId="177">13х18см (5&quot;х7&quot;)</category>
+      <category id="165" parentId="177">15х23см (6&quot;х9&quot;)</category>
+      <category id="166" parentId="177">інше</category>
+      <category id="184" parentId="178">10 см(4&quot;)</category>
+      <category id="159" parentId="178">13 см(5.25&quot;)</category>
+      <category id="160" parentId="178">16-17 см(6.5-7&quot;)</category>
+      <category id="617" parentId="178">15Х23СМ (6&quot;Х9&quot;)</category>
+      <category id="161" parentId="178">Твітери та інше</category>
+      <category id="606" parentId="199">1-но канальні</category>
+      <category id="189" parentId="199">2х-канальні</category>
+      <category id="603" parentId="199">3х-канальні</category>
+      <category id="190" parentId="199">4х-канальні</category>
+      <category id="198" parentId="199">5-ти канальні</category>
+      <category id="607" parentId="199">6-ти канальні</category>
+      <category id="605" parentId="199">8-ми канальні</category>
+      <category id="191" parentId="199">Моноблоки</category>
+      <category id="193" parentId="200">4 датчики</category>
+      <category id="194" parentId="200">6 датчиків</category>
+      <category id="195" parentId="200">8 датчиків</category>
+      <category id="196" parentId="200">Відеопарктроніки</category>
+      <category id="490" parentId="200">Системи контролю сліпих зон</category>
+      <category id="201" parentId="200">Комплектуючі та аксесуари</category>
+      <category id="581" parentId="200">Адаптери підключення</category>
+      <category id="203" parentId="202">Механічні замки КПП</category>
+      <category id="443" parentId="202">Електромеханічні замки КПП</category>
+      <category id="444" parentId="202">Замки КПП и капота</category>
+      <category id="102" parentId="202">Замки капота</category>
+      <category id="524" parentId="202">Замки на кермо та педалі</category>
+      <category id="257" parentId="202">Аксесуари та інструменти</category>
+      <category id="204" parentId="212">3,5&#039;&#039;</category>
+      <category id="205" parentId="212">4,3&#039;&#039;</category>
+      <category id="206" parentId="212">5&#039;&#039;</category>
+      <category id="248" parentId="212">6&quot;</category>
+      <category id="207" parentId="212">7&#039;&#039;</category>
+      <category id="209" parentId="212">Блоки GPS</category>
+      <category id="417" parentId="212">Різне</category>
+      <category id="310" parentId="247">480p(SD)-якість</category>
+      <category id="312" parentId="247">HD (720p)</category>
+      <category id="331" parentId="247">Full HD (1080p)</category>
+      <category id="439" parentId="247">Super HD (1296p)</category>
+      <category id="609" parentId="247">Ultra HD / 4K (2160p)</category>
+      <category id="311" parentId="247">З GPS</category>
+      <category id="332" parentId="247">Двоканальні</category>
+      <category id="351" parentId="247">Чотириканальні</category>
+      <category id="364" parentId="247">Екшн-камери</category>
+      <category id="313" parentId="247">Аксесуари</category>
+      <category id="268" parentId="267">Audi</category>
+      <category id="298" parentId="267">BMW</category>
+      <category id="415" parentId="267">Buick</category>
+      <category id="572" parentId="267">Chery</category>
+      <category id="412" parentId="267">Chevrolet</category>
+      <category id="573" parentId="267">Citroen</category>
+      <category id="574" parentId="267">Daewoo</category>
+      <category id="577" parentId="267">FIAT</category>
+      <category id="269" parentId="267">Ford</category>
+      <category id="578" parentId="267">Geely</category>
+      <category id="297" parentId="267">Honda</category>
+      <category id="302" parentId="267">Hyundai</category>
+      <category id="600" parentId="267">Jaguar</category>
+      <category id="303" parentId="267">Kia</category>
+      <category id="408" parentId="267">Land Rover</category>
+      <category id="409" parentId="267">Lexus</category>
+      <category id="300" parentId="267">Mazda</category>
+      <category id="410" parentId="267">Mercedes</category>
+      <category id="270" parentId="267">Mitsubishi</category>
+      <category id="273" parentId="267">Nissan/Infinity</category>
+      <category id="272" parentId="267">Opel</category>
+      <category id="414" parentId="267">Peugeot</category>
+      <category id="413" parentId="267">Porsche</category>
+      <category id="416" parentId="267">Renault</category>
+      <category id="575" parentId="267">Seat</category>
+      <category id="304" parentId="267">Skoda</category>
+      <category id="576" parentId="267">Ssangyong</category>
+      <category id="305" parentId="267">Subaru</category>
+      <category id="407" parentId="267">Suzuki</category>
+      <category id="271" parentId="267">Toyota</category>
+      <category id="301" parentId="267">Volkswagen</category>
+      <category id="411" parentId="267">Volvo</category>
+      <category id="299" parentId="267">Інші</category>
+      <category id="601" parentId="274">Audi</category>
+      <category id="488" parentId="274">BMW</category>
+      <category id="397" parentId="274">Chevrolet</category>
+      <category id="400" parentId="274">Chrysler</category>
+      <category id="401" parentId="274">Citroen</category>
+      <category id="406" parentId="274">Dodge</category>
+      <category id="602" parentId="274">Fiat</category>
+      <category id="214" parentId="274">Ford</category>
+      <category id="218" parentId="274">Honda</category>
+      <category id="239" parentId="274">Hyundai</category>
+      <category id="403" parentId="274">Jeep</category>
+      <category id="238" parentId="274">Kia</category>
+      <category id="599" parentId="274">Land Rover</category>
+      <category id="221" parentId="274">Mazda</category>
+      <category id="404" parentId="274">Mercedes</category>
+      <category id="215" parentId="274">Mitsubishi</category>
+      <category id="237" parentId="274">Nissan</category>
+      <category id="222" parentId="274">Opel</category>
+      <category id="399" parentId="274">Peugeot</category>
+      <category id="398" parentId="274">Renault</category>
+      <category id="586" parentId="274">Seat</category>
+      <category id="216" parentId="274">Skoda</category>
+      <category id="405" parentId="274">SsangYong</category>
+      <category id="220" parentId="274">Subaru</category>
+      <category id="402" parentId="274">Suzuki</category>
+      <category id="219" parentId="274">Toyota</category>
+      <category id="217" parentId="274">Volkswagen</category>
+      <category id="224" parentId="274">Інші</category>
+      <category id="673" parentId="278">Габаритні лампи</category>
+      <category id="126" parentId="278">Ксенон</category>
+      <category id="307" parentId="278">LED-лампи</category>
+      <category id="521" parentId="278">Галогенні лампи</category>
+      <category id="381" parentId="278">Модулі обходу (обманки)</category>
+      <category id="286" parentId="278">Лінзи та маски</category>
+      <category id="598" parentId="278">Протитуманні фари</category>
+      <category id="591" parentId="278">Аксесуари</category>
+      <category id="212" parentId="282">GPS-навігатори</category>
+      <category id="210" parentId="282">Карти та аксесуари</category>
+      <category id="352" parentId="282">Планшети</category>
+      <category id="589" parentId="286">Лінзи ксенонові</category>
+      <category id="590" parentId="286">Лінзи LED</category>
+      <category id="588" parentId="286">Маски до лінз</category>
+      <category id="592" parentId="286">Ангельські очі</category>
+      <category id="423" parentId="290">Силові</category>
+      <category id="294" parentId="290">Настановні</category>
+      <category id="295" parentId="290">Міжблочні та спеціальні</category>
+      <category id="296" parentId="290">Набори</category>
+      <category id="231" parentId="306">Audi</category>
+      <category id="320" parentId="306">BMW</category>
+      <category id="322" parentId="306">Chevrolet</category>
+      <category id="242" parentId="306">Chrysler/Jeep/Dodge</category>
+      <category id="324" parentId="306">Citroen</category>
+      <category id="582" parentId="306">Dodge</category>
+      <category id="317" parentId="306">Fiat</category>
+      <category id="232" parentId="306">Ford</category>
+      <category id="316" parentId="306">Honda</category>
+      <category id="226" parentId="306">Hyundai</category>
+      <category id="229" parentId="306">Kia</category>
+      <category id="534" parentId="306">Land Rover</category>
+      <category id="252" parentId="306">Lexus</category>
+      <category id="227" parentId="306">Mazda</category>
+      <category id="240" parentId="306">Mercedes</category>
+      <category id="228" parentId="306">Mitsubishi</category>
+      <category id="250" parentId="306">Nissan</category>
+      <category id="233" parentId="306">Opel</category>
+      <category id="323" parentId="306">Peugeot</category>
+      <category id="230" parentId="306">Renault</category>
+      <category id="251" parentId="306">Seat</category>
+      <category id="234" parentId="306">Skoda</category>
+      <category id="319" parentId="306">Ssangyong</category>
+      <category id="321" parentId="306">Subaru</category>
+      <category id="318" parentId="306">Suzuki</category>
+      <category id="235" parentId="306">Toyota</category>
+      <category id="241" parentId="306">Volkswagen</category>
+      <category id="535" parentId="306">Китайські автомобілі</category>
+      <category id="236" parentId="306">Різне</category>
+      <category id="533" parentId="306">Універсальні</category>
+      <category id="309" parentId="307">LED-фари (ДХО)</category>
+      <category id="308" parentId="307">LED- лампи</category>
+      <category id="442" parentId="307">LED-фари комбінованого світла</category>
+      <category id="441" parentId="307">LED-фари ближнього світла</category>
+      <category id="422" parentId="307">LED-фари дальнього світла</category>
+      <category id="374" parentId="371">Адаптери та перехідники</category>
+      <category id="623" parentId="371">Адаптери Авто-16PIN</category>
+      <category id="373" parentId="371">Антени</category>
+      <category id="266" parentId="371">Відеокамери універсальні</category>
+      <category id="267" parentId="371">Відеокамери штатні</category>
+      <category id="492" parentId="371">Кріплення до штатних камер</category>
+      <category id="540" parentId="371">Штатні мультимедійні інтерфейси</category>
+      <category id="107" parentId="371">Пульти ДК та адаптери кнопок керма</category>
+      <category id="306" parentId="371">Рамки перехідні</category>
+      <category id="121" parentId="371">TV-тюнери</category>
+      <category id="327" parentId="371">FM-модулятори</category>
+      <category id="124" parentId="371">Фільтри та конвертери</category>
+      <category id="276" parentId="371">Аксесуари до штатних головних пристроїв</category>
+      <category id="261" parentId="371">Інше</category>
+      <category id="151" parentId="372">Вбудовувані монітори</category>
+      <category id="111" parentId="372">Стельові монітори</category>
+      <category id="379" parentId="372">Портативні монітори</category>
+      <category id="430" parentId="372">Дзеркала з монітором</category>
+      <category id="115" parentId="372">Портативні телевізори</category>
+      <category id="481" parentId="372">Системи відеопаркування</category>
+      <category id="489" parentId="372">Системи відеоспостереження</category>
+      <category id="604" parentId="372">Телевізори</category>
+      <category id="108" parentId="373">Антени AM/FM</category>
+      <category id="116" parentId="373">Антени TV</category>
+      <category id="365" parentId="374">Адаптери антенні</category>
+      <category id="259" parentId="374">Адаптери Авто-ISO</category>
+      <category id="366" parentId="374">Адаптери Магнітола-ISO</category>
+      <category id="375" parentId="374">Адаптери Bluetooth, Xcarlink, iPod та інші</category>
+      <category id="435" parentId="430">Дзеркала з монітором</category>
+      <category id="434" parentId="430">Дзеркала з монітором та відеореєстратором</category>
+      <category id="433" parentId="430">Дзеркала з монітором та паркуванням</category>
+      <category id="479" parentId="430">Дзеркала з монітором та Android</category>
+      <category id="480" parentId="430">Кріплення до дзеркал заднього виду</category>
+      <category id="613" parentId="492">Alfa Romeo</category>
+      <category id="493" parentId="492">Audi</category>
+      <category id="494" parentId="492">BMW</category>
+      <category id="528" parentId="492">BYD</category>
+      <category id="526" parentId="492">Chery</category>
+      <category id="496" parentId="492">Chevrolet</category>
+      <category id="612" parentId="492">Citroen</category>
+      <category id="532" parentId="492">Daewoo</category>
+      <category id="529" parentId="492">Fiat</category>
+      <category id="497" parentId="492">Ford</category>
+      <category id="525" parentId="492">Geely</category>
+      <category id="527" parentId="492">Great Wall</category>
+      <category id="498" parentId="492">Honda</category>
+      <category id="499" parentId="492">Hyundai</category>
+      <category id="500" parentId="492">Kia</category>
+      <category id="614" parentId="492">Land Rover</category>
+      <category id="502" parentId="492">Lexus</category>
+      <category id="503" parentId="492">Mazda</category>
+      <category id="504" parentId="492">Mercedes</category>
+      <category id="505" parentId="492">Mitsubishi</category>
+      <category id="506" parentId="492">Nissan</category>
+      <category id="507" parentId="492">Opel</category>
+      <category id="508" parentId="492">Peugeot</category>
+      <category id="510" parentId="492">Renault</category>
+      <category id="531" parentId="492">Seat</category>
+      <category id="511" parentId="492">Skoda</category>
+      <category id="530" parentId="492">Ssangyong</category>
+      <category id="512" parentId="492">Subaru</category>
+      <category id="513" parentId="492">Suzuki</category>
+      <category id="514" parentId="492">Toyota</category>
+      <category id="515" parentId="492">Volkswagen</category>
+      <category id="516" parentId="492">Volvo</category>
+      <category id="517" parentId="492">Інші</category>
+      <category id="542" parentId="540">Audi</category>
+      <category id="547" parentId="540">Bentley</category>
+      <category id="545" parentId="540">BMW</category>
+      <category id="571" parentId="540">Cadillac</category>
+      <category id="549" parentId="540">Chevrolet</category>
+      <category id="548" parentId="540">Chrysler</category>
+      <category id="550" parentId="540">Citroen</category>
+      <category id="551" parentId="540">Dodge</category>
+      <category id="552" parentId="540">Ferrari</category>
+      <category id="553" parentId="540">FIAT</category>
+      <category id="546" parentId="540">Ford</category>
+      <category id="554" parentId="540">Honda</category>
+      <category id="555" parentId="540">Hyundai</category>
+      <category id="556" parentId="540">Infiniti</category>
+      <category id="557" parentId="540">Jaguar</category>
+      <category id="558" parentId="540">Jeep</category>
+      <category id="559" parentId="540">Land Rover</category>
+      <category id="560" parentId="540">Lexus</category>
+      <category id="561" parentId="540">Maserati</category>
+      <category id="562" parentId="540">Mazda</category>
+      <category id="544" parentId="540">Mercedes</category>
+      <category id="563" parentId="540">Mitsubishi</category>
+      <category id="564" parentId="540">Peugeot</category>
+      <category id="565" parentId="540">Porsche</category>
+      <category id="566" parentId="540">Renault</category>
+      <category id="567" parentId="540">Seat</category>
+      <category id="568" parentId="540">Skoda</category>
+      <category id="569" parentId="540">Toyota</category>
+      <category id="543" parentId="540">Volkswagen</category>
+      <category id="570" parentId="540">Volvo</category>
+      <category id="597" parentId="540">Універсальні</category>
+      <category id="382" parentId="591">Перехідники</category>
+      <category id="594" parentId="591">Провід, герметик</category>
+      <category id="593" parentId="591">Кришки блоку фар</category>
+      <category id="608" parentId="591">Комплектуючі та інструмент</category>
+      <category id="625" parentId="623">Audi</category>
+      <category id="626" parentId="623">BMW</category>
+      <category id="627" parentId="623">Fiat</category>
+      <category id="628" parentId="623">Ford</category>
+      <category id="629" parentId="623">GM</category>
+      <category id="630" parentId="623">KIA/Hyundai</category>
+      <category id="631" parentId="623">Honda</category>
+      <category id="632" parentId="623">JEEP/Dodge</category>
+      <category id="633" parentId="623">Lexus</category>
+      <category id="634" parentId="623">Mazda</category>
+      <category id="636" parentId="623">Mercedes</category>
+      <category id="635" parentId="623">Mitsubishi</category>
+      <category id="637" parentId="623">Nissan/Infiniti</category>
+      <category id="644" parentId="623">Renault</category>
+      <category id="639" parentId="623">Peugeot/Citroen</category>
+      <category id="654" parentId="623">Subaru</category>
+      <category id="640" parentId="623">Suzuki</category>
+      <category id="641" parentId="623">Toyota</category>
+      <category id="638" parentId="623">VW</category>
+      <category id="642" parentId="623">Китайський автопром</category>
+      <category id="656" parentId="646">Автономне живлення для дому / інвертори</category>
+      <category id="653" parentId="646">Акумулятори 12В</category>
+      <category id="655" parentId="646">Зарядні пристрої для акумуляторів</category>
+      <category id="289" parentId="646">Автомобільні перетворювачі напруги</category>
+      <category id="649" parentId="646">Пуско-зарядні пристрої 220 В / 12–24 В</category>
+      <category id="650" parentId="646">Бустери (акумуляторні пускові пристрої)</category>
+      <category id="329" parentId="646">Розгалужувачі прикурювача</category>
+      <category id="647" parentId="655">Зарядні пристрої для АКБ 12/24В</category>
+      <category id="328" parentId="655">Зарядні пристрої для портативних пристроїв</category>
+      <category id="246" parentId="673">LED-габарити</category>
+      <category id="580" parentId="673">Галогенні габаритні лампи</category>
+    </categories>
+    <offers>
+<offer id="423" available="true">
+        <url>https://www.caralarm.com.ua/immobilaizer-biocode-auto-m10-rdu/p-423.html</url>
+        <name>Іммобілайзер Biocode-auto M10 RDU</name>
+        <model>02449</model>
+        <priceUSD>42</priceUSD>
+        <priceUAH>1885.8</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>2059</priceMinUAH>
+        <priceOld>31.5</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>90</categoryID>
+        <categoryName>Іммобілайзери</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_biocode_m-10_rdu.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_img_4773_biocode_m-10_scanner.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_dsc_3884.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_dsc_3798.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_img_4771_biocode_m-10_pin-code.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_m10_m10int_2.jpg</picture>
+        <vendor>BIOCODE</vendor>
+        <description_short><![CDATA[
+Система Biocode є іммобілайзером нового покоління. Працює він на основі біометричних технологій. Що дозволяє автомобілю дізнатися про свого власника за відбитком пальця. Подібний ключ завжди із собою – його не можуть вкрасти, його не можна підробити. І головне – у цій системі відсутній радіосигнал, який можуть перехопити зловмисники.
+]]></description_short>
+        <description><![CDATA[
+<p><strong style="text-align: justify;"><span style="font-size: 14px;"><span style="font-family: tahoma, geneva, sans-serif;"><span style="color: rgb(0, 0, 255);">Принцип роботи іммобілайзерів Biocode (відео):&nbsp;</span><a href="https://youtu.be/d4agCDobaXc"><span style="color: rgb(0, 0, 255);"></span></a></span></span><span style="font-size: 14px;"><span style="font-family: tahoma, geneva, sans-serif;"><a href="https://youtu.be/d4agCDobaXc"><span style="color: rgb(0, 0, 255);">https://youtu.be/d4agCDobaXc</span></a></span></span><span style="font-size: 14px;"><span style="font-family: tahoma, geneva, sans-serif;"><a href="https://youtu.be/d4agCDobaXc"><span style="color: rgb(0, 0, 255);"></span></a></span></span></strong></p><p><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;"><strong>Опис Biocode-auto M10 RDU:</strong></span></span></p><p><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;"><span style="color: rgb(51, 51, 51); line-height: 20px;">Автомобільна протиугінна система BIOCODE-AUTO M10 призначена для захисту автомобіля від викрадення та захоплення. За допомогою спеціального сканера система визначає власника по його відбитку пальця, що виключає будь-які можливості перехоплення сигналу і несанкціонованого доступу до автомобіля, що охороняється. Мініатюрний ємнісний сканер відрізняється простотою установки та органічно вписується в інтер'єр салону.</span></span></span></p><p style="box-sizing: border-box; margin: 0px 0px 10px; color: rgb(51, 51, 51); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 20px;"><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">Порівняння відбитка відбувається за десятками параметрів і дає 100% гарантію у впевненому зчитуванні за різних умов. Завдяки застосуванню інтелектуальних цифрових реле дистанційного блокування RDU, керованих штатною електропроводкою, при несанкціонованому доступі двигун автомобіля буде надійно заблокований.<br style="box-sizing: border-box;" /><br style="box-sizing: border-box;" />У разі використання реле RDU блокування двигуна відбувається після увімкнення запалювання.</span></span></p><p style="box-sizing: border-box; margin: 0px 0px 10px; color: rgb(51, 51, 51); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 20px;"><strong style="color: rgb(255, 0, 0); font-family: Verdana, Arial, sans-serif; text-align: justify;"><span style="font-family: tahoma, geneva, sans-serif;">Зверніть увагу! Реле RDU і RDUK не мають вбудованого датчика руху, тому автозапуск з даним типом реле працювати не буде (відразу після включення запалювання система проводить ідентифікацію власника. Якщо не прикласти палець до сканера або буде доданий не прописаний у системі палець, двигун заблокується).</span></strong><br style="box-sizing: border-box;" /><br style="box-sizing: border-box;" /><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">Цифрові реле дистанційного блокування у виконанні із нормально замкнутими контактами забезпечують захист від пошуку заблокованих ланцюгів автомобіля за допомогою діагностичного обладнання. Для підвищення скритності установки реле RDU виконані як звичайних штатних автомобільних реле. Кількість реле, що встановлюються в автомобілі, не обмежена.<br style="box-sizing: border-box;" /><br style="box-sizing: border-box;" />Система BIOCODE-AUTO M10 не вимагає наявності комп'ютера для програмування, що значно спрощує процедуру встановлення та подальшої експлуатації. На згадку про систему може бути занесено до 10 відбитків пальців.<br style="box-sizing: border-box;" /><br style="box-sizing: border-box;" />BIOCODE-AUTO M10 має низку протирозбійних функцій, що перешкоджають силовому захопленню автомобіля. Це контроль за відкриттям дверей водія, а також спеціальний режим "тривожний палець" - коли власник, у разі вимушення його зловмисниками завести двигун, прикладає до сканера палець, статус якого в базі даних користувачів є "тривожним", і через 5 хвилин відбувається блокування двигуна.<br style="box-sizing: border-box;" /><br style="box-sizing: border-box;" />Система може бути встановлена ​​у будь-які автомобілі та не порушує роботу штатної електроніки. Нова технологія передачі даних, в якій використовується оригінальний спосіб модуляції, забезпечує неможливість перехоплення сигналу керування код-грабер.</span></span></p><p><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;"><strong>Технічні характеристики:</strong> </span></span></p><ul><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">максимальний час ідентифікації – не більше 2 сек.</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">максимальна кількість відбитків пальців, що зберігаються в пам'яті, - 10 шт.</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">кількість реле RDU, що підключаються - не обмежена</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">максимальний комутований струм реле - 15 А</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">споживана потужність кожного реле - трохи більше 1 Вт</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">споживана потужність контрольного блоку (без реле) – не більше 3 Вт</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">робоча температура – ​​від -40С до +85С</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">відносна вологість повітря за температури +25С - 98%</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">живлення - від мережі постійного струму автомобіля напругою від 9В до 15В</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">габаритні розміри контрольного блоку – 110х55х30 мм</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">габаритні розміри сканера відбитків пальців - 39x24x10 мм</span></span></li></ul><p><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;"><strong style="font-size: small; font-family: tahoma, arial, helvetica, sans-serif;">Комплектність постачання:</strong></span></span></p><ul><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">контрольний блок – 1 шт.</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">сканер відбитків пальців зі світлодіодами – 1 шт.</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">реле дистанційного блокування – 1 шт.</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">кабель з'єднувальний – 1 шт.</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">кнопка VALET із кабелем - 1 шт.</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">комплект кріплення</span></span></li><li><span style="font-family:tahoma,geneva,sans-serif;"><span style="font-size: 14px;">конверт з PIN-кодом</span></span></li></ul><p>&nbsp;</p>
+]]></description>
+      </offer>
+<offer id="449" available="false">
+        <url>https://www.caralarm.com.ua/cohol-dla-breloka-sheriff-zx-700-rk-39-/p-449.html</url>
+        <name>Чохол для брелока Sheriff ZX-700 (РК-39)</name>
+        <model>02445</model>
+        <priceUSD>2</priceUSD>
+        <priceUAH>89.8</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>77</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>98</categoryID>
+        <categoryName>Чохли для брелоків</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_dsc_3132.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_dsc_3128.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_dsc_3256.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_dsc_3257.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_dsc_3259.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_dsc_3260.jpg</picture>
+        <vendor>SHERIFF</vendor>
+        <description_short><![CDATA[
+Чохол для брелока Sheriff ZX-700
+]]></description_short>
+        <description><![CDATA[
+<p><span style="font-size:14px;"><span style="font-family: tahoma,geneva,sans-serif;">Чохол для<span style="font-size:14px;"><span style="font-family: tahoma,geneva,sans-serif;">брелока</span></span>Sheriff ZX-700</span></span></p>
+]]></description>
+      </offer>
+<offer id="493" available="false">
+        <url>https://www.caralarm.com.ua/brelok-dla-signalizacii-sheriff-aps-2600/p-493.html</url>
+        <name>Брелок для сигналізації Sheriff APS-2600</name>
+        <model>01379</model>
+        <priceUSD>13</priceUSD>
+        <priceUAH>583.7</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>500.5</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>95</categoryID>
+        <categoryName>Брелоки та мітки</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/271x216/heriff_2600_b.jpg</picture>
+        <vendor>SHERIFF</vendor>
+        <description_short><![CDATA[
+Брелок для сигналізації Sheriff APS-2600 (b3) 1 шт
+]]></description_short>
+        <description><![CDATA[
+<p><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">Брелок для сигналізації Sheriff APS-2600</span></span><p><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>Сумісний із сигналізаціями:</strong></span></span></p><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">777ER (аналог ZX-725 v2)</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">777v.2 (аналог ZX-710 v1)</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">999ER (аналог ZX-925 v1)</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">999RS (аналог ZX-1050 v1)</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">999v.2 (аналог ZX-910 v1)</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 2400</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 2600</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 2620</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 2625</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 2700</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 35PRO</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 35PRO T7</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 35PRO з білим металевим брелоком T5</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 35PRO з платиновим металевим брелоком T3</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 35PRO з рубіновим металевим брелоком T4</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 35PRO зі срібним металевим брелоком T2</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 35PRO T1</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 75</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">APS 85</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size: 14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-1050</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-699</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-700 (Ver.3)</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-710</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-710 Ver.2 Новий брелок</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-725 v.2 Новий брелок</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-800</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-900</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-910</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-910 Ver.2 Новий брелок</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-925</span></span></div><div><span style="font-family: tahoma, geneva, sans-serif; font-size: 14px;">Sheriff</span><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">ZX-939 (аналог ZX-925 v2)</span></span></div><div><div><span style="font-size: 14px;"><span style="font-family: tahoma, geneva, sans-serif;">daVINCI codice 5.k1</span></span></div><div><span style="font-size: 14px;"><span style="font-family: tahoma, geneva, sans-serif;">daVINCI codice 7.k1</span></span></div><div><span style="font-size: 14px;"><span style="font-family: tahoma, geneva, sans-serif;">daVINCI codice 9.k</span></span></div></div><p></p></p>
+]]></description>
+      </offer>
+<offer id="842" available="false">
+        <url>https://www.caralarm.com.ua/tubing-d7/p-842.html</url>
+        <name>Тюбінг d7</name>
+        <model>02195</model>
+        <priceUSD>0.4</priceUSD>
+        <priceUAH>17.96</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>0.37</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>292</categoryID>
+        <categoryName>Клеми, термоусадка та трубки</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/320x85/tybing-d7-bbb.jpg</picture>
+        <vendor>РАЗНОЕ</vendor>
+        <description_short><![CDATA[
+Тюбінг d7. Трубка пластмасова для прокладання проводів d=7 мм, ціна за 1 метр
+]]></description_short>
+        <description><![CDATA[
+<p><font size="2"><font face="tahoma,arial,helvetica,sans-serif"><strong>Тюбінг d7.</strong>Трубка пластмасова для прокладання проводів d=7 мм, ціна за 1 метр. Іде в б</font></font><span style="font-family: tahoma, arial, helvetica, sans-serif; font-size: small;">обидва по 10 метрів.</span></p>
+]]></description>
+      </offer>
+<offer id="1113" available="false">
+        <url>https://www.caralarm.com.ua/interfeis-sklopidiomnika-sheriff-pwm200/p-1113.html</url>
+        <name>Інтерфейс склопідйомника Sheriff PWM200</name>
+        <model>02374</model>
+        <priceUSD>18</priceUSD>
+        <priceUAH>808.2</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>864</priceMinUAH>
+        <priceOld>17</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>130</categoryID>
+        <categoryName>Електросклопідіймачі</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/656x580/032025fxzsx9999999999999999994.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/444x307/032025fxzsx9999999999999999992.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/656x804/032025fxzsx9999999999999999993.jpg</picture>
+        <vendor>SHERIFF</vendor>
+        <description_short><![CDATA[
+Модуль керування електросклопідйомниками PWM200 призначений для автоматичного керування склом дверей або люком. Центральний модуль. Джгут проводів.
+]]></description_short>
+        <description><![CDATA[
+<p style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>КОМПЛЕКТАЦІЯ</strong></span></span></p><ul><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">центральний модуль,</span></span></li><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">джгут проводів,</span></span></li><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">Інструкція з експлуатації.</span></span></li></ul><p style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>ТЕХНІЧНІ ХАРАКТЕРИСТИКИ</strong></span></span></p><ul><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>Напруга живлення:</strong> 10..18 В,</span></span></li><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>Споживаний струм у черговому режимі:</strong> 20 мА,</span></span></li><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>Максимальний вихідний струм: </strong>30 А,</span></span></li><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>Струм управління по входам управління: </strong>2мА,</span></span></li><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>Максимальний струм керування реле блокування датчиків:</strong> 150 мА,</span></span></li><li style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>Діапазон робочих температур: </strong>від -40 до +85°С.</span></span></li></ul><p style="text-align: justify;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>ОСОБЛИВОСТІ СИСТЕМИ</strong><br />Модуль призначений для послідовного керування двома склопідйомниками автомобіля в одному напрямку, за умови наявності в автомобілі встановлених електроприводів. Управління модулем може здійснюватися від сигналу, що формується автомобільною сигналізацією або іншим пристроєм при постановці на охорону або закриття замків дверей, для чого передбачені "негативний" або "позитивний" входи, що запускають.</span></span></p><p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p>
+]]></description>
+      </offer>
+<offer id="7497" available="false">
+        <url>https://www.caralarm.com.ua/ramka-perehidna-acv-281340-03-skoda-oktavia-04-06-/p-7497.html</url>
+        <name>Рамка перехідна ACV 281340-03 Skoda Octavia, Yeti</name>
+        <model>05198</model>
+        <priceUSD>23</priceUSD>
+        <priceUAH>1032.7</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>1250</priceMinUAH>
+        <priceOld>17.5</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>234</categoryID>
+        <categoryName>Skoda</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/500x285/ramka_281340_03.jpg</picture>
+        <vendor>ACV</vendor>
+        <description_short><![CDATA[
+Перехідна рамка для встановлення автомагнітолиACV 281340-03: 2 DIN - 188 x 117 мм;1 DIN - 182 x 53 мм, з кишенеюКолір: чорний. Для автомобілів: Skoda Yeti (09-17), Octavia II (A5) (04-13)
+]]></description_short>
+        <description><![CDATA[
+<p><strong>Перехідна рамка для встановлення автомагнітоли<br />ACV 281340-03:&nbsp;<strong>2 DIN - 188 x 117 мм;<br />1 DIN - 182 x 53 мм, з кишенею</strong></strong></p><p><strong>Колір чорний.</strong></p><p>3D дизайн • Текстура пластику збігається з оригінальним інтер'єром • Високоякісна пластмаса ABS • Надійне кріплення автомагнітоли в автомобілі</p><p><strong>Перехідна рамка ACV 281340-03 для автомобілів:</strong></p><p><strong>Skoda</strong><br />Octavia 2004-2013<br />Yeti 2009-2017</p>
+]]></description>
+<param name="Марка авто">Škoda</param>
+<param name="Модель авто">Octavia II (A5) (04-13)</param>
+      </offer>
+<offer id="7823" available="false">
+        <url>https://www.caralarm.com.ua/izolenta-coroplast-18-mm-mater-ana-/p-7823.html</url>
+        <name>Ізострічка (ізолєнта) Coroplast 8550 19мм x 25м (флісова)</name>
+        <model>02163</model>
+        <priceUSD>2.4</priceUSD>
+        <priceUAH>107.76</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>92.4</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>293</categoryID>
+        <categoryName>Інші товари</categoryName>
+        <vendor>COROPLAST</vendor>
+        <description_short><![CDATA[
+Ізоляційна стрічка Coroplast 8550 19мм x 25м (флісова)Марка: Coroplast (Німеччина)Модель: 8550 «велюр»Опис: Ізолента на основі нетканого поліестеру, в рулонах 19мм х 25м.
+]]></description_short>
+        <description><![CDATA[
+<p>Ізоляційна стрічка&nbsp;Coroplast 8550 19мм x 25м (флісова)</p><p>Марка: Coroplast (Німеччина)<br />Модель: 8550&nbsp;«велюр»<br />Опис: Ізолента на основі нетканого поліестеру, в рулонах 19мм х 25м.</p><p>Призначення: Для захисту джгутів електропроводки, розташованих у салоні автомобіля. Ізострічка&nbsp;має гарні шумоізоляційні властивості.</p><p>Тип: Нетканий поліестер<br />Розмір: 19 мм х 25 м<br />Товщина: 0,3 мм<br />Міцність на розрив: 32 Н/см<br />Подовження при розриві: 20%<br />Адгезія: 5,9 Н/см<br />Діапазон робочих температур: від -40 до +105</p><p>&nbsp;</p><p>&nbsp;</p>
+]]></description>
+      </offer>
+<offer id="8117" available="false">
+        <url>https://www.caralarm.com.ua/izolenta-tesa-sirina-19-mm/p-8117.html</url>
+        <name>Ізолента Tesa ширина 19 мм</name>
+        <model>06274</model>
+        <priceUSD>2.6</priceUSD>
+        <priceUAH>116.74</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>2.4</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>293</categoryID>
+        <categoryName>Інші товари</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/446x422/tesa_51618_pr_001_fullsize.jpg</picture>
+        <vendor>TESA</vendor>
+        <description_short><![CDATA[
+Ізолента Tesa ширина 19 мм
+]]></description_short>
+        <description><![CDATA[
+<font size="2" face="tahoma,arial,helvetica,sans-serif">Ізолента Tesa ширина 19 мм</font>
+]]></description>
+      </offer>
+<offer id="20663" available="false">
+        <url>https://www.caralarm.com.ua/interfeis-sklopidiomnikiv-sheriff-pwm-102-2-stekla-/p-20663.html</url>
+        <name>Інтерфейс склопідйомників Sheriff PWM-102 (2 стекла)</name>
+        <model>21685</model>
+        <priceUSD>10</priceUSD>
+        <priceUAH>449</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>385</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>130</categoryID>
+        <categoryName>Електросклопідіймачі</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/1000x1000/med_med_dd04838.jpg</picture>
+        <vendor>SHERIFF</vendor>
+        <description_short><![CDATA[
+Модуль забезпечує автоматичне закриття скла або стельового люка за наявності електричного дроту останнього. На 2 стекла
+]]></description_short>
+        <description><![CDATA[
+<p style="padding: 3px 0px; font-family: Verdana, Arial, sans-serif; margin: 5px 0px !important;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;"><strong>Опис Sheriff PWM102:</strong></span></span><p style="padding: 3px 0px; font-family: Verdana, Arial, sans-serif; margin: 5px 0px !important;"><span style="font-size:14px;"><span style="font-family:tahoma,geneva,sans-serif;">Модуль призначений для спільної роботи з автомобільною сигналізацією або іншим пристроєм, що має спеціальний вихід, на якому з'являється імпульс негативної або позитивної полярності зміні стану системи (наприклад, при постановці на охорону).<br><br>Модуль забезпечує автоматичне закриття 2 стекол або стельового люка за наявності електричного дроту останнього. Модуль закриття скла призначений для використання на всіх типах автомобілів з живленням від бортової мережі із заземленим негативним виведенням акумуляторної батареї з номінальною напругою +12 Ст.</span></span></p></p>
+]]></description>
+      </offer>
+<offer id="13627" available="false">
+        <url>https://www.caralarm.com.ua/baner-gt-180h80-vinil-stiika/p-13627.html</url>
+        <name>Банер GT 180х80 вініл стійка</name>
+        <model>14796</model>
+        <priceUSD>39</priceUSD>
+        <priceUAH>1751.1</priceUAH>
+        <priceMinUSD>0</priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>1501.5</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>142</categoryID>
+        <categoryName>Рекламна продукція</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/700x700/med_baner_gt_1.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/700x700/med_baner_gt_2.jpg</picture>
+        <vendor>GT</vendor>
+        <description_short><![CDATA[
+Банер GT 180х80 вініл стійка
+]]></description_short>
+        <description><![CDATA[
+<p>Банер GT 180х80 вініл стійка</p>
+]]></description>
+      </offer>
+<offer id="13627" available="false">
+        <url>https://www.caralarm.com.ua/baner-gt-180h80-vinil-stiika/p-13627.html</url>
+        <name>Банер GT 180х80 вініл стійка</name>
+        <model>14796</model>
+        <priceUSD>39</priceUSD>
+        <priceUAH>1751.1</priceUAH>
+        <priceMinUSD>0</priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>1501.5</priceOld>
+        <currencyId>USD</currencyId>
+        <categoryID>142</categoryID>
+        <categoryName>Рекламна продукція</categoryName>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/700x700/med_baner_gt_1.jpg</picture>
+        <picture>https://cdn.solomono.net/caralarm/images/cache/700x700/med_baner_gt_2.jpg</picture>
+        <vendor>GT</vendor>
+        <description_short><![CDATA[
+Банер GT 180х80 вініл стійка
+]]></description_short>
+        <description><![CDATA[
+<p>Банер GT 180х80 вініл стійка</p>
+]]></description>
+      </offer>
+    </offers>
+  </shop>
+</yml_catalog>

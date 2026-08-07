@@ -177,6 +177,24 @@ const CAMERA_FACETS: FacetConfig[] = [
   },
 ]
 
+const PARKING_RADAR_FACETS: FacetConfig[] = [
+  {
+    key: 'sensors',
+    label: 'Кількість датчиків',
+    specKeys: ['Кількість датчиків'],
+    type: 'value',
+  },
+  {
+    key: 'alert',
+    label: 'Оповіщення',
+    specKeys: ['Оповіщення'],
+    type: 'value',
+  },
+]
+
+/** Merged parking cameras + radars root. */
+const PARKING_FACETS: FacetConfig[] = [...CAMERA_FACETS, ...PARKING_RADAR_FACETS]
+
 const FACETS_BY_ROOT: Record<string, FacetConfig[]> = {
   /** Head units / Android multimedia — largest catalog. */
   multymedia: MULTIMEDIA_FACETS,
@@ -309,23 +327,11 @@ const FACETS_BY_ROOT: Record<string, FacetConfig[]> = {
     },
   ],
 
-  'kamery-parkuvalni': CAMERA_FACETS,
-  /** Catalog currently stores many OEM cameras under this root. */
-  'parkuvalni-radary': [
-    ...CAMERA_FACETS,
-    {
-      key: 'sensors',
-      label: 'Кількість датчиків',
-      specKeys: ['Кількість датчиків'],
-      type: 'value',
-    },
-    {
-      key: 'alert',
-      label: 'Оповіщення',
-      specKeys: ['Оповіщення'],
-      type: 'value',
-    },
-  ],
+  'kamery-parkuvalni': PARKING_FACETS,
+  'parkuvalni-kamery': PARKING_FACETS,
+  'parkuvalni-kamery-ta-radary': PARKING_FACETS,
+  'parkuvalni-radary': PARKING_RADAR_FACETS,
+  'parkuvalni-radary-ta-systemy-videoparkuvannya': PARKING_FACETS,
 
   avtoelektronika: [
     {
@@ -392,6 +398,16 @@ const FACETS_BY_ROOT: Record<string, FacetConfig[]> = {
       key: 'voltage',
       label: 'Напруга',
       specKeys: ['Напруга, в', 'Напруга акумуляторної батареї, В'],
+      type: 'value',
+    },
+  ],
+
+  'vse-dlya-montazhu': [
+    { key: 'type', label: 'Тип', specKeys: ['Тип'], type: 'value' },
+    {
+      key: 'outpower',
+      label: 'Вихідна потужність',
+      specKeys: ['Вихідна потужність'],
       type: 'value',
     },
   ],

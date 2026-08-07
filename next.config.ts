@@ -45,6 +45,41 @@ const nextConfig: NextConfig = {
         hostname: 'www.torssen.com',
         pathname: '/image/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'decibel.com.ua',
+        pathname: '/file-manager/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.decibel.com.ua',
+        pathname: '/file-manager/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'carav.com.ua',
+        pathname: '/image/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.carav.com.ua',
+        pathname: '/image/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.solomono.net',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.caralarm.com.ua',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'caralarm.com.ua',
+        pathname: '/**',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
   },
@@ -180,6 +215,36 @@ const nextConfig: NextConfig = {
       {
         source: '/((?!api|_next|images|fonts|manifest.json|robots.txt|sitemap.xml).*)',
         headers: [{ key: 'Cache-Control', value: HTML_CDN }],
+      },
+    ]
+  },
+
+  async redirects() {
+    return [
+      {
+        source: '/shop/avtomahnitoly-ta-multymedia',
+        destination: '/shop/avtomahnitoly',
+        permanent: true,
+      },
+      {
+        source: '/shop/kamery-parkuvalni',
+        destination: '/shop/parkuvalni-kamery-ta-radary',
+        permanent: true,
+      },
+      {
+        source: '/shop/parkuvalni-kamery',
+        destination: '/shop/parkuvalni-kamery-ta-radary',
+        permanent: true,
+      },
+      {
+        source: '/shop/parkuvalni-radary',
+        destination: '/shop/parkuvalni-kamery-ta-radary',
+        permanent: true,
+      },
+      {
+        source: '/shop/parkuvalni-radary-ta-systemy-videoparkuvannya',
+        destination: '/shop/parkuvalni-kamery-ta-radary',
+        permanent: true,
       },
     ]
   },

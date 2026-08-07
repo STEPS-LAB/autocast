@@ -1,3 +1,5 @@
+import { canonicalizeImportCategoryName } from './category-locale'
+import { isFallbackCategoryName } from './category-infer'
 import type { YmlCategory } from './types'
 
 /** Shop taxonomy: root + one subcategory level only (≈30 items, not car model trees). */
@@ -49,6 +51,14 @@ export function resolveFeedCategoryIdAtMaxDepth(
   return chain[idx] ?? null
 }
 
+function displayCategoryName(cat: YmlCategory | undefined): string {
+  const raw = cat?.name?.trim() ?? ''
+  if (raw && !isFallbackCategoryName(raw)) {
+    return canonicalizeImportCategoryName(raw)
+  }
+  return 'Інше'
+}
+
 /**
  * Build an ordered plan of categories to upsert: only nodes up to maxDepth,
  * derived from used product leaves (deep leaves are collapsed to maxDepth).
@@ -84,7 +94,7 @@ export function buildCategoryImportPlan(
 
     nodes.push({
       feedId,
-      name: cat.name.trim() || `Категорія ${feedId}`,
+      name: displayCategoryName(cat),
       parentFeedId,
       depth,
       sortOrder: 0,
@@ -115,12 +125,11 @@ export function formatCategoryPath(
 ): string {
   const byId = buildById(categories)
   const resolved = resolveFeedCategoryIdAtMaxDepth(categories, leafId, maxDepth)
-  if (!resolved) return `Категорія ${leafId}`
+  if (!resolved) {
+    return displayCategoryName(byId.get(leafId))
+  }
 
   const chain = feedCategoryChain(byId, resolved)
-  const parts = chain.map(id => {
-    const cat = byId.get(id)
-    return cat?.name.trim() || `Категорія ${id}`
-  })
+  const parts = chain.map(id => displayCategoryName(byId.get(id)))
   return parts.join(' › ')
 }
