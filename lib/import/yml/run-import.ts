@@ -8,7 +8,6 @@ import {
 } from './category-match'
 import { formatCategoryPath, resolveFeedCategoryIdAtMaxDepth } from './category-tree'
 import { parseYmlFromUrl } from './parser'
-import { fetchPdfText } from './pdf-text'
 import { dbPricingFromYmlOffer } from './pricing'
 import {
   pricingNeedsUpdate,
@@ -19,7 +18,6 @@ import {
 import {
   LEGACY_OFFER_ID_SPEC_KEY,
   YML_OFFER_ID_SPEC_KEY,
-  YML_PDF_SPEC_KEY,
   YML_SOURCE_URL_SPEC_KEY,
   YML_VENDOR_CODE_SPEC_KEY,
   type ImportPreview,
@@ -34,8 +32,6 @@ export { ensureNamedCategory, importCategoryTree } from './category-import'
 
 const MAX_IMAGES_PER_PRODUCT = 10
 const WRITE_CONCURRENCY = 8
-const PDF_ENRICH_CONCURRENCY = 3
-const MAX_PDF_ENRICH = 40
 const PRODUCT_DIFF_SELECT =
   'id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images'
 
@@ -51,31 +47,12 @@ function buildSpecs(product: ParsedYmlOffer): Record<string, string> {
   }
   if (product.vendorCode) specs[YML_VENDOR_CODE_SPEC_KEY] = product.vendorCode
   if (product.url) specs[YML_SOURCE_URL_SPEC_KEY] = product.url
-  if (product.pdfUrls.length > 0) specs[YML_PDF_SPEC_KEY] = product.pdfUrls[0] ?? ''
   return specs
 }
 
 function offerIdFromSpecs(specs: Record<string, string> | null): string | undefined {
   if (!specs) return undefined
   return specs[YML_OFFER_ID_SPEC_KEY] || specs[LEGACY_OFFER_ID_SPEC_KEY]
-}
-
-/** Fill empty descriptions from linked PDF datasheets (best-effort). */
-async function enrichDescriptionsFromPdfs(products: ParsedYmlOffer[]): Promise<void> {
-  const targets = products
-    .filter(p => !p.description.trim() && p.pdfUrls.length > 0)
-    .slice(0, MAX_PDF_ENRICH)
-  if (targets.length === 0) return
-
-  await mapPool(targets, PDF_ENRICH_CONCURRENCY, async product => {
-    for (const pdfUrl of product.pdfUrls.slice(0, 2)) {
-      const text = await fetchPdfText(pdfUrl)
-      if (text.trim().length >= 40) {
-        product.description = text.trim()
-        return
-      }
-    }
-  })
 }
 
 async function loadExistingByOfferId(supabase: SupabaseClient): Promise<Map<string, ProductRow>> {
@@ -163,21 +140,32 @@ function isUniqueViolation(message: string): boolean {
   return /duplicate key|unique constraint|products_slug_key/i.test(message)
 }
 
-async function mapPool<T>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T, index: number) => Promise<void>
-) {
-  let index = 0
-  const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-    while (index < items.length) {
-      const current = index
-      index += 1
-      const item = items[current]
-      if (item !== undefined) await worker(item, current)
+function createLimiter(concurrency: number) {
+  let active = 0
+  const waiting: Array<() => void> = []
+
+  async function acquire() {
+    if (active >= concurrency) {
+      await new Promise<void>(resolve => waiting.push(resolve))
     }
-  })
-  await Promise.all(runners)
+    active += 1
+  }
+
+  function release() {
+    active -= 1
+    waiting.shift()?.()
+  }
+
+  return {
+    async run<T>(fn: () => Promise<T>): Promise<T> {
+      await acquire()
+      try {
+        return await fn()
+      } finally {
+        release()
+      }
+    },
+  }
 }
 
 function previewAction(
@@ -219,8 +207,6 @@ function previewItem(
 }
 
 export async function buildYmlImportPreview(url: string): Promise<ImportPreview> {
-  const parsed = await parseYmlFromUrl(url)
-  await enrichDescriptionsFromPdfs(parsed.products)
   const supabase = await createServerClient()
   const byOfferId = await loadExistingByOfferId(supabase)
 
@@ -229,32 +215,39 @@ export async function buildYmlImportPreview(url: string): Promise<ImportPreview>
   let unchanged = 0
   let priceChanges = 0
   let priceChangesMatched = 0
+  const sample: ImportPreviewItem[] = []
+  const usedLeafIds = new Set<string>()
+  let categories: YmlCategory[] = []
 
-  for (const product of parsed.products) {
-    const existing = byOfferId.get(product.offerId)
-    const { action, priceChanged } = previewAction(product, existing)
-    if (action === 'create') toCreate += 1
-    else if (action === 'update') toUpdate += 1
-    else unchanged += 1
-    if (priceChanged) {
-      priceChanges += 1
-      if (existing) priceChangesMatched += 1
-    }
-  }
+  const parsed = await parseYmlFromUrl(url, {
+    collectProducts: false,
+    skipPdfUrls: true,
+    onCategories: cats => {
+      categories = cats
+    },
+    onProduct: product => {
+      usedLeafIds.add(product.categoryId)
+      const existing = byOfferId.get(product.offerId)
+      const { action, priceChanged } = previewAction(product, existing)
+      if (action === 'create') toCreate += 1
+      else if (action === 'update') toUpdate += 1
+      else unchanged += 1
+      if (priceChanged) {
+        priceChanges += 1
+        if (existing) priceChangesMatched += 1
+      }
+      if (sample.length < 20) {
+        sample.push(previewItem(product, byOfferId, formatCategoryPath(categories, product.categoryId)))
+      }
+    },
+  })
 
-  const sample = parsed.products.slice(0, 20).map(product =>
-    previewItem(product, byOfferId, formatCategoryPath(parsed.categories, product.categoryId))
-  )
-
-  const usedLeafIds = [...new Set(parsed.products.map(p => p.categoryId))]
-  const categories = [
-    ...new Set(usedLeafIds.map(id => formatCategoryPath(parsed.categories, id))),
-  ]
+  const categoryLabels = [...new Set([...usedLeafIds].map(id => formatCategoryPath(categories, id)))]
     .filter(label => !/^категорія\s+\d+$/i.test(label))
     .sort((a, b) => a.localeCompare(b, 'uk'))
 
   return {
-    totalParsed: parsed.products.length,
+    totalParsed: toCreate + toUpdate + unchanged,
     toCreate,
     toUpdate,
     skipped:
@@ -266,7 +259,7 @@ export async function buildYmlImportPreview(url: string): Promise<ImportPreview>
     skippedDuplicateCode: parsed.skippedDuplicateId,
     priceChanges,
     priceChangesMatched,
-    categories,
+    categories: categoryLabels,
     sample,
   }
 }
@@ -283,13 +276,11 @@ export async function runYmlImport(
   url: string,
   options?: { onProgress?: (progress: YmlImportProgress) => void }
 ): Promise<ImportResult> {
-  const parsed = await parseYmlFromUrl(url)
-  await enrichDescriptionsFromPdfs(parsed.products)
   const supabase = await createServerClient()
   const byOfferId = await loadExistingByOfferId(supabase)
 
-  const usedLeafIds = parsed.products.map(product => product.categoryId)
-  const categoryIds = await importCategoryTree(supabase, parsed.categories, usedLeafIds)
+  let feedCategories: YmlCategory[] = []
+  let categoryIds = new Map<string, string>()
   const fallbackCache = new Map<string, string>()
   const { data: allCats } = await fetchAllCategories(supabase, 'id,name_ua,parent_id')
   const matchCandidates: CategoryMatchCandidate[] = (allCats ?? []).map(row => ({
@@ -302,6 +293,7 @@ export async function runYmlImport(
   let knownBrands = (brands ?? []) as Brand[]
   const brandCache = new Map<string, string | null>()
   const reservedSlugs = new Set<string>()
+  const writePool = createLimiter(WRITE_CONCURRENCY)
 
   const result: ImportResult = {
     created: 0,
@@ -310,12 +302,11 @@ export async function runYmlImport(
     priceUpdates: 0,
     imagesUploaded: 0,
     errors: [],
-    total: parsed.products.length,
+    total: 0,
     processed: 0,
   }
 
   let processed = 0
-  const total = parsed.products.length
   let lastProgressAt = 0
 
   function emitProgress(force = false) {
@@ -324,7 +315,7 @@ export async function runYmlImport(
     lastProgressAt = now
     options?.onProgress?.({
       processed,
-      total,
+      total: result.total,
       created: result.created,
       updated: result.updated,
       skipped: result.skipped,
@@ -345,7 +336,7 @@ export async function runYmlImport(
 
   async function resolveProductCategoryId(product: ParsedYmlOffer): Promise<string | null> {
     const feedId =
-      resolveFeedCategoryIdAtMaxDepth(parsed.categories, product.categoryId) ?? product.categoryId
+      resolveFeedCategoryIdAtMaxDepth(feedCategories, product.categoryId) ?? product.categoryId
     const fromTree = categoryIds.get(feedId)
     if (fromTree) return fromTree
     return ensureNamedCategory(
@@ -398,7 +389,7 @@ export async function runYmlImport(
     throw lastError ?? new Error('Не вдалося створити товар після повторів slug.')
   }
 
-  await mapPool(parsed.products, WRITE_CONCURRENCY, async product => {
+  async function writeProduct(product: ParsedYmlOffer) {
     try {
       const categoryId = await resolveProductCategoryId(product)
       if (!categoryId) {
@@ -452,10 +443,25 @@ export async function runYmlImport(
     } finally {
       processed += 1
       result.processed = processed
+      result.total = Math.max(result.total, processed)
       emitProgress()
     }
+  }
+
+  await parseYmlFromUrl(url, {
+    collectProducts: false,
+    onCategories: async cats => {
+      feedCategories = cats
+      categoryIds = await importCategoryTree(
+        supabase,
+        cats,
+        cats.map(category => category.id)
+      )
+    },
+    onProduct: product => writePool.run(() => writeProduct(product)),
   })
 
+  result.total = processed
   emitProgress(true)
   result.errors = result.errors.slice(0, 50)
   return result

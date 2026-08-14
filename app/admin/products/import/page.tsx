@@ -21,12 +21,33 @@ type LiveProgress = {
   message: string
 }
 
+function messageFromNonJson(text: string, status: number): string {
+  if (/An error occurred with your deployment/i.test(text) || text.startsWith('An error')) {
+    return 'Сервер обірвав запит (таймаут або брак памʼяті). Спробуйте ще раз — великий XML обробляється потоково.'
+  }
+  if (text.trim().startsWith('<')) {
+    return `Сервер повернув HTML замість JSON (HTTP ${status}).`
+  }
+  return text.slice(0, 180) || `Помилка HTTP ${status}`
+}
+
+async function readJsonPayload(response: Response): Promise<Record<string, unknown>> {
+  const text = await response.text()
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch {
+    throw new Error(messageFromNonJson(text, response.status))
+  }
+}
+
 async function readNdjsonImportStream(
   response: Response,
   onEvent: (event: ImportProgressEvent) => void
 ): Promise<ImportResult> {
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}))
+    const data = await readJsonPayload(response).catch((error: unknown) =>
+      error instanceof Error ? { error: error.message } : {}
+    )
     throw new Error((data as { error?: string }).error ?? 'Помилка імпорту XML')
   }
   if (!response.body) {
@@ -138,9 +159,9 @@ export default function AdminImportProductsPage() {
           method: 'POST',
           body: formData,
         })
-        const data = await response.json()
-        if (!response.ok) throw new Error(data.error ?? 'Помилка превʼю')
-        setPreview(data as ImportPreview)
+        const data = await readJsonPayload(response)
+        if (!response.ok) throw new Error(String(data.error ?? 'Помилка превʼю'))
+        setPreview(data as unknown as ImportPreview)
       } else {
         const url = feedUrl.trim()
         if (!url) {
@@ -152,9 +173,9 @@ export default function AdminImportProductsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
         })
-        const data = await response.json()
-        if (!response.ok) throw new Error(data.error ?? 'Помилка превʼю XML')
-        setPreview(data as ImportPreview)
+        const data = await readJsonPayload(response)
+        if (!response.ok) throw new Error(String(data.error ?? 'Помилка превʼю XML'))
+        setPreview(data as unknown as ImportPreview)
       }
       setStep('preview')
     } catch (err) {
@@ -418,12 +439,12 @@ export default function AdminImportProductsPage() {
                       setFeedUrl(event.target.value)
                       resetFlow()
                     }}
-                    placeholder="https://example.com/price.xml або …?route=feed/yandex_yml"
+                    placeholder="https://example.com/price.xml"
                     className="mt-1 w-full rounded-lg border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary"
                   />
                 </label>
                 <p className="text-xs text-text-muted">
-                  Вставте HTTPS-посилання на `.xml` / `.yml` або динамічний Yandex YML-фід.
+                  Вставте HTTPS-посилання на `.xml` / `.yml` або динамічний YML-фід.
                   Імпортуються товари з наявністю (stock &gt; 0). Ідентифікатор оновлення — offer id
                   у specs «Offer ID». HTML в описі очищається до тексту. Зображення зберігаються як
                   URL з фіду.

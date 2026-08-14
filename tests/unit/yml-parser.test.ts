@@ -171,6 +171,20 @@ describe('YML / XML catalog parser', () => {
     expect(parsed.products[0]?.categoryName).toBe('LED лампи головного світла')
   })
 
+  it('can parse without keeping products in memory', async () => {
+    const seen: string[] = []
+    const parsed = await parseYmlStream(Readable.from([SAMPLE_YML]), {
+      collectProducts: false,
+      onProduct: product => {
+        seen.push(product.offerId)
+      },
+    })
+    expect(parsed.products).toHaveLength(0)
+    expect(seen).toEqual(['614'])
+    expect(parsed.skippedOutOfStock).toBe(1)
+    expect(parsed.categories.length).toBeGreaterThan(0)
+  })
+
   it('parses categories with extra attributes like rz_id', async () => {
     const xml = `<?xml version="1.0"?>
 <yml_catalog><shop>

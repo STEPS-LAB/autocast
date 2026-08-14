@@ -19,7 +19,7 @@ export const KNOWN_YML_FEEDS = [
   },
   {
     id: 'carav',
-    label: 'Carav (Yandex YML)',
+    label: 'Carav (YML)',
     url: 'https://carav.com.ua/ua/index.php?route=feed/yandex_yml',
     language: 'ua',
     hasHtmlDescription: true,
@@ -117,7 +117,7 @@ export function resolveYmlFeedUrl(input: {
   }
   if (!isAcceptedCatalogFeedUrl(parsed)) {
     throw new Error(
-      'Посилання має вести на .xml / .yml файл або динамічний YML-фід (наприклад route=feed/yandex_yml).'
+      'Посилання має вести на .xml / .yml файл або динамічний YML-фід.'
     )
   }
 

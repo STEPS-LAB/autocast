@@ -118,10 +118,22 @@ function parseStock(offerXml: string, available: boolean): number {
   return Math.max(0, Math.floor(stock))
 }
 
+export type ParseYmlOptions = {
+  skipOutOfStock?: boolean
+  /** Keep parsed products in memory. Default true. Set false for large feeds. */
+  collectProducts?: boolean
+  /** Skip PDF URL extraction (faster preview). */
+  skipPdfUrls?: boolean
+  onCategories?: (categories: YmlCategory[]) => void | Promise<void>
+  onProduct?: (product: ParsedYmlOffer) => void | Promise<void>
+}
+
+const MAX_DESCRIPTION_CHARS = 12_000
+
 export function parseOfferXml(
   offerXml: string,
   categoryById: Map<string, YmlCategory>,
-  options?: { skipOutOfStock?: boolean }
+  options?: { skipOutOfStock?: boolean; skipPdfUrls?: boolean }
 ): { product: ParsedYmlOffer | null; skipReason: 'oos' | 'invalid' | null } {
   const openTag = OFFER_OPEN_RE.exec(offerXml)?.[0] ?? ''
   const { id: offerId, available } = parseOfferAttributes(openTag)
@@ -152,10 +164,10 @@ export function parseOfferXml(
   const vendorRaw = tagContent(offerXml, 'vendor')
   const urlRaw = tagContent(offerXml, 'url')
   const descriptionRaw = tagContent(offerXml, 'description') ?? ''
-  const description = stripHtmlToText(descriptionRaw)
+  const description = stripHtmlToText(descriptionRaw).slice(0, MAX_DESCRIPTION_CHARS)
   const params = parseParams(offerXml)
   const pictures = collectOfferPictures(offerXml)
-  const pdfUrls = collectOfferPdfUrls(offerXml, params, description)
+  const pdfUrls = options?.skipPdfUrls ? [] : collectOfferPdfUrls(offerXml, params, description)
 
   return {
     product: {
@@ -197,11 +209,12 @@ function ingestCategories(chunk: string, categoryById: Map<string, YmlCategory>)
 
 export async function parseYmlStream(
   source: ReadableStream<Uint8Array> | NodeJS.ReadableStream,
-  options?: { skipOutOfStock?: boolean }
+  options?: ParseYmlOptions
 ): Promise<YmlParseResult> {
   const categoryById = new Map<string, YmlCategory>()
   const products: ParsedYmlOffer[] = []
   const seenIds = new Set<string>()
+  const collectProducts = options?.collectProducts !== false
 
   let skippedOutOfStock = 0
   let skippedDuplicateId = 0
@@ -211,6 +224,13 @@ export async function parseYmlStream(
   let buffer = ''
   let insideOffer = false
   let categoriesClosed = false
+  let categoriesEmitted = false
+
+  async function emitCategories() {
+    if (categoriesEmitted || !options?.onCategories) return
+    categoriesEmitted = true
+    await options.onCategories([...categoryById.values()])
+  }
 
   for await (const chunk of readTextChunks(source)) {
     buffer += chunk
@@ -224,6 +244,7 @@ export async function parseYmlStream(
         const offersAt = buffer.search(/<offers[\s>]/i)
         if (offersAt >= 0) buffer = buffer.slice(offersAt)
         else if (buffer.length > 512_000) buffer = buffer.slice(-64_000)
+        await emitCategories()
       } else if (buffer.length > 2_000_000) {
         // Categories section unexpectedly huge — keep sliding window.
         ingestCategories(buffer.slice(-500_000), categoryById)
@@ -273,11 +294,16 @@ export async function parseYmlStream(
         continue
       }
       seenIds.add(product.offerId)
-      products.push(product)
+      await emitCategories()
+      if (options?.onProduct) await options.onProduct(product)
+      if (collectProducts) products.push(product)
     }
   }
 
-  const enriched = enrichMissingCategories([...categoryById.values()], products)
+  const categoryList = [...categoryById.values()]
+  const enriched = collectProducts
+    ? enrichMissingCategories(categoryList, products)
+    : { categories: categoryList, products }
 
   return {
     categories: enriched.categories,
@@ -291,12 +317,13 @@ export async function parseYmlStream(
 
 export async function parseYmlFromUrl(
   url: string,
-  options?: { skipOutOfStock?: boolean }
+  options?: ParseYmlOptions
 ): Promise<YmlParseResult> {
   const response = await fetch(url, {
     headers: {
       'User-Agent': 'AutocastImporter/1.0',
       Accept: 'application/xml,text/xml,*/*',
+      'Accept-Encoding': 'gzip, deflate, br',
     },
     signal: AbortSignal.timeout(240_000),
   })
