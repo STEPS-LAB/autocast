@@ -58,6 +58,7 @@ async function readNdjsonImportStream(
   const decoder = new TextDecoder()
   let buffer = ''
   let finalResult: ImportResult | null = null
+  let lastProgress: ImportProgressEvent | null = null
 
   while (true) {
     const { done, value } = await reader.read()
@@ -69,10 +70,18 @@ async function readNdjsonImportStream(
     for (const line of lines) {
       const trimmed = line.trim()
       if (!trimmed) continue
-      const event = JSON.parse(trimmed) as ImportProgressEvent
+      let event: ImportProgressEvent
+      try {
+        event = JSON.parse(trimmed) as ImportProgressEvent
+      } catch {
+        continue
+      }
       onEvent(event)
       if (event.type === 'error') {
         throw new Error(event.error ?? 'Помилка імпорту')
+      }
+      if (event.type === 'progress' || event.type === 'status') {
+        lastProgress = event
       }
       if (event.type === 'done' && event.result) {
         finalResult = event.result
@@ -81,16 +90,33 @@ async function readNdjsonImportStream(
   }
 
   if (buffer.trim()) {
-    const event = JSON.parse(buffer.trim()) as ImportProgressEvent
-    onEvent(event)
-    if (event.type === 'error') throw new Error(event.error ?? 'Помилка імпорту')
-    if (event.type === 'done' && event.result) finalResult = event.result
+    try {
+      const event = JSON.parse(buffer.trim()) as ImportProgressEvent
+      onEvent(event)
+      if (event.type === 'error') throw new Error(event.error ?? 'Помилка імпорту')
+      if (event.type === 'done' && event.result) finalResult = event.result
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        // truncated stream
+      } else {
+        throw error
+      }
+    }
   }
 
-  if (!finalResult) {
-    throw new Error('Імпорт завершився без підсумку. Оновіть сторінку товарів.')
+  if (finalResult) return finalResult
+
+  return {
+    created: lastProgress?.created ?? 0,
+    updated: lastProgress?.updated ?? 0,
+    skipped: lastProgress?.skipped ?? 0,
+    priceUpdates: 0,
+    imagesUploaded: 0,
+    errors: [],
+    processed: lastProgress?.processed ?? 0,
+    total: lastProgress?.total ?? 0,
+    done: false,
   }
-  return finalResult
 }
 
 export default function AdminImportProductsPage() {
@@ -257,6 +283,72 @@ export default function AdminImportProductsPage() {
     return accumulated
   }
 
+  async function runYmlPasses(url: string): Promise<ImportResult> {
+    const accumulated: ImportResult = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      priceUpdates: 0,
+      imagesUploaded: 0,
+      errors: [],
+      processed: 0,
+      total: preview?.totalParsed ?? 0,
+      done: false,
+    }
+
+    let pass = 0
+    while (pass < 20) {
+      pass += 1
+      const response = await fetch('/api/admin/import-yml', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, expectedTotal: preview?.totalParsed ?? 0 }),
+      })
+      const passResult = await readNdjsonImportStream(response, event => {
+        if (event.type === 'status') {
+          setProgress(prev => ({
+            processed: prev?.processed ?? accumulated.processed ?? 0,
+            total: prev?.total ?? accumulated.total ?? preview?.totalParsed ?? 0,
+            created: accumulated.created,
+            updated: accumulated.updated,
+            skipped: accumulated.skipped,
+            message: event.message ?? `XML · прохід ${pass}…`,
+          }))
+        }
+        if (event.type === 'progress') {
+          setProgress({
+            processed: event.processed ?? 0,
+            total: event.total || preview?.totalParsed || 0,
+            created: accumulated.created + (event.created ?? 0),
+            updated: accumulated.updated + (event.updated ?? 0),
+            skipped: accumulated.skipped + (event.skipped ?? 0),
+            message: event.message ?? `XML · прохід ${pass}…`,
+          })
+        }
+      })
+
+      accumulated.created += passResult.created
+      accumulated.updated += passResult.updated
+      accumulated.skipped += passResult.skipped
+      accumulated.priceUpdates += passResult.priceUpdates
+      accumulated.imagesUploaded += passResult.imagesUploaded
+      accumulated.processed = (accumulated.processed ?? 0) + (passResult.processed ?? 0)
+      accumulated.total = passResult.total ?? accumulated.total
+      accumulated.errors.push(...passResult.errors)
+      accumulated.done = passResult.done !== false
+
+      if (passResult.done !== false) break
+      setProgress(prev =>
+        prev
+          ? { ...prev, message: `Часовий ліміт — прохід ${pass + 1}…` }
+          : prev
+      )
+    }
+
+    accumulated.errors = accumulated.errors.slice(0, 50)
+    return accumulated
+  }
+
   async function handleImport() {
     setLoading(true)
     setError('')
@@ -281,33 +373,7 @@ export default function AdminImportProductsPage() {
       } else {
         const url = feedUrl.trim()
         if (!url) return
-        const response = await fetch('/api/admin/import-yml', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, expectedTotal: preview?.totalParsed ?? 0 }),
-        })
-        importResult = await readNdjsonImportStream(response, event => {
-          if (event.type === 'status') {
-            setProgress(prev => ({
-              processed: prev?.processed ?? 0,
-              total: prev?.total ?? preview?.totalParsed ?? 0,
-              created: prev?.created ?? 0,
-              updated: prev?.updated ?? 0,
-              skipped: prev?.skipped ?? 0,
-              message: event.message ?? 'Імпорт…',
-            }))
-          }
-          if (event.type === 'progress') {
-            setProgress({
-              processed: event.processed ?? 0,
-              total: event.total || preview?.totalParsed || 0,
-              created: event.created ?? 0,
-              updated: event.updated ?? 0,
-              skipped: event.skipped ?? 0,
-              message: event.message ?? 'Імпорт…',
-            })
-          }
-        })
+        importResult = await runYmlPasses(url)
       }
 
       setResult(importResult)

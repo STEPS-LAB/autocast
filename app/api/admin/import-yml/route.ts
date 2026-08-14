@@ -24,8 +24,10 @@ async function isCurrentUserAdmin() {
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
+const TIME_BUDGET_MS = 240_000
+
 export async function POST(request: Request) {
-  const rl = rateLimit(request, { bucket: 'admin:import-yml', limit: 2, windowMs: 60_000 })
+  const rl = rateLimit(request, { bucket: 'admin:import-yml', limit: 20, windowMs: 60_000 })
   if (!rl.ok) return rl.response
 
   const allowed = await isCurrentUserAdmin()
@@ -50,13 +52,18 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: ImportProgressEvent) => {
-        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`))
+        try {
+          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`))
+        } catch {
+          // Client disconnected or the stream already closed.
+        }
       }
 
       try {
         send({ type: 'status', message: 'Завантаження та розбір XML/YML…' })
         const result = await runYmlImport(resolved.url, {
           expectedTotal: body.expectedTotal,
+          deadlineMs: Date.now() + TIME_BUDGET_MS,
           onProgress: progress => {
             send({
               type: 'progress',
@@ -69,12 +76,21 @@ export async function POST(request: Request) {
             })
           },
         })
-        try {
-          revalidateCatalogCache()
-        } catch {
-          // Cache revalidation must not block completion.
+        if (result.done !== false) {
+          try {
+            revalidateCatalogCache()
+          } catch {
+            // Cache revalidation must not block completion.
+          }
         }
-        send({ type: 'done', result })
+        send({
+          type: 'done',
+          result,
+          message:
+            result.done === false
+              ? 'Часовий ліміт — продовжуємо наступним проходом.'
+              : 'Готово',
+        })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Не вдалося виконати імпорт фіду.'
         send({ type: 'error', error: message })
