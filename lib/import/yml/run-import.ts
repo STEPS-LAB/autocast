@@ -24,6 +24,7 @@ import {
   type ImportPreviewItem,
   type ImportResult,
   type ParsedYmlOffer,
+  type YmlCategory,
 } from './types'
 import type { Brand } from '@/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
