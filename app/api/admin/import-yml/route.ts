@@ -31,9 +31,9 @@ export async function POST(request: Request) {
   const allowed = await isCurrentUserAdmin()
   if (!allowed) return NextResponse.json({ error: 'Доступ заборонено.' }, { status: 403 })
 
-  let body: { feedId?: string; url?: string }
+  let body: { feedId?: string; url?: string; expectedTotal?: number }
   try {
-    body = (await request.json()) as { feedId?: string; url?: string }
+    body = (await request.json()) as { feedId?: string; url?: string; expectedTotal?: number }
   } catch {
     return NextResponse.json({ error: 'Очікується JSON з feedId або url.' }, { status: 400 })
   }
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       try {
         send({ type: 'status', message: 'Завантаження та розбір XML/YML…' })
         const result = await runYmlImport(resolved.url, {
+          expectedTotal: body.expectedTotal,
           onProgress: progress => {
             send({
               type: 'progress',

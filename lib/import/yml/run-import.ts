@@ -275,7 +275,10 @@ export type YmlImportProgress = {
 
 export async function runYmlImport(
   url: string,
-  options?: { onProgress?: (progress: YmlImportProgress) => void }
+  options?: {
+    onProgress?: (progress: YmlImportProgress) => void
+    expectedTotal?: number
+  }
 ): Promise<ImportResult> {
   const supabase = await createServerClient()
   const byOfferId = await loadExistingByOfferId(supabase)
@@ -295,6 +298,9 @@ export async function runYmlImport(
   const brandCache = new Map<string, string | null>()
   const reservedSlugs = new Set<string>()
   const writePool = createLimiter(WRITE_CONCURRENCY)
+  const expectedTotal = Number.isFinite(options?.expectedTotal)
+    ? Math.max(0, Math.floor(options.expectedTotal as number))
+    : 0
 
   const result: ImportResult = {
     created: 0,
@@ -303,7 +309,7 @@ export async function runYmlImport(
     priceUpdates: 0,
     imagesUploaded: 0,
     errors: [],
-    total: 0,
+    total: expectedTotal,
     processed: 0,
   }
 
@@ -316,7 +322,7 @@ export async function runYmlImport(
     lastProgressAt = now
     options?.onProgress?.({
       processed,
-      total: result.total ?? processed,
+      total: expectedTotal > 0 ? expectedTotal : processed,
       created: result.created,
       updated: result.updated,
       skipped: result.skipped,
@@ -444,7 +450,7 @@ export async function runYmlImport(
     } finally {
       processed += 1
       result.processed = processed
-      result.total = Math.max(result.total ?? 0, processed)
+      if (expectedTotal === 0) result.total = processed
       emitProgress()
     }
   }
@@ -462,7 +468,7 @@ export async function runYmlImport(
     onProduct: product => writePool.run(() => writeProduct(product)),
   })
 
-  result.total = processed
+  result.total = expectedTotal > 0 ? expectedTotal : processed
   emitProgress(true)
   result.errors = result.errors.slice(0, 50)
   return result

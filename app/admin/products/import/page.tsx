@@ -284,7 +284,7 @@ export default function AdminImportProductsPage() {
         const response = await fetch('/api/admin/import-yml', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url }),
+          body: JSON.stringify({ url, expectedTotal: preview?.totalParsed ?? 0 }),
         })
         importResult = await readNdjsonImportStream(response, event => {
           if (event.type === 'status') {
@@ -300,7 +300,7 @@ export default function AdminImportProductsPage() {
           if (event.type === 'progress') {
             setProgress({
               processed: event.processed ?? 0,
-              total: event.total ?? 0,
+              total: event.total || preview?.totalParsed || 0,
               created: event.created ?? 0,
               updated: event.updated ?? 0,
               skipped: event.skipped ?? 0,
