@@ -319,14 +319,34 @@ export async function parseYmlFromUrl(
   url: string,
   options?: ParseYmlOptions
 ): Promise<YmlParseResult> {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'AutocastImporter/1.0',
-      Accept: 'application/xml,text/xml,*/*',
-      'Accept-Encoding': 'gzip, deflate, br',
-    },
-    signal: AbortSignal.timeout(240_000),
-  })
+  const controller = new AbortController()
+  const connectTimer = setTimeout(() => controller.abort(), 90_000)
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      headers: {
+        'User-Agent': 'AutocastImporter/1.0',
+        Accept: 'application/xml,text/xml,*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
+      },
+      signal: controller.signal,
+    })
+  } catch (error) {
+    const aborted =
+      (error instanceof Error && error.name === 'AbortError') ||
+      (error instanceof Error && error.name === 'TimeoutError') ||
+      (typeof error === 'object' &&
+        error !== null &&
+        'name' in error &&
+        (error.name === 'AbortError' || error.name === 'TimeoutError'))
+    if (aborted) {
+      throw new Error('Не вдалося дочекатися відповіді фіду (таймаут з’єднання).')
+    }
+    throw error
+  } finally {
+    clearTimeout(connectTimer)
+  }
 
   if (!response.ok) {
     throw new Error(`Не вдалося завантажити фід (HTTP ${response.status}).`)
