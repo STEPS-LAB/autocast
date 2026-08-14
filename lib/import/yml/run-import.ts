@@ -298,8 +298,9 @@ export async function runYmlImport(
   const brandCache = new Map<string, string | null>()
   const reservedSlugs = new Set<string>()
   const writePool = createLimiter(WRITE_CONCURRENCY)
-  const expectedTotal = Number.isFinite(options?.expectedTotal)
-    ? Math.max(0, Math.floor(options.expectedTotal as number))
+  const expectedTotalRaw = options?.expectedTotal
+  const expectedTotal = Number.isFinite(expectedTotalRaw)
+    ? Math.max(0, Math.floor(expectedTotalRaw as number))
     : 0
 
   const result: ImportResult = {
