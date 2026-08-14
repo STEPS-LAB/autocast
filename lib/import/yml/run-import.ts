@@ -316,7 +316,7 @@ export async function runYmlImport(
     lastProgressAt = now
     options?.onProgress?.({
       processed,
-      total: result.total,
+      total: result.total ?? processed,
       created: result.created,
       updated: result.updated,
       skipped: result.skipped,
@@ -444,7 +444,7 @@ export async function runYmlImport(
     } finally {
       processed += 1
       result.processed = processed
-      result.total = Math.max(result.total, processed)
+      result.total = Math.max(result.total ?? 0, processed)
       emitProgress()
     }
   }
