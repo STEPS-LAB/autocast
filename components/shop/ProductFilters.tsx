@@ -1,6 +1,13 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect, type ReactNode } from 'react'
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useTransition,
+  type ReactNode,
+} from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, SlidersHorizontal, X } from 'lucide-react'
@@ -8,7 +15,11 @@ import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { buildCategoryMaps, getDirectChildren } from '@/lib/shop/category-tree'
 import type { Facet } from '@/lib/shop/facets'
-import type { VehicleFacets, VehicleSelections } from '@/lib/shop/vehicle'
+import {
+  vehicleFacetsForSelection,
+  type VehicleFacets,
+  type VehicleSelections,
+} from '@/lib/shop/vehicle'
 import type { Brand, Category } from '@/types'
 
 interface FiltersState {
@@ -35,6 +46,8 @@ interface ProductFiltersProps {
   rootCategory?: Category | null
   /** Desktop sidebar: keep title fixed and scroll filter sections independently. */
   scrollable?: boolean
+  /** Lifted optimistic vehicle selection (keeps chips / both sidebars in sync). */
+  onVehicleOptimistic?: (next: VehicleSelections | null) => void
 }
 
 const PRICE_RANGES = [
@@ -130,17 +143,19 @@ function ShowMoreButton({
 export default function ProductFilters({
   filters,
   facets = [],
-  vehicleFacets = { makes: [], models: [], years: [] },
+  vehicleFacets = { makes: [], models: [], years: [], cascade: {} },
   onClose,
   categories,
   brands,
   mode,
   rootCategory = null,
   scrollable = false,
+  onVehicleOptimistic,
 }: ProductFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [, startTransition] = useTransition()
   const [subOpenSections, setSubOpenSections] = useState<Record<string, boolean>>({})
   const [accordionOpen, setAccordionOpen] = useState<Record<string, boolean>>({})
   const [expandedLists, setExpandedLists] = useState<Record<string, boolean>>({})
@@ -152,6 +167,11 @@ export default function ProductFilters({
   const valueFacets = facets.filter(f => f.type !== 'boolean')
   const booleanFacets = facets.filter(f => f.type === 'boolean')
   const showVehicle = vehicleFacets.makes.length > 0
+
+  const { models: vehicleModels, years: vehicleYears } = useMemo(
+    () => vehicleFacetsForSelection(vehicleFacets, vehicle),
+    [vehicleFacets, vehicle]
+  )
 
   const createURL = useCallback(
     (mutate: (params: URLSearchParams) => void) => {
@@ -165,7 +185,10 @@ export default function ProductFilters({
   )
 
   function pushURL(mutate: (params: URLSearchParams) => void) {
-    router.push(createURL(mutate), { scroll: false })
+    const href = createURL(mutate)
+    startTransition(() => {
+      router.replace(href, { scroll: false })
+    })
   }
 
   useEffect(() => {
@@ -336,38 +359,51 @@ export default function ProductFilters({
   }
 
   function selectVehicleMake(make: string) {
+    const next: VehicleSelections =
+      vehicle.make === make ? {} : { make }
+    onVehicleOptimistic?.(next)
     pushURL(params => {
-      if (vehicle.make === make) {
+      if (!next.make) {
         params.delete('vmake')
         params.delete('vmodel')
         params.delete('vyear')
         return
       }
-      params.set('vmake', make)
+      params.set('vmake', next.make)
       params.delete('vmodel')
       params.delete('vyear')
     })
   }
 
   function selectVehicleModel(model: string) {
+    const next: VehicleSelections =
+      vehicle.model === model
+        ? { make: vehicle.make }
+        : { make: vehicle.make, model }
+    onVehicleOptimistic?.(next)
     pushURL(params => {
-      if (vehicle.model === model) {
+      if (!next.model) {
         params.delete('vmodel')
         params.delete('vyear')
         return
       }
-      params.set('vmodel', model)
+      params.set('vmodel', next.model)
       params.delete('vyear')
     })
   }
 
   function selectVehicleYear(year: string) {
+    const next: VehicleSelections =
+      vehicle.year === year
+        ? { make: vehicle.make, model: vehicle.model }
+        : { make: vehicle.make, model: vehicle.model, year }
+    onVehicleOptimistic?.(next)
     pushURL(params => {
-      if (vehicle.year === year) {
+      if (!next.year) {
         params.delete('vyear')
         return
       }
-      params.set('vyear', year)
+      params.set('vyear', next.year)
     })
   }
 
@@ -591,7 +627,7 @@ export default function ProductFilters({
             )}
           </FilterAccordion>
 
-          {vehicle.make && vehicleFacets.models.length > 0 && (
+          {vehicle.make && vehicleModels.length > 0 && (
             <FilterAccordion
               id="vmodel"
               title="Модель"
@@ -600,14 +636,14 @@ export default function ProductFilters({
             >
               {renderSingleSelectList(
                 'vmodel',
-                vehicleFacets.models,
+                vehicleModels,
                 vehicle.model,
                 selectVehicleModel
               )}
             </FilterAccordion>
           )}
 
-          {vehicle.make && vehicle.model && vehicleFacets.years.length > 0 && (
+          {vehicle.make && vehicle.model && vehicleYears.length > 0 && (
             <FilterAccordion
               id="vyear"
               title="Рік"
@@ -616,7 +652,7 @@ export default function ProductFilters({
             >
               {renderSingleSelectList(
                 'vyear',
-                vehicleFacets.years,
+                vehicleYears,
                 vehicle.year,
                 selectVehicleYear
               )}

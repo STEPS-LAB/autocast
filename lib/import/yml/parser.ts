@@ -1,70 +1,35 @@
+import {
+  allTagContents,
+  decodeXmlEntities,
+  parseNumber,
+  readTextChunks,
+  stripHtmlToText,
+  tagContent,
+} from '@/lib/import/xml/text'
+import { enrichMissingCategories } from './category-infer'
+import { canonicalizeImportCategoryName } from './category-locale'
+import { collectPdfUrlsFromText } from './pdf-text'
 import type { ParsedYmlOffer, YmlCategory, YmlParseResult } from './types'
+
+export {
+  decodeXmlEntities,
+  stripHtmlToText,
+} from '@/lib/import/xml/text'
 
 const OFFER_OPEN_RE = /<offer\b[^>]*>/i
 const OFFER_CLOSE_RE = /<\/offer>/i
 const CATEGORY_RE = /<category\b([^>]*)>([^<]*)<\/category>/gi
 
-function parseCategoryAttributes(attrs: string): { id: string | null; parentId: string | null } {
+function parseCategoryAttributes(attrs: string): {
+  id: string | null
+  parentId: string | null
+  url: string | null
+} {
   const id = /\bid="(\d+)"/i.exec(attrs)?.[1] ?? null
   const parentId = /\bparentId="(\d+)"/i.exec(attrs)?.[1] ?? null
-  return { id, parentId }
-}
-
-function decodeXmlEntities(value: string): string {
-  return value
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)))
-}
-
-export function stripHtmlToText(value: string): string {
-  const withoutCdata = value
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
-    .replace(/<!\[CDATA\[/gi, '')
-    .replace(/\]\]>/g, '')
-
-  return decodeXmlEntities(withoutCdata)
-    .replace(/<\s*;\s*p>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '• ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\u00a0/g, ' ')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim()
-}
-
-function tagContent(xml: string, tag: string): string | null {
-  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'i')
-  const match = re.exec(xml)
-  if (!match?.[1]) return null
-  return match[1].trim()
-}
-
-function allTagContents(xml: string, tag: string): string[] {
-  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'gi')
-  const values: string[] = []
-  let match: RegExpExecArray | null
-  while ((match = re.exec(xml)) !== null) {
-    const value = match[1]?.trim()
-    if (value) values.push(value)
-  }
-  return values
-}
-
-function parseNumber(value: string | null): number | null {
-  if (!value) return null
-  const normalized = value.replace(/\s+/g, '').replace(',', '.')
-  const num = Number(normalized)
-  return Number.isFinite(num) ? num : null
+  const urlRaw = /\burl="([^"]+)"/i.exec(attrs)?.[1] ?? null
+  const url = urlRaw ? decodeXmlEntities(urlRaw).trim() : null
+  return { id, parentId, url: url && /^https?:\/\//i.test(url) ? url : null }
 }
 
 function parseOfferAttributes(openTag: string): { id: string | null; available: boolean } {
@@ -88,6 +53,71 @@ function parseParams(offerXml: string): Record<string, string> {
   return params
 }
 
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value)
+}
+
+function isImageUrl(value: string): boolean {
+  if (!isHttpUrl(value)) return false
+  if (/\.pdf(\?|$)/i.test(value)) return false
+  return true
+}
+
+/** Collect pictures from common YML / Google Merchant / custom tags. */
+export function collectOfferPictures(offerXml: string): string[] {
+  const tags = ['picture', 'image', 'additional_image_link', 'img', 'gallery_image']
+  const seen = new Set<string>()
+  const pictures: string[] = []
+
+  for (const tag of tags) {
+    for (const raw of allTagContents(offerXml, tag)) {
+      const src = decodeXmlEntities(raw).trim()
+      if (!isImageUrl(src)) continue
+      const key = src.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      pictures.push(src)
+    }
+  }
+
+  return pictures
+}
+
+function collectOfferPdfUrls(offerXml: string, params: Record<string, string>, description: string): string[] {
+  const seen = new Set<string>()
+  const urls: string[] = []
+
+  function add(raw: string) {
+    const src = decodeXmlEntities(raw).trim()
+    if (!isHttpUrl(src) || !/\.pdf(\?|$)/i.test(src)) return
+    const key = src.toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    urls.push(src)
+  }
+
+  for (const tag of ['file', 'manual', 'documentation', 'pdf', 'datasheet']) {
+    for (const raw of allTagContents(offerXml, tag)) add(raw)
+  }
+
+  for (const value of Object.values(params)) {
+    for (const url of collectPdfUrlsFromText(value)) add(url)
+  }
+  for (const url of collectPdfUrlsFromText(description)) add(url)
+  for (const url of collectPdfUrlsFromText(offerXml)) add(url)
+
+  return urls
+}
+
+function parseStock(offerXml: string, available: boolean): number {
+  const stock =
+    parseNumber(tagContent(offerXml, 'quantity_in_stock')) ??
+    parseNumber(tagContent(offerXml, 'stock_quantity')) ??
+    parseNumber(tagContent(offerXml, 'stock')) ??
+    (available ? 1 : 0)
+  return Math.max(0, Math.floor(stock))
+}
+
 export function parseOfferXml(
   offerXml: string,
   categoryById: Map<string, YmlCategory>,
@@ -97,6 +127,7 @@ export function parseOfferXml(
   const { id: offerId, available } = parseOfferAttributes(openTag)
   if (!offerId) return { product: null, skipReason: 'invalid' }
 
+  // Prefer Ukrainian <name>; never use <name_ru> as primary title.
   const nameRaw = tagContent(offerXml, 'name')
   const name = nameRaw ? stripHtmlToText(nameRaw) : ''
   const price = parseNumber(tagContent(offerXml, 'price'))
@@ -104,7 +135,7 @@ export function parseOfferXml(
     return { product: null, skipReason: 'invalid' }
   }
 
-  const stock = parseNumber(tagContent(offerXml, 'quantity_in_stock')) ?? (available ? 1 : 0)
+  const stock = parseStock(offerXml, available)
   const skipOutOfStock = options?.skipOutOfStock !== false
   if (skipOutOfStock && stock <= 0) {
     return { product: null, skipReason: 'oos' }
@@ -112,17 +143,19 @@ export function parseOfferXml(
 
   const categoryId = tagContent(offerXml, 'categoryId')?.trim() || '0'
   const category = categoryById.get(categoryId)
-  const categoryName = category?.name?.trim() || `Категорія ${categoryId}`
+  const categoryName = category?.name?.trim()
+    ? canonicalizeImportCategoryName(category.name)
+    : `Категорія ${categoryId}`
 
   const oldPrice = parseNumber(tagContent(offerXml, 'price_old'))
   const vendorCodeRaw = tagContent(offerXml, 'vendorCode')
   const vendorRaw = tagContent(offerXml, 'vendor')
   const urlRaw = tagContent(offerXml, 'url')
   const descriptionRaw = tagContent(offerXml, 'description') ?? ''
-
-  const pictures = allTagContents(offerXml, 'picture')
-    .map(src => decodeXmlEntities(src).trim())
-    .filter(src => /^https?:\/\//i.test(src))
+  const description = stripHtmlToText(descriptionRaw)
+  const params = parseParams(offerXml)
+  const pictures = collectOfferPictures(offerXml)
+  const pdfUrls = collectOfferPdfUrls(offerXml, params, description)
 
   return {
     product: {
@@ -135,10 +168,11 @@ export function parseOfferXml(
       categoryName,
       price: Math.round(price * 100) / 100,
       oldPrice: oldPrice != null && oldPrice > price ? Math.round(oldPrice * 100) / 100 : null,
-      stock: Math.max(0, Math.floor(stock)),
-      description: stripHtmlToText(descriptionRaw),
+      stock,
+      description,
       pictures,
-      params: parseParams(offerXml),
+      pdfUrls,
+      params,
       url: urlRaw ? decodeXmlEntities(urlRaw).trim() : null,
     },
     skipReason: null,
@@ -149,40 +183,16 @@ function ingestCategories(chunk: string, categoryById: Map<string, YmlCategory>)
   CATEGORY_RE.lastIndex = 0
   let match: RegExpExecArray | null
   while ((match = CATEGORY_RE.exec(chunk)) !== null) {
-    const { id, parentId } = parseCategoryAttributes(match[1] ?? '')
+    const { id, parentId, url } = parseCategoryAttributes(match[1] ?? '')
     if (!id) continue
+    const name = canonicalizeImportCategoryName(decodeXmlEntities(match[2] ?? '').trim())
     categoryById.set(id, {
       id,
       parentId,
-      name: decodeXmlEntities(match[2] ?? '').trim(),
+      name,
+      url,
     })
   }
-}
-
-async function* readTextChunks(
-  source: ReadableStream<Uint8Array> | NodeJS.ReadableStream
-): AsyncGenerator<string> {
-  const decoder = new TextDecoder('utf-8')
-
-  if (typeof (source as ReadableStream<Uint8Array>).getReader === 'function') {
-    const reader = (source as ReadableStream<Uint8Array>).getReader()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (value) yield decoder.decode(value, { stream: true })
-    }
-    const tail = decoder.decode()
-    if (tail) yield tail
-    return
-  }
-
-  const nodeStream = source as NodeJS.ReadableStream
-  for await (const chunk of nodeStream) {
-    const buf = typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk as Buffer)
-    yield decoder.decode(buf, { stream: true })
-  }
-  const tail = decoder.decode()
-  if (tail) yield tail
 }
 
 export async function parseYmlStream(
@@ -267,9 +277,11 @@ export async function parseYmlStream(
     }
   }
 
+  const enriched = enrichMissingCategories([...categoryById.values()], products)
+
   return {
-    categories: [...categoryById.values()],
-    products,
+    categories: enriched.categories,
+    products: enriched.products,
     skippedOutOfStock,
     skippedDuplicateId,
     skippedInvalid,

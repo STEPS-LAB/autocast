@@ -21,8 +21,8 @@ const HOME_PRODUCT_SLOTS: HomeProductSlot[] = [
   { key: 'avtozvuk', rootSlug: 'avtozvuk', selectedSlugs: [] },
   {
     key: 'magnitola',
-    rootSlug: null,
-    selectedSlugs: ['shtatni-holovni-prystroyi'],
+    rootSlug: 'avtomahnitoly',
+    selectedSlugs: ['holovni-prystroyi'],
     maxPrice: MAGNITOLA_MAX_PRICE,
   },
   { key: 'avtosvitlo', rootSlug: 'avtosvitlo', selectedSlugs: [] },

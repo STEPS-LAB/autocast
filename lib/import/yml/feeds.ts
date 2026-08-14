@@ -1,5 +1,5 @@
 /**
- * Optional presets for convenience. Any HTTPS `.xml` URL is accepted —
+ * Optional presets for convenience. Any HTTPS YML/XML catalog URL is accepted —
  * these are just examples, not a vendor lock-in.
  */
 export const KNOWN_YML_FEEDS = [
@@ -14,6 +14,13 @@ export const KNOWN_YML_FEEDS = [
     id: 'rozetka_html_ua',
     label: 'Приклад: Rozetka UA (HTML-опис)',
     url: 'https://torssen.com/price/rozetka_html_ua.xml',
+    language: 'ua',
+    hasHtmlDescription: true,
+  },
+  {
+    id: 'carav',
+    label: 'Carav (Yandex YML)',
+    url: 'https://carav.com.ua/ua/index.php?route=feed/yandex_yml',
     language: 'ua',
     hasHtmlDescription: true,
   },
@@ -55,7 +62,25 @@ function isBlockedHostname(hostname: string): boolean {
   return false
 }
 
-/** SSRF guard: HTTPS public XML only. */
+/**
+ * Accept static `.xml` / `.yml` files and common dynamic Yandex Market YML
+ * endpoints (OpenCart `route=feed/yandex_yml`, etc.).
+ */
+export function isAcceptedCatalogFeedUrl(url: URL): boolean {
+  const path = url.pathname.toLowerCase()
+  if (path.endsWith('.xml') || path.endsWith('.yml')) return true
+
+  const route = `${path}?${url.searchParams.toString()}`.toLowerCase()
+  return (
+    route.includes('yandex_yml') ||
+    route.includes('yandex.market') ||
+    route.includes('feed/yml') ||
+    route.includes('export/yml') ||
+    /(?:^|[/?&=._-])yml(?:$|[/?&=._-])/i.test(route)
+  )
+}
+
+/** SSRF guard: HTTPS public YML/XML catalog feeds only. */
 export function resolveYmlFeedUrl(input: {
   feedId?: string | null
   url?: string | null
@@ -74,14 +99,14 @@ export function resolveYmlFeedUrl(input: {
 
   const raw = (input.url ?? '').trim()
   if (!raw) {
-    throw new Error('Вставте посилання на XML-фід.')
+    throw new Error('Вставте посилання на XML/YML-фід.')
   }
 
   let parsed: URL
   try {
     parsed = new URL(raw)
   } catch {
-    throw new Error('Некоректне посилання на XML.')
+    throw new Error('Некоректне посилання на XML/YML.')
   }
 
   if (parsed.protocol !== 'https:') {
@@ -90,14 +115,20 @@ export function resolveYmlFeedUrl(input: {
   if (isBlockedHostname(parsed.hostname)) {
     throw new Error('Це посилання заборонене з міркувань безпеки.')
   }
-  if (!parsed.pathname.toLowerCase().endsWith('.xml')) {
-    throw new Error('Посилання має вести на файл .xml')
+  if (!isAcceptedCatalogFeedUrl(parsed)) {
+    throw new Error(
+      'Посилання має вести на .xml / .yml файл або динамічний YML-фід (наприклад route=feed/yandex_yml).'
+    )
   }
 
   const known = KNOWN_YML_FEEDS.find(feed => feed.url === parsed.toString() || feed.url === raw)
+  const looksHtml =
+    known?.hasHtmlDescription ??
+    (parsed.pathname.toLowerCase().includes('html') ||
+      parsed.searchParams.toString().toLowerCase().includes('html'))
   return {
     url: parsed.toString(),
     feedId: known?.id ?? null,
-    hasHtmlDescription: known?.hasHtmlDescription ?? parsed.pathname.toLowerCase().includes('html'),
+    hasHtmlDescription: looksHtml,
   }
 }

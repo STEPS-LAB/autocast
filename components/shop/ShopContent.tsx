@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -14,7 +14,6 @@ import Pagination from '@/components/ui/Pagination'
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { pageRangeLabel } from '@/lib/pagination'
-import { getRootCategories } from '@/lib/shop/category-tree'
 import { countActiveFacetSelections, type Facet } from '@/lib/shop/facets'
 import {
   countActiveVehicleSelections,
@@ -64,26 +63,42 @@ export default function ShopContent({
   heading,
   filters,
   facets = [],
-  vehicleFacets = { makes: [], models: [], years: [] },
+  vehicleFacets = { makes: [], models: [], years: [], cascade: {} },
   query,
 }: ShopContentProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [, startTransition] = useTransition()
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const rootCategories = useMemo(() => getRootCategories(categories), [categories])
+  const [optimisticVehicle, setOptimisticVehicle] = useState<VehicleSelections | null>(
+    null
+  )
+
+  const serverVehicle = filters.vehicle ?? {}
+  useEffect(() => {
+    setOptimisticVehicle(null)
+  }, [serverVehicle.make, serverVehicle.model, serverVehicle.year])
+
+  const displayFilters = useMemo(
+    () => ({
+      ...filters,
+      vehicle: optimisticVehicle ?? filters.vehicle,
+    }),
+    [filters, optimisticVehicle]
+  )
 
   // Filters only exist on a selected-category page, never on the /shop hub.
   const showFilters = mode === 'category'
-  const specCount = countActiveFacetSelections(filters.specs ?? {})
-  const vehicleCount = countActiveVehicleSelections(filters.vehicle ?? {})
+  const specCount = countActiveFacetSelections(displayFilters.specs ?? {})
+  const vehicleCount = countActiveVehicleSelections(displayFilters.vehicle ?? {})
 
   const hasFilters =
-    filters.categories.length > 0 ||
-    filters.brands.length > 0 ||
-    filters.minPrice !== undefined ||
-    filters.maxPrice !== undefined ||
-    !!filters.inStock ||
+    displayFilters.categories.length > 0 ||
+    displayFilters.brands.length > 0 ||
+    displayFilters.minPrice !== undefined ||
+    displayFilters.maxPrice !== undefined ||
+    !!displayFilters.inStock ||
     specCount > 0 ||
     vehicleCount > 0
 
@@ -92,7 +107,9 @@ export default function ShopContent({
     if (nextPage <= 1) params.delete('page')
     else params.set('page', String(nextPage))
     const next = params.toString()
-    router.push(next ? `${pathname}?${next}` : pathname)
+    startTransition(() => {
+      router.replace(next ? `${pathname}?${next}` : pathname)
+    })
   }
 
   const emptyCatalog = total === 0 && !query && !hasFilters
@@ -132,13 +149,13 @@ export default function ShopContent({
           </p>
         </div>
 
-        {mode === 'hub' && rootCategories.length > 0 && (
-          <CategoryTiles categories={rootCategories} variant="hub" />
+        {mode === 'hub' && categories.length > 0 && (
+          <CategoryTiles categories={categories} variant="hub" />
         )}
 
-        {mode === 'category' && rootCategories.length > 0 && (
+        {mode === 'category' && categories.length > 0 && (
           <CategoryTiles
-            categories={rootCategories}
+            categories={categories}
             variant="compact"
             activeSlug={rootCategory?.slug}
           />
@@ -148,7 +165,7 @@ export default function ShopContent({
           {showFilters && (
             <div className="hidden lg:block w-56 shrink-0 self-start sticky top-24 max-h-[calc(100vh-6.5rem)]">
               <ProductFilters
-                filters={filters}
+                filters={displayFilters}
                 facets={facets}
                 vehicleFacets={vehicleFacets}
                 categories={categories}
@@ -156,6 +173,7 @@ export default function ShopContent({
                 mode={mode}
                 rootCategory={rootCategory}
                 scrollable
+                onVehicleOptimistic={setOptimisticVehicle}
               />
             </div>
           )}
@@ -172,10 +190,13 @@ export default function ShopContent({
                   Фільтри
                   {hasFilters && (
                     <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-text-primary text-[10px] flex items-center justify-center">
-                      {filters.categories.length +
-                        filters.brands.length +
-                        (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0) +
-                        (filters.inStock ? 1 : 0) +
+                      {displayFilters.categories.length +
+                        displayFilters.brands.length +
+                        (displayFilters.minPrice !== undefined ||
+                        displayFilters.maxPrice !== undefined
+                          ? 1
+                          : 0) +
+                        (displayFilters.inStock ? 1 : 0) +
                         specCount +
                         vehicleCount}
                     </span>
@@ -190,9 +211,10 @@ export default function ShopContent({
 
             {showFilters && (
               <ActiveFilters
-                filters={filters}
+                filters={displayFilters}
                 facets={facets}
                 categories={categories}
+                onVehicleOptimistic={setOptimisticVehicle}
               />
             )}
 
@@ -238,7 +260,7 @@ export default function ShopContent({
               )}
             >
               <ProductFilters
-                filters={filters}
+                filters={displayFilters}
                 facets={facets}
                 vehicleFacets={vehicleFacets}
                 categories={categories}
@@ -246,6 +268,7 @@ export default function ShopContent({
                 mode={mode}
                 rootCategory={rootCategory}
                 onClose={() => setFiltersOpen(false)}
+                onVehicleOptimistic={setOptimisticVehicle}
               />
             </motion.div>
           </>

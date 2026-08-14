@@ -32,6 +32,10 @@ export interface ImportResult {
   /** Total products processed (created + updated + skipped during write). */
   processed?: number
   total?: number
+  /** Hard-deleted products (Caralarm OOS sync). */
+  deleted?: number
+  /** False when a time-budgeted run needs another pass. */
+  done?: boolean
 }
 
 export interface ImportProgressEvent {
@@ -42,6 +46,7 @@ export interface ImportProgressEvent {
   created?: number
   updated?: number
   skipped?: number
+  deleted?: number
   result?: ImportResult
   error?: string
 }

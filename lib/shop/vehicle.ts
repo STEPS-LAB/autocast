@@ -27,10 +27,22 @@ export interface VehicleFacetOption {
   count: number
 }
 
+/** Per-make cascade so the client can show models/years instantly on select. */
+export interface VehicleMakeCascade {
+  models: VehicleFacetOption[]
+  yearsByModel: Record<string, VehicleFacetOption[]>
+}
+
 export interface VehicleFacets {
   makes: VehicleFacetOption[]
+  /** Derived for the current selection (SSR + fallback). */
   models: VehicleFacetOption[]
   years: VehicleFacetOption[]
+  /**
+   * Full make → models → years tree built once from the current product set.
+   * Lets the sidebar update the cascade without waiting for a server round-trip.
+   */
+  cascade: Record<string, VehicleMakeCascade>
 }
 
 /** Spec keys that may hold a make (used only as fallback when name parse fails). */
@@ -86,15 +98,24 @@ const MAKE_ENTRIES: Array<{ canonical: string; aliases: string[] }> = [
   { canonical: 'Jac', aliases: ['Jac', 'JAC'] },
 ]
 
-/** Sorted longest-alias-first so "Land Rover" wins over a hypothetical "Land". */
-const MAKE_ALIAS_LIST: Array<{ alias: string; canonical: string; re: RegExp }> = MAKE_ENTRIES.flatMap(
-  entry =>
-    entry.aliases.map(alias => ({
-      alias,
-      canonical: entry.canonical,
-      re: new RegExp(`(^|[^A-Za-zÀ-ÿ])(${escapeRegExp(alias)})(?=[^A-Za-zÀ-ÿ]|$)`, 'i'),
-    }))
+/** Longest-alias-first so "Land Rover" wins over a hypothetical "Land". */
+const MAKE_ALIASES_LONGEST_FIRST: Array<{ alias: string; canonical: string }> = MAKE_ENTRIES.flatMap(
+  entry => entry.aliases.map(alias => ({ alias, canonical: entry.canonical }))
 ).sort((a, b) => b.alias.length - a.alias.length)
+
+const MAKE_ALIAS_TO_CANONICAL = new Map(
+  MAKE_ALIASES_LONGEST_FIRST.map(({ alias, canonical }) => [alias.toLowerCase(), canonical])
+)
+
+/**
+ * Single combined regex — one scan per product name instead of ~50 separate
+ * `exec` calls. Alternation is longest-first so the leftmost hit prefers the
+ * longest alias at that position.
+ */
+const MAKE_COMBINED_RE = new RegExp(
+  `(^|[^A-Za-zÀ-ÿ])(${MAKE_ALIASES_LONGEST_FIRST.map(e => escapeRegExp(e.alias)).join('|')})(?=[^A-Za-zÀ-ÿ]|$)`,
+  'i'
+)
 
 /** Tokens that belong to the product (SKU / features), not the vehicle model. */
 const NOISE_TOKEN =
@@ -195,19 +216,14 @@ function findYearInText(text: string): { label: string; start: number; end: numb
 }
 
 function findMakeInName(name: string): { make: string; endIndex: number } | null {
-  let best: { make: string; endIndex: number; start: number } | null = null
-  for (const entry of MAKE_ALIAS_LIST) {
-    const m = entry.re.exec(name)
-    if (!m || m.index === undefined) continue
-    const aliasMatch = m[2]
-    if (!aliasMatch) continue
-    const start = m.index + (m[1]?.length ?? 0)
-    const endIndex = start + aliasMatch.length
-    if (!best || start < best.start || (start === best.start && aliasMatch.length > best.endIndex - best.start)) {
-      best = { make: entry.canonical, endIndex, start }
-    }
-  }
-  return best ? { make: best.make, endIndex: best.endIndex } : null
+  const m = MAKE_COMBINED_RE.exec(name)
+  if (!m || m.index === undefined) return null
+  const aliasMatch = m[2]
+  if (!aliasMatch) return null
+  const canonical = MAKE_ALIAS_TO_CANONICAL.get(aliasMatch.toLowerCase())
+  if (!canonical) return null
+  const start = m.index + (m[1]?.length ?? 0)
+  return { make: canonical, endIndex: start + aliasMatch.length }
 }
 
 function cleanModel(raw: string): string | undefined {
@@ -297,35 +313,91 @@ function countOptions(
     .sort((a, b) => a.value.localeCompare(b.value, 'uk', { numeric: true, sensitivity: 'base' }))
 }
 
+const EMPTY_VEHICLE_FACETS: VehicleFacets = {
+  makes: [],
+  models: [],
+  years: [],
+  cascade: {},
+}
+
 /**
- * Build cascading vehicle facets. Models appear only when a make is selected;
- * years only when make + model are selected.
+ * Build cascading vehicle facets from already-parsed vehicle rows (one pass).
+ * Cascade is always complete so the client can reveal models/years instantly.
  */
-export function buildVehicleFacets(
-  products: Array<Pick<ShopFacetRow, 'name_ua' | 'specs'>>,
-  selected: VehicleSelections
+export function buildVehicleFacetsFromParsed(
+  parsed: VehicleInfo[],
+  selected: VehicleSelections = {}
 ): VehicleFacets {
-  const parsed = products.map(p => parseVehicle(p.name_ua, p.specs))
+  if (parsed.length === 0) return EMPTY_VEHICLE_FACETS
 
   const makes = countOptions(parsed.map(p => p.make))
 
-  let models: VehicleFacetOption[] = []
-  if (selected.make) {
-    models = countOptions(
-      parsed.filter(p => p.make === selected.make).map(p => p.model)
-    )
+  const cascade: Record<string, VehicleMakeCascade> = {}
+  const byMake = new Map<string, VehicleInfo[]>()
+  for (const info of parsed) {
+    if (!info.make) continue
+    let bucket = byMake.get(info.make)
+    if (!bucket) {
+      bucket = []
+      byMake.set(info.make, bucket)
+    }
+    bucket.push(info)
   }
 
-  let years: VehicleFacetOption[] = []
-  if (selected.make && selected.model) {
-    years = countOptions(
-      parsed
-        .filter(p => p.make === selected.make && p.model === selected.model)
-        .map(p => p.year)
-    )
+  for (const [make, rows] of byMake) {
+    const models = countOptions(rows.map(r => r.model))
+    const yearsByModel: Record<string, VehicleFacetOption[]> = {}
+    const byModel = new Map<string, VehicleInfo[]>()
+    for (const row of rows) {
+      if (!row.model) continue
+      let bucket = byModel.get(row.model)
+      if (!bucket) {
+        bucket = []
+        byModel.set(row.model, bucket)
+      }
+      bucket.push(row)
+    }
+    for (const [model, modelRows] of byModel) {
+      yearsByModel[model] = countOptions(modelRows.map(r => r.year))
+    }
+    cascade[make] = { models, yearsByModel }
   }
 
-  return { makes, models, years }
+  const models = selected.make ? (cascade[selected.make]?.models ?? []) : []
+  const years =
+    selected.make && selected.model
+      ? (cascade[selected.make]?.yearsByModel[selected.model] ?? [])
+      : []
+
+  return { makes, models, years, cascade }
+}
+
+/** Slice models / years for a selection from a prebuilt cascade tree. */
+export function vehicleFacetsForSelection(
+  facets: VehicleFacets,
+  selected: VehicleSelections
+): Pick<VehicleFacets, 'models' | 'years'> {
+  const models = selected.make ? (facets.cascade[selected.make]?.models ?? []) : []
+  const years =
+    selected.make && selected.model
+      ? (facets.cascade[selected.make]?.yearsByModel[selected.model] ?? [])
+      : []
+  return { models, years }
+}
+
+/**
+ * Build cascading vehicle facets. Models appear only when a make is selected;
+ * years only when make + model are selected. Prefer `buildVehicleFacetsFromParsed`
+ * when names are already parsed to avoid a second pass.
+ */
+export function buildVehicleFacets(
+  products: Array<Pick<ShopFacetRow, 'name_ua' | 'specs'>>,
+  selected: VehicleSelections = {}
+): VehicleFacets {
+  return buildVehicleFacetsFromParsed(
+    products.map(p => parseVehicle(p.name_ua, p.specs)),
+    selected
+  )
 }
 
 /** True when a parsed vehicle satisfies every active selection (AND). */

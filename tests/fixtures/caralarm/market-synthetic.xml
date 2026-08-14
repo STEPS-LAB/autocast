@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<yml_catalog date="2026-08-06 17:00">
+  <shop>
+    <name>ON-LINE</name>
+    <company>Caralarm</company>
+    <url>https://www.caralarm.com.ua/</url>
+    <currencies>
+      <currency id="USD" rate="1.0000"/>
+      <currency id="UAH" rate="0.0223"/>
+    </currencies>
+    <categories>
+      <category id="87">Автосигналізації</category>
+      <category id="90" parentId="87">Іммобілайзери</category>
+      <category id="142">Рекламна продукція</category>
+      <category id="143" parentId="142">Брошури</category>
+      <category id="384">Знижені в ціні товари</category>
+      <category id="385" parentId="384">Акція</category>
+    </categories>
+    <offers>
+      <offer id="1001" available="1">
+        <url>https://www.caralarm.com.ua/p-1001.html</url>
+        <priceUSD>10</priceUSD>
+        <priceUAH>450</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>560</priceMinUAH>
+        <priceOld>9</priceOld>
+        <currencyId>USD</currencyId>
+        <kodTovara>CODE-1001</kodTovara>
+        <categoryId>90</categoryId>
+        <picture>https://cdn.solomono.net/caralarm/img/1001.jpg</picture>
+        <name>Тестовий іммобілайзер</name>
+        <vendor>TESTBRAND</vendor>
+        <description>Короткий опис</description>
+      </offer>
+      <offer id="1002" available="3">
+        <url>https://www.caralarm.com.ua/p-1002.html</url>
+        <priceUSD>20</priceUSD>
+        <priceUAH>900</priceUAH>
+        <priceMinUSD>25</priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>18</priceOld>
+        <currencyId>USD</currencyId>
+        <kodTovara>CODE-1002</kodTovara>
+        <categoryId>90</categoryId>
+        <picture>https://cdn.solomono.net/caralarm/img/1002.jpg</picture>
+        <name>Постачання 1-2 дні</name>
+        <vendor>TESTBRAND</vendor>
+        <description>Опис</description>
+      </offer>
+      <offer id="1003" available="0">
+        <url>https://www.caralarm.com.ua/p-1003.html</url>
+        <priceUSD>5</priceUSD>
+        <priceUAH>225</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>300</priceMinUAH>
+        <priceOld>0</priceOld>
+        <currencyId>USD</currencyId>
+        <kodTovara>CODE-1003</kodTovara>
+        <categoryId>90</categoryId>
+        <picture>https://cdn.solomono.net/caralarm/img/1003.jpg</picture>
+        <name>Немає в наявності</name>
+        <vendor>TESTBRAND</vendor>
+        <description>OOS</description>
+      </offer>
+      <offer id="1004" available="2">
+        <url>https://www.caralarm.com.ua/p-1004.html</url>
+        <priceUSD>8</priceUSD>
+        <priceUAH>360</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>400</priceMinUAH>
+        <priceOld>0</priceOld>
+        <currencyId>USD</currencyId>
+        <kodTovara>CODE-1004</kodTovara>
+        <categoryId>90</categoryId>
+        <name>У резерві</name>
+        <vendor>TESTBRAND</vendor>
+        <description>Reserved</description>
+      </offer>
+      <offer id="1005" available="1">
+        <url>https://www.caralarm.com.ua/p-1005.html</url>
+        <priceUSD>12</priceUSD>
+        <priceUAH>540</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH></priceMinUAH>
+        <priceOld>0</priceOld>
+        <currencyId>USD</currencyId>
+        <kodTovara>CODE-1005</kodTovara>
+        <categoryId>90</categoryId>
+        <name>Без роздрібної ціни</name>
+        <vendor>TESTBRAND</vendor>
+        <description>No retail</description>
+      </offer>
+      <offer id="1006" available="1">
+        <url>https://www.caralarm.com.ua/p-1006.html</url>
+        <priceUSD>3</priceUSD>
+        <priceUAH>135</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>150</priceMinUAH>
+        <priceOld>0</priceOld>
+        <currencyId>USD</currencyId>
+        <kodTovara>CODE-1006</kodTovara>
+        <categoryId>143</categoryId>
+        <name>Рекламна брошура</name>
+        <vendor>TESTBRAND</vendor>
+        <description>Blocked root</description>
+      </offer>
+      <offer id="1007" available="1">
+        <url>https://www.caralarm.com.ua/p-1007.html</url>
+        <priceUSD>4</priceUSD>
+        <priceUAH>180</priceUAH>
+        <priceMinUSD></priceMinUSD>
+        <priceMinUAH>200</priceMinUAH>
+        <priceOld>0</priceOld>
+        <currencyId>USD</currencyId>
+        <kodTovara>CODE-1007</kodTovara>
+        <categoryId>385</categoryId>
+        <name>Акційний товар</name>
+        <vendor>TESTBRAND</vendor>
+        <description>Promo blocked</description>
+      </offer>
+    </offers>
+  </shop>
+</yml_catalog>
