@@ -7,9 +7,11 @@ import {
   getCategories,
   getCategoryFacetIndex,
   getProductCardsByIds,
+  getUsedCategoryIds,
 } from '@/lib/data/catalog-db'
 import { resolveShopCategoryIdsForRoots } from '@/lib/shop/category-tree'
 import { resolveShopCategoryPage } from '@/lib/shop/category-aliases'
+import { collectOccupiedCategoryIds } from '@/lib/shop/category-display'
 import { parseShopSearchParams } from '@/lib/shop/search-params'
 import {
   computeFacets,
@@ -69,7 +71,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 async function CategoryShop({ params, searchParams }: Props) {
   const [{ category: slug }, sp] = await Promise.all([params, searchParams])
   const parsed = parseShopSearchParams(sp)
-  const [categories, brands] = await Promise.all([getCategories(), getBrands()])
+  const [categories, brands, usedCategoryIds] = await Promise.all([
+    getCategories(),
+    getBrands(),
+    getUsedCategoryIds(),
+  ])
+
+  const occupiedCategoryIds = [
+    ...collectOccupiedCategoryIds(categories, usedCategoryIds),
+  ]
 
   const resolved = resolveShopCategoryPage(slug, categories)
   if (!resolved) notFound()
@@ -157,6 +167,7 @@ async function CategoryShop({ params, searchParams }: Props) {
       rootCategories={resolved.roots}
       heading={resolved.heading}
       query={parsed.q}
+      occupiedCategoryIds={occupiedCategoryIds}
       facets={facets}
       vehicleFacets={vehicleFacets}
       filters={{

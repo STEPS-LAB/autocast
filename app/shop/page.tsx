@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import ShopContent from '@/components/shop/ShopContent'
-import { getBrands, getCategories, getShopProductsPage } from '@/lib/data/catalog-db'
+import { getBrands, getCategories, getShopProductsPage, getUsedCategoryIds } from '@/lib/data/catalog-db'
 import { resolveShopCategoryIds } from '@/lib/shop/category-tree'
+import { collectOccupiedCategoryIds } from '@/lib/shop/category-display'
 import { resolveShopCategoryPage } from '@/lib/shop/category-aliases'
 import { parseShopSearchParams } from '@/lib/shop/search-params'
 import { buildPageMetadata } from '@/lib/seo/metadata'
@@ -26,7 +27,14 @@ type Props = {
 async function ShopHub({ searchParams }: Props) {
   const sp = await searchParams
   const parsed = parseShopSearchParams(sp)
-  const [categories, brands] = await Promise.all([getCategories(), getBrands()])
+  const [categories, brands, usedCategoryIds] = await Promise.all([
+    getCategories(),
+    getBrands(),
+    getUsedCategoryIds(),
+  ])
+  const occupiedCategoryIds = [
+    ...collectOccupiedCategoryIds(categories, usedCategoryIds),
+  ]
 
   // Legacy ?category=rootSlug → dedicated page (including merged alias slugs)
   const onlySlug = parsed.category.length === 1 ? parsed.category[0] : undefined
@@ -75,6 +83,7 @@ async function ShopHub({ searchParams }: Props) {
       mode="hub"
       heading={heading}
       query={parsed.q}
+      occupiedCategoryIds={occupiedCategoryIds}
       facets={[]}
       filters={{
         categories: parsed.category,

@@ -50,6 +50,8 @@ interface ShopContentProps {
   /** Cascading make → model → year facets (empty when unsupported). */
   vehicleFacets?: VehicleFacets
   query?: string
+  /** Category ids that have at least one product (plus ancestors). */
+  occupiedCategoryIds?: string[]
 }
 
 export default function ShopContent({
@@ -68,6 +70,7 @@ export default function ShopContent({
   facets = [],
   vehicleFacets = { makes: [], models: [], years: [], cascade: {} },
   query,
+  occupiedCategoryIds,
 }: ShopContentProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -159,7 +162,11 @@ export default function ShopContent({
         </div>
 
         {mode === 'hub' && categories.length > 0 && (
-          <CategoryTiles categories={categories} variant="hub" />
+          <CategoryTiles
+            categories={categories}
+            variant="hub"
+            occupiedCategoryIds={occupiedCategoryIds}
+          />
         )}
 
         {mode === 'category' && categories.length > 0 && (
@@ -167,6 +174,7 @@ export default function ShopContent({
             categories={categories}
             variant="compact"
             activeSlug={rootCategory?.slug}
+            occupiedCategoryIds={occupiedCategoryIds}
           />
         )}
 
@@ -182,6 +190,7 @@ export default function ShopContent({
                 mode={mode}
                 rootCategory={rootCategory}
                 rootCategories={filterRoots}
+                occupiedCategoryIds={occupiedCategoryIds}
                 scrollable
                 onVehicleOptimistic={setOptimisticVehicle}
               />
@@ -278,6 +287,7 @@ export default function ShopContent({
                 mode={mode}
                 rootCategory={rootCategory}
                 rootCategories={filterRoots}
+                occupiedCategoryIds={occupiedCategoryIds}
                 onClose={() => setFiltersOpen(false)}
                 onVehicleOptimistic={setOptimisticVehicle}
               />

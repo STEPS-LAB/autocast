@@ -14,6 +14,7 @@ import { ChevronDown, SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { buildCategoryMaps, getDirectChildren } from '@/lib/shop/category-tree'
+import { isPlaceholderCategoryName } from '@/lib/import/yml/category-locale'
 import type { Facet } from '@/lib/shop/facets'
 import {
   vehicleFacetsForSelection,
@@ -46,6 +47,7 @@ interface ProductFiltersProps {
   rootCategory?: Category | null
   /** Live roots whose children should appear in subcategory filters. */
   rootCategories?: Category[]
+  occupiedCategoryIds?: string[]
   /** Desktop sidebar: keep title fixed and scroll filter sections independently. */
   scrollable?: boolean
   /** Lifted optimistic vehicle selection (keeps chips / both sidebars in sync). */
@@ -152,6 +154,7 @@ export default function ProductFilters({
   mode,
   rootCategory = null,
   rootCategories,
+  occupiedCategoryIds,
   scrollable = false,
   onVehicleOptimistic,
 }: ProductFiltersProps) {
@@ -201,6 +204,11 @@ export default function ProductFilters({
 
   const { childrenByParentId } = useMemo(() => buildCategoryMaps(categories), [categories])
 
+  const occupiedSet = useMemo(
+    () => (occupiedCategoryIds ? new Set(occupiedCategoryIds) : null),
+    [occupiedCategoryIds]
+  )
+
   const subcategoryTree = useMemo(() => {
     const roots = rootCategories?.length
       ? rootCategories
@@ -212,15 +220,21 @@ export default function ProductFilters({
     for (const root of roots) {
       for (const child of getDirectChildren(categories, root.id)) {
         if (seen.has(child.slug)) continue
+        if (isPlaceholderCategoryName(child.name_ua)) continue
+        if (occupiedSet && !occupiedSet.has(child.id)) continue
         seen.add(child.slug)
         nodes.push({
           ...child,
-          children: childrenByParentId.get(child.id) ?? [],
+          children: (childrenByParentId.get(child.id) ?? []).filter(
+            grand =>
+              !isPlaceholderCategoryName(grand.name_ua) &&
+              (!occupiedSet || occupiedSet.has(grand.id))
+          ),
         })
       }
     }
     return nodes
-  }, [categories, rootCategory, rootCategories, childrenByParentId])
+  }, [categories, rootCategory, rootCategories, childrenByParentId, occupiedSet])
 
   useEffect(() => {
     if (filters.categories.length === 0) return

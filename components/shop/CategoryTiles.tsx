@@ -25,6 +25,7 @@ interface CategoryTilesProps {
   variant: 'hub' | 'compact'
   /** Currently selected root category slug (compact / category page). */
   activeSlug?: string | null
+  occupiedCategoryIds?: string[]
 }
 
 function subtitleFor(cat: Category, childrenByParentId: Map<string, Category[]>): string {
@@ -118,13 +119,18 @@ export default function CategoryTiles({
   categories,
   variant,
   activeSlug = null,
+  occupiedCategoryIds,
 }: CategoryTilesProps) {
+  const occupiedSet = useMemo(
+    () => (occupiedCategoryIds ? new Set(occupiedCategoryIds) : null),
+    [occupiedCategoryIds]
+  )
   const roots = useMemo(
     () =>
-      getShopNavCategories(categories).filter(
+      getShopNavCategories(categories, occupiedSet).filter(
         cat => resolveShopCategoryPage(cat.slug, categories) != null
       ),
-    [categories]
+    [categories, occupiedSet]
   )
   const { childrenByParentId } = useMemo(() => buildCategoryMaps(categories), [categories])
   const [expanded, setExpanded] = useState(false)

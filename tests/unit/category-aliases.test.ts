@@ -141,3 +141,26 @@ describe('resolveShopCategoryIdsForRoots', () => {
     expect(ids.sort()).toEqual(['cameras', 'parktronics', 'radars'])
   })
 })
+
+describe('shop display taxonomy', () => {
+  it('nests Автохімія leaves that were imported as roots', async () => {
+    const { applyDisplayCategoryParents, collectOccupiedCategoryIds } = await import(
+      '@/lib/shop/category-display'
+    )
+    const chemistry = cat({ id: 'chem', slug: 'avtokhimiya', name_ua: 'Автохімія' })
+    const wax = cat({ id: 'wax', slug: 'visk', name_ua: 'Віск' })
+    const wheels = cat({ id: 'wheels', slug: 'kolesa', name_ua: 'Колеса' })
+    const placeholder = cat({ id: 'p167', slug: 'kategoriya-167', name_ua: 'Категорія 167' })
+    const nested = applyDisplayCategoryParents([chemistry, wax, wheels, placeholder])
+
+    expect(nested.find(c => c.id === 'wax')?.parent_id).toBe('chem')
+    expect(nested.find(c => c.id === 'wheels')?.parent_id).toBe('chem')
+    expect(nested.find(c => c.id === 'chem')?.parent_id).toBeNull()
+
+    const occupied = collectOccupiedCategoryIds(nested, ['wax'])
+    const nav = getShopNavCategories(nested, occupied)
+    expect(nav.map(c => c.slug)).toEqual(['avtokhimiya'])
+    expect(nav.some(c => c.name_ua.startsWith('Категорія'))).toBe(false)
+    expect(nav.some(c => c.slug === 'kolesa')).toBe(false)
+  })
+})

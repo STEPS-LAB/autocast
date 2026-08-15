@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { slugifyName } from '@/lib/utils'
-import { canonicalizeImportCategoryName } from './category-locale'
+import { canonicalizeImportCategoryName, isPlaceholderCategoryName } from './category-locale'
 import {
   findBestCategoryMatch,
   type CategoryMatchCandidate,
 } from './category-match'
+import { SHOP_TAXONOMY_RULES } from './category-taxonomy'
 import { buildCategoryImportPlan } from './category-tree'
 import type { YmlCategory } from './types'
 
@@ -93,7 +94,8 @@ export async function importCategoryTree(
 
   for (const node of plan) {
     const parentDbId = node.parentFeedId ? (feedToDb.get(node.parentFeedId) ?? null) : null
-    const nameUa = canonicalizeImportCategoryName(node.name)
+    const nameUaRaw = canonicalizeImportCategoryName(node.name)
+    const nameUa = isPlaceholderCategoryName(nameUaRaw) ? 'Інше' : nameUaRaw
 
     const existing =
       findBestCategoryMatch(nameUa, parentDbId, matchCandidates) ??
@@ -174,7 +176,34 @@ export async function importCategoryTree(
     }
   }
 
+  await reparentTaxonomyLeaves(supabase, matchCandidates)
+
   return feedToDb
+}
+
+async function reparentTaxonomyLeaves(
+  supabase: SupabaseClient,
+  matchCandidates: CategoryMatchCandidate[]
+): Promise<void> {
+  for (const rule of SHOP_TAXONOMY_RULES) {
+    const parent =
+      matchCandidates.find(c => !c.parentId && rule.isParent(c.nameUa)) ??
+      matchCandidates.find(c => rule.isParent(c.nameUa))
+    if (!parent) continue
+
+    for (const child of matchCandidates) {
+      if (child.id === parent.id) continue
+      if (isPlaceholderCategoryName(child.nameUa)) continue
+      if (!rule.isChild(child.nameUa)) continue
+      if (child.parentId === parent.id) continue
+
+      const { error } = await supabase
+        .from('categories')
+        .update({ parent_id: parent.id })
+        .eq('id', child.id)
+      if (!error) child.parentId = parent.id
+    }
+  }
 }
 
 /** Ensure a named fallback category exists (never "Категорія N"). */
@@ -184,7 +213,8 @@ export async function ensureNamedCategory(
   cache: Map<string, string>,
   matchCandidates: CategoryMatchCandidate[]
 ): Promise<string | null> {
-  const nameUa = canonicalizeImportCategoryName(name.trim() || 'Інше')
+  const nameUaRaw = canonicalizeImportCategoryName(name.trim() || 'Інше')
+  const nameUa = isPlaceholderCategoryName(nameUaRaw) ? 'Інше' : nameUaRaw
   const cacheKey = nameUa.toLowerCase()
   if (cache.has(cacheKey)) return cache.get(cacheKey) ?? null
 

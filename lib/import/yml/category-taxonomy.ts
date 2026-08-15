@@ -333,6 +333,70 @@ export function isExtraCarCareChildName(name: string): boolean {
   return matchesNamedList(name, CAR_CARE_EXTRA_CHILD_NAMES)
 }
 
+export type ShopTaxonomyRule = {
+  parentName: string
+  parentFeedId: string
+  isParent: (name: string) => boolean
+  isChild: (name: string) => boolean
+}
+
+export const SHOP_TAXONOMY_RULES: ShopTaxonomyRule[] = [
+  {
+    isParent: isElectronicsParentName,
+    isChild: isElectronicsChildName,
+    parentName: CANONICAL_ELECTRONICS_PARENT,
+    parentFeedId: ELECTRONICS_PARENT_FEED_ID,
+  },
+  {
+    isParent: isParkingCamParentName,
+    isChild: isParkingCamChildName,
+    parentName: CANONICAL_PARKING_CAM_PARENT,
+    parentFeedId: PARKING_CAM_PARENT_FEED_ID,
+  },
+  {
+    isParent: isLightingParentName,
+    isChild: isLightingChildName,
+    parentName: CANONICAL_LIGHTING_PARENT,
+    parentFeedId: LIGHTING_PARENT_FEED_ID,
+  },
+  {
+    isParent: isSecurityParentName,
+    isChild: isSecurityChildName,
+    parentName: CANONICAL_SECURITY_PARENT,
+    parentFeedId: SECURITY_PARENT_FEED_ID,
+  },
+  {
+    isParent: isMultimediaParentName,
+    isChild: isMultimediaChildName,
+    parentName: CANONICAL_MULTIMEDIA_PARENT,
+    parentFeedId: MULTIMEDIA_PARENT_FEED_ID,
+  },
+  {
+    isParent: isHeadUnitParentName,
+    isChild: isHeadUnitChildName,
+    parentName: CANONICAL_HEAD_UNIT_PARENT,
+    parentFeedId: HEAD_UNIT_PARENT_FEED_ID,
+  },
+  {
+    isParent: isCarAudioParentName,
+    isChild: isCarAudioChildName,
+    parentName: CANONICAL_CAR_AUDIO_PARENT,
+    parentFeedId: CAR_AUDIO_PARENT_FEED_ID,
+  },
+  {
+    isParent: isCarCareParentName,
+    isChild: (name) => isCarCareChildName(name) || isExtraCarCareChildName(name),
+    parentName: CANONICAL_CAR_CARE_CATEGORY,
+    parentFeedId: CAR_CARE_PARENT_FEED_ID,
+  },
+  {
+    isParent: isInstallParentName,
+    isChild: isInstallChildName,
+    parentName: CANONICAL_INSTALL_PARENT,
+    parentFeedId: INSTALL_PARENT_FEED_ID,
+  },
+]
+
 function ensureParent(
   byId: Map<string, YmlCategory>,
   opts: {
@@ -401,68 +465,9 @@ export function applyShopCategoryTaxonomy(categories: YmlCategory[]): YmlCategor
     }
   }
 
-  ensureParent(byId, {
-    isParent: isElectronicsParentName,
-    isChild: isElectronicsChildName,
-    parentName: CANONICAL_ELECTRONICS_PARENT,
-    parentFeedId: ELECTRONICS_PARENT_FEED_ID,
-  })
-
-  ensureParent(byId, {
-    isParent: isParkingCamParentName,
-    isChild: isParkingCamChildName,
-    parentName: CANONICAL_PARKING_CAM_PARENT,
-    parentFeedId: PARKING_CAM_PARENT_FEED_ID,
-  })
-
-  ensureParent(byId, {
-    isParent: isLightingParentName,
-    isChild: isLightingChildName,
-    parentName: CANONICAL_LIGHTING_PARENT,
-    parentFeedId: LIGHTING_PARENT_FEED_ID,
-  })
-
-  ensureParent(byId, {
-    isParent: isSecurityParentName,
-    isChild: isSecurityChildName,
-    parentName: CANONICAL_SECURITY_PARENT,
-    parentFeedId: SECURITY_PARENT_FEED_ID,
-  })
-
-  ensureParent(byId, {
-    isParent: isMultimediaParentName,
-    isChild: isMultimediaChildName,
-    parentName: CANONICAL_MULTIMEDIA_PARENT,
-    parentFeedId: MULTIMEDIA_PARENT_FEED_ID,
-  })
-
-  ensureParent(byId, {
-    isParent: isHeadUnitParentName,
-    isChild: isHeadUnitChildName,
-    parentName: CANONICAL_HEAD_UNIT_PARENT,
-    parentFeedId: HEAD_UNIT_PARENT_FEED_ID,
-  })
-
-  ensureParent(byId, {
-    isParent: isCarAudioParentName,
-    isChild: isCarAudioChildName,
-    parentName: CANONICAL_CAR_AUDIO_PARENT,
-    parentFeedId: CAR_AUDIO_PARENT_FEED_ID,
-  })
-
-  ensureParent(byId, {
-    isParent: isCarCareParentName,
-    isChild: (name) => isCarCareChildName(name) || isExtraCarCareChildName(name),
-    parentName: CANONICAL_CAR_CARE_CATEGORY,
-    parentFeedId: CAR_CARE_PARENT_FEED_ID,
-  })
-
-  ensureParent(byId, {
-    isParent: isInstallParentName,
-    isChild: isInstallChildName,
-    parentName: CANONICAL_INSTALL_PARENT,
-    parentFeedId: INSTALL_PARENT_FEED_ID,
-  })
+  for (const rule of SHOP_TAXONOMY_RULES) {
+    ensureParent(byId, rule)
+  }
 
   return [...byId.values()]
 }

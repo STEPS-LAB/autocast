@@ -7,7 +7,8 @@ import {
   tagContent,
 } from '@/lib/import/xml/text'
 import { enrichMissingCategories } from './category-infer'
-import { canonicalizeImportCategoryName } from './category-locale'
+import { canonicalizeImportCategoryName, isPlaceholderCategoryName } from './category-locale'
+import { applyShopCategoryTaxonomy } from './category-taxonomy'
 import { collectPdfUrlsFromText } from './pdf-text'
 import { collectOfferPictures } from './pictures'
 import type { ParsedYmlOffer, YmlCategory, YmlParseResult } from './types'
@@ -132,9 +133,11 @@ export function parseOfferXml(
 
   const categoryId = tagContent(offerXml, 'categoryId')?.trim() || '0'
   const category = categoryById.get(categoryId)
-  const categoryName = category?.name?.trim()
+  const rawCategoryName = category?.name?.trim()
     ? canonicalizeImportCategoryName(category.name)
-    : `Категорія ${categoryId}`
+    : ''
+  const categoryName =
+    rawCategoryName && !isPlaceholderCategoryName(rawCategoryName) ? rawCategoryName : 'Інше'
 
   const oldPrice = parseNumber(tagContent(offerXml, 'price_old'))
   const vendorCodeRaw = tagContent(offerXml, 'vendorCode')
@@ -206,6 +209,12 @@ export async function parseYmlStream(
   async function emitCategories() {
     if (categoriesEmitted || !options?.onCategories) return
     categoriesEmitted = true
+    const nested = applyShopCategoryTaxonomy([...categoryById.values()])
+    categoryById.clear()
+    for (const cat of nested) {
+      if (isPlaceholderCategoryName(cat.name)) cat.name = 'Інше'
+      categoryById.set(cat.id, cat)
+    }
     await options.onCategories([...categoryById.values()])
   }
 

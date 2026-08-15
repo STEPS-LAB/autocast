@@ -1,5 +1,6 @@
 import type { Category } from '@/types'
-import { getRootCategories } from '@/lib/shop/category-tree'
+import { isPlaceholderCategoryName } from '@/lib/import/yml/category-locale'
+import { buildCategoryMaps, getRootCategories } from '@/lib/shop/category-tree'
 
 export type CategorySlugGroup = {
   canonical: string
@@ -43,6 +44,15 @@ export function categorySlugGroupMembers(group: CategorySlugGroup): string[] {
   return [group.canonical, ...group.aliases]
 }
 
+export function isShopNavCategory(
+  cat: Category,
+  occupiedIds?: Set<string> | null
+): boolean {
+  if (isPlaceholderCategoryName(cat.name_ua)) return false
+  if (occupiedIds && !occupiedIds.has(cat.id)) return false
+  return true
+}
+
 export function isSameCategoryNavSlug(a: string, b: string): boolean {
   if (a === b) return true
   const groupA = findCategorySlugGroup(a)
@@ -77,6 +87,22 @@ export function resolveShopCategoryPage(
   const group = findCategorySlugGroup(slug)
   const exact = roots.find(c => c.slug === slug)
 
+  if (!exact && !group) {
+    const node = categories.find(c => c.slug === slug)
+    if (node?.parent_id) {
+      const { byId } = buildCategoryMaps(categories)
+      let current = node
+      while (current.parent_id) {
+        const parent = byId.get(current.parent_id)
+        if (!parent) break
+        current = parent
+      }
+      if (current.slug !== slug && !current.parent_id) {
+        return resolveShopCategoryPage(current.slug, categories)
+      }
+    }
+  }
+
   if (group) {
     const members = new Set(categorySlugGroupMembers(group))
     const groupRoots = roots.filter(c => members.has(c.slug)).slice().sort(compareRoots)
@@ -109,13 +135,17 @@ export function resolveShopCategoryPage(
  * Hub / compact nav: collapse alias-group roots into one tile so we never
  * link to a slug that 404s after a merge redirect.
  */
-export function getShopNavCategories(categories: Category[]): Category[] {
+export function getShopNavCategories(
+  categories: Category[],
+  occupiedIds?: Set<string> | null
+): Category[] {
   const roots = getRootCategories(categories)
   const used = new Set<string>()
   const out: Category[] = []
 
   for (const root of roots) {
     if (used.has(root.id)) continue
+    if (!isShopNavCategory(root, occupiedIds)) continue
 
     const group = findCategorySlugGroup(root.slug)
     if (!group) {

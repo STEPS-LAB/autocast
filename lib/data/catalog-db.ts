@@ -4,6 +4,7 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { createStaticClient } from '@/lib/supabase/static'
 import { fetchAllCategories } from '@/lib/data/categories'
+import { applyDisplayCategoryParents } from '@/lib/shop/category-display'
 import { unstable_cache } from 'next/cache'
 import { clampPage, getTotalPages, SHOP_PRODUCTS_PAGE_SIZE } from '@/lib/pagination'
 import {
@@ -138,7 +139,7 @@ async function fetchCategories(_dbOnly: boolean): Promise<Category[]> {
     const supabase = createStaticClient()
     const { data, error } = await fetchAllCategories(supabase)
     if (error || data.length === 0) return []
-    return (data as DbCategoryRow[]).map(rowToCategory)
+    return applyDisplayCategoryParents((data as DbCategoryRow[]).map(rowToCategory))
   } catch {
     return []
   }
@@ -158,6 +159,40 @@ const getCategoriesDbOnlyCached = unstable_cache(
 
 export async function getCategories(options?: CatalogReadOptions): Promise<Category[]> {
   return options?.dbOnly ? getCategoriesDbOnlyCached() : getCategoriesCached()
+}
+
+async function fetchUsedCategoryIds(): Promise<string[]> {
+  try {
+    const supabase = createStaticClient()
+    const ids = new Set<string>()
+    const pageSize = 1000
+    let from = 0
+    while (true) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('category_id')
+        .range(from, from + pageSize - 1)
+      if (error || !data || data.length === 0) break
+      for (const row of data as Array<{ category_id: string }>) {
+        if (row.category_id) ids.add(row.category_id)
+      }
+      if (data.length < pageSize) break
+      from += pageSize
+    }
+    return [...ids]
+  } catch {
+    return []
+  }
+}
+
+const getUsedCategoryIdsCached = unstable_cache(
+  fetchUsedCategoryIds,
+  ['catalog-used-category-ids', 'db-only'],
+  { revalidate: 60, tags: ['catalog-products', 'catalog-categories'] }
+)
+
+export async function getUsedCategoryIds(): Promise<Set<string>> {
+  return new Set(await getUsedCategoryIdsCached())
 }
 
 async function fetchBrands(_dbOnly: boolean): Promise<Brand[]> {

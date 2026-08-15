@@ -1,4 +1,4 @@
-import { canonicalizeImportCategoryName, ensureUkrainianCategoryName } from './category-locale'
+import { canonicalizeImportCategoryName, ensureUkrainianCategoryName, isPlaceholderCategoryName } from './category-locale'
 import { categoryKeysEquivalent, findBestCategoryMatch, normalizeCategoryKey } from './category-match'
 import { applyShopCategoryTaxonomy } from './category-taxonomy'
 import type { ParsedYmlOffer, YmlCategory } from './types'
@@ -55,10 +55,8 @@ const SLUG_WORDS: Record<string, string> = {
   ta: 'та',
 }
 
-const FALLBACK_NAME_RE = /^категорія\s+\d+$/i
-
 export function isFallbackCategoryName(name: string): boolean {
-  return FALLBACK_NAME_RE.test(name.trim())
+  return isPlaceholderCategoryName(name)
 }
 
 /** Extract `/category-{slug}/` from product image or page URLs. */

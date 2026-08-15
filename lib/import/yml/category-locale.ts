@@ -172,6 +172,13 @@ function aliasKey(name: string): string {
     .trim()
 }
 
+const FALLBACK_NAME_RE = /^категорія\s+\d+$/i
+
+/** Feed placeholders like «Категорія 167» must never appear in the shop. */
+export function isPlaceholderCategoryName(name: string): boolean {
+  return FALLBACK_NAME_RE.test(name.trim())
+}
+
 export function isCarCareParentName(name: string): boolean {
   const key = aliasKey(name)
   return CAR_CARE_PARENT_ALIASES.has(key) || key === 'автохімія'
