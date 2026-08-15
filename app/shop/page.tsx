@@ -29,8 +29,9 @@ async function ShopHub({ searchParams }: Props) {
   const [categories, brands] = await Promise.all([getCategories(), getBrands()])
 
   // Legacy ?category=rootSlug → dedicated page (including merged alias slugs)
-  if (parsed.category.length === 1) {
-    const resolved = resolveShopCategoryPage(parsed.category[0], categories)
+  const onlySlug = parsed.category.length === 1 ? parsed.category[0] : undefined
+  if (onlySlug) {
+    const resolved = resolveShopCategoryPage(onlySlug, categories)
     if (resolved) {
       const rest = new URLSearchParams()
       if (parsed.q) rest.set('q', parsed.q)
