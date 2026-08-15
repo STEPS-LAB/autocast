@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import ShopContent from '@/components/shop/ShopContent'
 import { getBrands, getCategories, getShopProductsPage } from '@/lib/data/catalog-db'
 import { resolveShopCategoryIds } from '@/lib/shop/category-tree'
+import { resolveShopCategoryPage } from '@/lib/shop/category-aliases'
 import { parseShopSearchParams } from '@/lib/shop/search-params'
 import { buildPageMetadata } from '@/lib/seo/metadata'
 import { KEYWORD_CLUSTERS } from '@/lib/seo/site'
@@ -27,10 +28,10 @@ async function ShopHub({ searchParams }: Props) {
   const parsed = parseShopSearchParams(sp)
   const [categories, brands] = await Promise.all([getCategories(), getBrands()])
 
-  // Legacy ?category=rootSlug → dedicated page
+  // Legacy ?category=rootSlug → dedicated page (including merged alias slugs)
   if (parsed.category.length === 1) {
-    const only = categories.find(c => c.slug === parsed.category[0])
-    if (only && !only.parent_id) {
+    const resolved = resolveShopCategoryPage(parsed.category[0], categories)
+    if (resolved) {
       const rest = new URLSearchParams()
       if (parsed.q) rest.set('q', parsed.q)
       for (const b of parsed.brand) rest.append('brand', b)
@@ -39,7 +40,11 @@ async function ShopHub({ searchParams }: Props) {
       if (parsed.inStock) rest.set('inStock', '1')
       if (parsed.sort) rest.set('sort', parsed.sort)
       const qs = rest.toString()
-      redirect(qs ? `/shop/${only.slug}?${qs}` : `/shop/${only.slug}`)
+      redirect(
+        qs
+          ? `/shop/${resolved.canonicalSlug}?${qs}`
+          : `/shop/${resolved.canonicalSlug}`
+      )
     }
   }
 

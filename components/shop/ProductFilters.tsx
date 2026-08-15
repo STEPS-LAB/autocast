@@ -44,6 +44,8 @@ interface ProductFiltersProps {
   /** hub = /shop; category = /shop/[slug] with subcategory accordions */
   mode: 'hub' | 'category'
   rootCategory?: Category | null
+  /** Live roots whose children should appear in subcategory filters. */
+  rootCategories?: Category[]
   /** Desktop sidebar: keep title fixed and scroll filter sections independently. */
   scrollable?: boolean
   /** Lifted optimistic vehicle selection (keeps chips / both sidebars in sync). */
@@ -149,6 +151,7 @@ export default function ProductFilters({
   brands,
   mode,
   rootCategory = null,
+  rootCategories,
   scrollable = false,
   onVehicleOptimistic,
 }: ProductFiltersProps) {
@@ -199,12 +202,25 @@ export default function ProductFilters({
   const { childrenByParentId } = useMemo(() => buildCategoryMaps(categories), [categories])
 
   const subcategoryTree = useMemo(() => {
-    if (!rootCategory) return []
-    return getDirectChildren(categories, rootCategory.id).map(child => ({
-      ...child,
-      children: childrenByParentId.get(child.id) ?? [],
-    }))
-  }, [categories, rootCategory, childrenByParentId])
+    const roots = rootCategories?.length
+      ? rootCategories
+      : rootCategory
+        ? [rootCategory]
+        : []
+    const seen = new Set<string>()
+    const nodes: Array<Category & { children: Category[] }> = []
+    for (const root of roots) {
+      for (const child of getDirectChildren(categories, root.id)) {
+        if (seen.has(child.slug)) continue
+        seen.add(child.slug)
+        nodes.push({
+          ...child,
+          children: childrenByParentId.get(child.id) ?? [],
+        })
+      }
+    }
+    return nodes
+  }, [categories, rootCategory, rootCategories, childrenByParentId])
 
   useEffect(() => {
     if (filters.categories.length === 0) return

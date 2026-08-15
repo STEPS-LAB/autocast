@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { buildCategoryMaps, getRootCategories } from '@/lib/shop/category-tree'
+import { buildCategoryMaps } from '@/lib/shop/category-tree'
+import { getShopNavCategories, isSameCategoryNavSlug, resolveShopCategoryPage } from '@/lib/shop/category-aliases'
 import {
   ALL_PRODUCTS_ICON,
   getCategoryBlurb,
@@ -118,7 +119,13 @@ export default function CategoryTiles({
   variant,
   activeSlug = null,
 }: CategoryTilesProps) {
-  const roots = useMemo(() => getRootCategories(categories), [categories])
+  const roots = useMemo(
+    () =>
+      getShopNavCategories(categories).filter(
+        cat => resolveShopCategoryPage(cat.slug, categories) != null
+      ),
+    [categories]
+  )
   const { childrenByParentId } = useMemo(() => buildCategoryMaps(categories), [categories])
   const [expanded, setExpanded] = useState(false)
   const reduceMotion = useReducedMotion()
@@ -130,7 +137,7 @@ export default function CategoryTiles({
       <nav aria-label="Категорії магазину" className="mb-6">
         <ul className="flex flex-wrap gap-2">
           {roots.map(cat => {
-            const active = cat.slug === activeSlug
+            const active = !!activeSlug && isSameCategoryNavSlug(cat.slug, activeSlug)
             return (
               <li key={cat.id}>
                 <Link

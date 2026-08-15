@@ -32,6 +32,8 @@ interface ShopContentProps {
   brands: Brand[]
   mode: 'hub' | 'category'
   rootCategory?: Category | null
+  /** All live roots backing this page (alias-group merge). */
+  rootCategories?: Category[]
   heading: string
   /** Current filter selection from URL (already parsed on server). */
   filters: {
@@ -60,6 +62,7 @@ export default function ShopContent({
   brands,
   mode,
   rootCategory = null,
+  rootCategories,
   heading,
   filters,
   facets = [],
@@ -87,6 +90,12 @@ export default function ShopContent({
     }),
     [filters, optimisticVehicle]
   )
+
+  const filterRoots = rootCategories?.length
+    ? rootCategories
+    : rootCategory
+      ? [rootCategory]
+      : []
 
   // Filters only exist on a selected-category page, never on the /shop hub.
   const showFilters = mode === 'category'
@@ -172,6 +181,7 @@ export default function ShopContent({
                 brands={brands}
                 mode={mode}
                 rootCategory={rootCategory}
+                rootCategories={filterRoots}
                 scrollable
                 onVehicleOptimistic={setOptimisticVehicle}
               />
@@ -267,6 +277,7 @@ export default function ShopContent({
                 brands={brands}
                 mode={mode}
                 rootCategory={rootCategory}
+                rootCategories={filterRoots}
                 onClose={() => setFiltersOpen(false)}
                 onVehicleOptimistic={setOptimisticVehicle}
               />

@@ -84,6 +84,21 @@ export function resolveShopCategoryIds(
   return Array.from(ids)
 }
 
+/** Union of `resolveShopCategoryIds` across several live roots (merged alias groups). */
+export function resolveShopCategoryIdsForRoots(
+  categories: Category[],
+  rootSlugs: string[],
+  selectedSlugs: string[]
+): string[] {
+  const ids = new Set<string>()
+  for (const slug of rootSlugs) {
+    const part = resolveShopCategoryIds(categories, slug, selectedSlugs)
+    if (!part) continue
+    for (const id of part) ids.add(id)
+  }
+  return Array.from(ids)
+}
+
 export function getRootCategories(categories: Category[]): Category[] {
   return categories
     .filter(c => !c.parent_id)

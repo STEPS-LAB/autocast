@@ -8,7 +8,8 @@ import {
   getCategoryFacetIndex,
   getProductCardsByIds,
 } from '@/lib/data/catalog-db'
-import { resolveShopCategoryIds } from '@/lib/shop/category-tree'
+import { resolveShopCategoryIdsForRoots } from '@/lib/shop/category-tree'
+import { resolveShopCategoryPage } from '@/lib/shop/category-aliases'
 import { parseShopSearchParams } from '@/lib/shop/search-params'
 import {
   computeFacets,
@@ -44,14 +45,14 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { category } = await params
   const categories = await getCategories({ dbOnly: true }).catch(() => [])
-  const cat = categories.find(c => c.slug === category && !c.parent_id)
-  const name = cat?.name_ua ?? categoryNameFallback(category)
+  const resolved = resolveShopCategoryPage(category, categories)
+  const name = resolved?.heading ?? categoryNameFallback(category)
 
   return buildPageMetadata({
     title: `${name} — купити в Україні`,
     description: truncateDescription(
-      cat?.name_ua
-        ? `Каталог ${cat.name_ua.toLowerCase()} в інтернет-магазині Autocast. Преміальні бренди, доставка по Україні.`
+      resolved
+        ? `Каталог ${resolved.heading.toLowerCase()} в інтернет-магазині Autocast. Преміальні бренди, доставка по Україні.`
         : categoryDescriptionFallback(name)
     ),
     path: `/shop/${category}`,
@@ -70,11 +71,16 @@ async function CategoryShop({ params, searchParams }: Props) {
   const parsed = parseShopSearchParams(sp)
   const [categories, brands] = await Promise.all([getCategories(), getBrands()])
 
-  const root = categories.find(c => c.slug === slug && !c.parent_id)
-  if (!root) notFound()
+  const resolved = resolveShopCategoryPage(slug, categories)
+  if (!resolved) notFound()
 
-  const categoryIds = resolveShopCategoryIds(categories, root.slug, parsed.category)
-  const facetConfigs = getFacetConfigs(root.slug)
+  const root = resolved.primary
+  const categoryIds = resolveShopCategoryIdsForRoots(
+    categories,
+    resolved.roots.map(r => r.slug),
+    parsed.category
+  )
+  const facetConfigs = getFacetConfigs(resolved.canonicalSlug)
   const facetSelections = parseFacetSelections(sp, facetConfigs)
   const vehicleEnabled = rootSupportsVehicleFilters(facetConfigs)
   const vehicleSelected = vehicleEnabled ? parseVehicleSelections(sp) : {}
@@ -147,8 +153,9 @@ async function CategoryShop({ params, searchParams }: Props) {
       categories={categories}
       brands={categoryBrands}
       mode="category"
-      rootCategory={root}
-      heading={root.name_ua}
+      rootCategory={{ ...root, slug: resolved.canonicalSlug, name_ua: resolved.heading }}
+      rootCategories={resolved.roots}
+      heading={resolved.heading}
       query={parsed.q}
       facets={facets}
       vehicleFacets={vehicleFacets}
