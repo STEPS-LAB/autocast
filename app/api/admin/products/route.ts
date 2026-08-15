@@ -8,9 +8,10 @@ import {
   parseProductSortKey,
   type ProductSortKey,
 } from '@/lib/product-sort'
+import { planAdminProductSearch } from '@/lib/admin/product-search'
 
 const PRODUCT_SELECT = `
-  id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images,is_featured,created_at,
+  id,slug,name_ua,price,sale_price,stock,category_id,brand_id,images,is_featured,created_at,
   category:categories(id,name_ua),
   brand:brands(id,name)
 `
@@ -28,10 +29,6 @@ async function isCurrentUserAdmin() {
     .maybeSingle()
 
   return profile?.role === 'admin'
-}
-
-function sanitizeSearch(raw: string): string {
-  return raw.replace(/[%_,.()"'\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
 }
 
 function sortOrder(sort: ProductSortKey): { column: string; ascending: boolean } {
@@ -71,7 +68,7 @@ export async function GET(request: Request) {
         ? Math.min(50, Math.floor(pageSizeRaw))
         : ADMIN_PRODUCTS_PAGE_SIZE
     const requestedPage = Number(url.searchParams.get('page') ?? 1)
-    const q = sanitizeSearch(url.searchParams.get('q') ?? '')
+    const searchPlan = planAdminProductSearch(url.searchParams.get('q') ?? '')
     const sort = parseProductSortKey(
       url.searchParams.get('sort'),
       ADMIN_PRODUCT_SORT_OPTIONS,
@@ -81,17 +78,6 @@ export async function GET(request: Request) {
 
     const supabase = await createServiceClient()
 
-    let categoryIds: string[] = []
-    let brandIds: string[] = []
-    if (q) {
-      const [{ data: matchedCategories }, { data: matchedBrands }] = await Promise.all([
-        supabase.from('categories').select('id').ilike('name_ua', `%${q}%`).limit(100),
-        supabase.from('brands').select('id').ilike('name', `%${q}%`).limit(100),
-      ])
-      categoryIds = (matchedCategories ?? []).map(row => row.id)
-      brandIds = (matchedBrands ?? []).map(row => row.id)
-    }
-
     let countQuery = supabase.from('products').select('id', { count: 'exact', head: true })
 
     let dataQuery = supabase
@@ -100,21 +86,32 @@ export async function GET(request: Request) {
       .order(column, { ascending })
       .order('id', { ascending: true })
 
-    if (q) {
-      const filters = [
-        `name_ua.ilike.%${q}%`,
-        `description_ua.ilike.%${q}%`,
-        `slug.ilike.%${q}%`,
-      ]
-      if (categoryIds.length > 0) {
-        filters.push(`category_id.in.(${categoryIds.join(',')})`)
+    if (searchPlan) {
+      if (searchPlan.expandRelations) {
+        const token = searchPlan.tokens[0]!
+        const [{ data: matchedCategories }, { data: matchedBrands }] = await Promise.all([
+          supabase.from('categories').select('id').ilike('name_ua', `%${token}%`).limit(50),
+          supabase.from('brands').select('id').ilike('name', `%${token}%`).limit(50),
+        ])
+        const filters = [`name_ua.ilike.%${token}%`, `slug.ilike.%${token}%`]
+        const categoryIds = (matchedCategories ?? []).map(row => row.id)
+        const brandIds = (matchedBrands ?? []).map(row => row.id)
+        if (categoryIds.length > 0) {
+          filters.push(`category_id.in.(${categoryIds.join(',')})`)
+        }
+        if (brandIds.length > 0) {
+          filters.push(`brand_id.in.(${brandIds.join(',')})`)
+        }
+        const orFilter = filters.join(',')
+        countQuery = countQuery.or(orFilter)
+        dataQuery = dataQuery.or(orFilter)
+      } else {
+        // AND each token against name_ua (trigram index). Never scan description.
+        for (const token of searchPlan.tokens) {
+          countQuery = countQuery.ilike('name_ua', `%${token}%`)
+          dataQuery = dataQuery.ilike('name_ua', `%${token}%`)
+        }
       }
-      if (brandIds.length > 0) {
-        filters.push(`brand_id.in.(${brandIds.join(',')})`)
-      }
-      const orFilter = filters.join(',')
-      countQuery = countQuery.or(orFilter)
-      dataQuery = dataQuery.or(orFilter)
     }
 
     const { count, error: countError } = await countQuery
