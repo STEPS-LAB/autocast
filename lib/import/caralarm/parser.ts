@@ -250,20 +250,61 @@ export async function parseCaralarmStream(
   }
 }
 
+const CARALARM_ORIGIN = 'https://www.caralarm.com.ua/'
+
+/** Browser-like headers: Cloudflare Bot Fight blocks custom importer User-Agents (HTTP 403). */
+const CARALARM_BROWSER_HEADERS: Record<string, string> = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'uk-UA,uk;q=0.9,en-US;q=0.8,en;q=0.7',
+  Referer: CARALARM_ORIGIN,
+}
+
+async function caralarmSessionCookieHeader(): Promise<string | undefined> {
+  try {
+    const home = await fetch(CARALARM_ORIGIN, {
+      headers: CARALARM_BROWSER_HEADERS,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20_000),
+    })
+    const cookies =
+      typeof home.headers.getSetCookie === 'function' ? home.headers.getSetCookie() : []
+    const pairs = cookies
+      .map(cookie => cookie.split(';')[0]?.trim())
+      .filter((pair): pair is string => Boolean(pair))
+    return pairs.length > 0 ? pairs.join('; ') : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function caralarmHttpError(response: Response): Error {
+  const server = response.headers.get('server') ?? ''
+  if (response.status === 403 && /cloudflare/i.test(server)) {
+    return new Error(
+      'Не вдалося завантажити фід Caralarm (HTTP 403, Cloudflare). Запит з цього сервера блокується як бот — запустіть синхронізацію з GitHub Actions (Caralarm catalog/prices).'
+    )
+  }
+  return new Error(`Не вдалося завантажити фід Caralarm (HTTP ${response.status}).`)
+}
+
 export async function parseCaralarmFromUrl(
   url: string,
   dialect: CaralarmFeedDialect
 ): Promise<CaralarmParseResult> {
+  const cookie = await caralarmSessionCookieHeader()
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'AutocastCaralarmImporter/1.0',
-      Accept: 'application/xml,text/xml,*/*',
+      ...CARALARM_BROWSER_HEADERS,
+      ...(cookie ? { Cookie: cookie } : {}),
     },
+    redirect: 'follow',
     signal: AbortSignal.timeout(300_000),
   })
 
   if (!response.ok) {
-    throw new Error(`Не вдалося завантажити фід Caralarm (HTTP ${response.status}).`)
+    throw caralarmHttpError(response)
   }
   if (!response.body) {
     throw new Error('Порожня відповідь фіду Caralarm.')
