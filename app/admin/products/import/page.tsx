@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, CheckCircle2, FileSpreadsheet, Upload } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import { createClient } from '@/lib/supabase/client'
+import { EXCEL_IMPORT_BUCKET } from '@/lib/import/excel/storage'
 import type { ImportPreview, ImportProgressEvent, ImportResult } from '@/lib/import/types'
 
 type Mode = 'excel' | 'xml' | 'caralarm'
@@ -22,6 +24,9 @@ type LiveProgress = {
 }
 
 function messageFromNonJson(text: string, status: number): string {
+  if (/FUNCTION_PAYLOAD_TOO_LARGE|Request Entity Too Large/i.test(text)) {
+    return 'Файл завеликий для прямого запиту. Завантажте ще раз — Excel іде через сховище, не через ліміт Vercel.'
+  }
   if (/An error occurred with your deployment/i.test(text) || text.startsWith('An error')) {
     return 'Сервер обірвав запит (таймаут або брак памʼяті). Спробуйте ще раз — великий XML обробляється потоково.'
   }
@@ -127,6 +132,7 @@ export default function AdminImportProductsPage() {
   const [caralarmMode, setCaralarmMode] = useState<CaralarmMode>('catalog')
   const [feedUrl, setFeedUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  const [excelStoragePath, setExcelStoragePath] = useState<string | null>(null)
   const [step, setStep] = useState<Step>('upload')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
@@ -142,15 +148,47 @@ export default function AdminImportProductsPage() {
     setStep('upload')
   }
 
+  async function ensureExcelUploaded(): Promise<string> {
+    if (!file) throw new Error('Оберіть файл .xlsx')
+    if (excelStoragePath) return excelStoragePath
+
+    const urlResponse = await fetch('/api/admin/import-products/upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: file.name, fileSize: file.size }),
+    })
+    const urlPayload = await readJsonPayload(urlResponse)
+    if (!urlResponse.ok) {
+      throw new Error(String(urlPayload.error ?? 'Не вдалося підготувати завантаження.'))
+    }
+    const path = String(urlPayload.path ?? '')
+    const token = String(urlPayload.token ?? '')
+    if (!path || !token) throw new Error('Не вдалося підготувати завантаження.')
+
+    const supabase = createClient()
+    const { error: uploadError } = await supabase.storage
+      .from(EXCEL_IMPORT_BUCKET)
+      .uploadToSignedUrl(path, token, file, {
+        contentType:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+    if (uploadError) throw new Error(uploadError.message)
+
+    setExcelStoragePath(path)
+    return path
+  }
+
   function onModeChange(next: Mode) {
     setMode(next)
     setFile(null)
+    setExcelStoragePath(null)
     resetFlow()
   }
 
   function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0] ?? null
     setFile(selected)
+    setExcelStoragePath(null)
     resetFlow()
   }
 
@@ -175,15 +213,11 @@ export default function AdminImportProductsPage() {
         return
       }
       if (mode === 'excel') {
-        if (!file) {
-          setError('Оберіть файл .xlsx')
-          return
-        }
-        const formData = new FormData()
-        formData.append('file', file)
+        const path = await ensureExcelUploaded()
         const response = await fetch('/api/admin/import-products/preview', {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path }),
         })
         const data = await readJsonPayload(response)
         if (!response.ok) throw new Error(String(data.error ?? 'Помилка превʼю'))
@@ -360,12 +394,11 @@ export default function AdminImportProductsPage() {
       if (mode === 'caralarm') {
         importResult = await runCaralarmPasses()
       } else if (mode === 'excel') {
-        if (!file) return
-        const formData = new FormData()
-        formData.append('file', file)
+        const path = await ensureExcelUploaded()
         const response = await fetch('/api/admin/import-products', {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path }),
         })
         const data = await response.json()
         if (!response.ok) throw new Error(data.error ?? 'Помилка імпорту')

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/security/rateLimit'
 import { runExcelImport } from '@/lib/import/excel/run-import'
 import { revalidateCatalogCache } from '@/lib/admin/revalidate-catalog'
+import { downloadExcelImportBuffer, removeExcelImportFile } from '@/lib/import/excel/storage'
 
-const MAX_FILE_BYTES = 50 * 1024 * 1024
+export const runtime = 'nodejs'
+export const maxDuration = 300
 
 async function isCurrentUserAdmin() {
   const supabase = await createClient()
@@ -21,9 +23,6 @@ async function isCurrentUserAdmin() {
   return profile?.role === 'admin'
 }
 
-export const runtime = 'nodejs'
-export const maxDuration = 300
-
 export async function POST(request: Request) {
   const rl = rateLimit(request, { bucket: 'admin:import-products', limit: 3, windowMs: 60_000 })
   if (!rl.ok) return rl.response
@@ -31,30 +30,20 @@ export async function POST(request: Request) {
   const allowed = await isCurrentUserAdmin()
   if (!allowed) return NextResponse.json({ error: 'Доступ заборонено.' }, { status: 403 })
 
-  let formData: FormData
+  let path = ''
   try {
-    formData = await request.formData()
+    const body = (await request.json()) as { path?: string }
+    path = (body.path ?? '').trim()
   } catch {
-    return NextResponse.json({ error: 'Не вдалося прочитати файл.' }, { status: 400 })
+    return NextResponse.json({ error: 'Некоректний запит.' }, { status: 400 })
   }
 
-  const file = formData.get('file')
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'Оберіть Excel-файл (.xlsx).' }, { status: 400 })
-  }
-
-  if (!file.name.toLowerCase().endsWith('.xlsx')) {
-    return NextResponse.json({ error: 'Підтримуються лише файли .xlsx.' }, { status: 400 })
-  }
-
-  if (file.size > MAX_FILE_BYTES) {
-    return NextResponse.json({ error: 'Файл завеликий (макс. 50 МБ).' }, { status: 400 })
-  }
-
+  const service = createServiceClient()
   try {
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const buffer = await downloadExcelImportBuffer(service, path)
     const result = await runExcelImport(buffer)
     revalidateCatalogCache()
+    await removeExcelImportFile(service, path).catch(() => undefined)
     return NextResponse.json(result)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Не вдалося виконати імпорт.'
