@@ -28,7 +28,7 @@ function messageFromNonJson(text: string, status: number): string {
     return 'Файл завеликий для прямого запиту. Завантажте ще раз — Excel іде через сховище, не через ліміт Vercel.'
   }
   if (/An error occurred with your deployment/i.test(text) || text.startsWith('An error')) {
-    return 'Сервер обірвав запит (таймаут або брак памʼяті). Спробуйте ще раз — великий XML обробляється потоково.'
+    return 'Сервер обірвав запит (таймаут або брак памʼяті). Великий Excel імпортується кількома проходами — спробуйте ще раз.'
   }
   if (text.trim().startsWith('<')) {
     return `Сервер повернув HTML замість JSON (HTTP ${status}).`
@@ -53,7 +53,7 @@ async function readNdjsonImportStream(
     const data = await readJsonPayload(response).catch((error: unknown) =>
       error instanceof Error ? { error: error.message } : {}
     )
-    throw new Error((data as { error?: string }).error ?? 'Помилка імпорту XML')
+    throw new Error((data as { error?: string }).error ?? 'Помилка імпорту')
   }
   if (!response.body) {
     throw new Error('Порожня відповідь сервера.')
@@ -383,6 +383,73 @@ export default function AdminImportProductsPage() {
     return accumulated
   }
 
+  async function runExcelPasses(path: string): Promise<ImportResult> {
+    const accumulated: ImportResult = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      priceUpdates: 0,
+      imagesUploaded: 0,
+      errors: [],
+      processed: 0,
+      total: preview?.totalParsed ?? 0,
+      done: false,
+    }
+
+    let offset = 0
+    let pass = 0
+    while (pass < 30) {
+      pass += 1
+      const response = await fetch('/api/admin/import-products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, offset }),
+      })
+      const passResult = await readNdjsonImportStream(response, event => {
+        if (event.type === 'status') {
+          setProgress(prev => ({
+            processed: prev?.processed ?? accumulated.processed ?? 0,
+            total: prev?.total ?? accumulated.total ?? preview?.totalParsed ?? 0,
+            created: accumulated.created,
+            updated: accumulated.updated,
+            skipped: accumulated.skipped,
+            message: event.message ?? `Excel · прохід ${pass}…`,
+          }))
+        }
+        if (event.type === 'progress') {
+          setProgress({
+            processed: event.processed ?? 0,
+            total: event.total || preview?.totalParsed || 0,
+            created: accumulated.created + (event.created ?? 0),
+            updated: accumulated.updated + (event.updated ?? 0),
+            skipped: accumulated.skipped + (event.skipped ?? 0),
+            message: event.message ?? `Excel · прохід ${pass}…`,
+          })
+        }
+      })
+
+      accumulated.created += passResult.created
+      accumulated.updated += passResult.updated
+      accumulated.skipped += passResult.skipped
+      accumulated.priceUpdates += passResult.priceUpdates
+      accumulated.imagesUploaded += passResult.imagesUploaded
+      accumulated.processed = passResult.processed ?? accumulated.processed
+      accumulated.total = passResult.total ?? accumulated.total
+      accumulated.errors.push(...passResult.errors)
+      accumulated.done = passResult.done !== false
+
+      if (passResult.done !== false) break
+      offset = passResult.processed ?? offset
+      if (offset <= 0) break
+      setProgress(prev =>
+        prev ? { ...prev, message: `Часовий ліміт — прохід ${pass + 1}…` } : prev
+      )
+    }
+
+    accumulated.errors = accumulated.errors.slice(0, 50)
+    return accumulated
+  }
+
   async function handleImport() {
     setLoading(true)
     setError('')
@@ -395,14 +462,7 @@ export default function AdminImportProductsPage() {
         importResult = await runCaralarmPasses()
       } else if (mode === 'excel') {
         const path = await ensureExcelUploaded()
-        const response = await fetch('/api/admin/import-products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path }),
-        })
-        const data = await response.json()
-        if (!response.ok) throw new Error(data.error ?? 'Помилка імпорту')
-        importResult = data as ImportResult
+        importResult = await runExcelPasses(path)
       } else {
         const url = feedUrl.trim()
         if (!url) return

@@ -44,15 +44,18 @@ function buildDescription(row: ExcelJS.Row): string {
 
 function extractSheetImages(
   worksheet: ExcelJS.Worksheet,
-  workbook: ExcelJS.Workbook
+  workbook: ExcelJS.Workbook,
+  allowedRows?: Set<number>
 ): Map<number, ExcelImage[]> {
   const byRow = new Map<number, ExcelImage[]>()
 
   for (const image of worksheet.getImages()) {
+    const excelRow = image.range.tl.nativeRow + 1
+    if (allowedRows && !allowedRows.has(excelRow)) continue
+
     const media = workbook.getImage(Number(image.imageId))
     if (!media?.buffer) continue
 
-    const excelRow = image.range.tl.nativeRow + 1
     const entry: ExcelImage = {
       buffer: Buffer.from(media.buffer),
       extension: media.extension || 'jpeg',
@@ -86,10 +89,8 @@ function attachImages(
 
 function parseProductSheet(
   sheetName: string,
-  worksheet: ExcelJS.Worksheet,
-  workbook: ExcelJS.Workbook
+  worksheet: ExcelJS.Worksheet
 ): { products: ParsedExcelProduct[]; skippedOutOfStock: number } {
-  const imagesByRow = extractSheetImages(worksheet, workbook)
   const products: ParsedExcelProduct[] = []
   let skippedOutOfStock = 0
 
@@ -127,7 +128,6 @@ function parseProductSheet(
       images: [],
     }
 
-    attachImages(product, imagesByRow)
     products.push(product)
   }
 
@@ -187,16 +187,34 @@ function findPriceChangesWorksheet(workbook: ExcelJS.Workbook): ExcelJS.Workshee
   return workbook.worksheets.find(ws => /зміни у прайсі/i.test(ws.name.trim()))
 }
 
-/**
- * Parse a dealer-style .xlsx price list.
- * Product sheets are auto-detected (any sheet with product rows that is not a
- * price-changes / info sheet). Sheet name becomes the category name.
- */
-export async function parseExcelWorkbook(buffer: Buffer): Promise<ExcelParseResult> {
+export async function loadExcelWorkbook(buffer: Buffer): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook()
-  // ExcelJS Buffer typings disagree with Node's Buffer<ArrayBufferLike>
   await workbook.xlsx.load(buffer as never)
+  return workbook
+}
 
+export function imagesForProduct(
+  workbook: ExcelJS.Workbook,
+  product: ParsedExcelProduct
+): ExcelImage[] {
+  const worksheet = workbook.worksheets.find(ws => ws.name.trim() === product.sheet)
+  if (!worksheet) return []
+  const allowed = new Set([product.excelRow, product.excelRow - 1, product.excelRow + 1])
+  const imagesByRow = extractSheetImages(worksheet, workbook, allowed)
+  const holder: ParsedExcelProduct = { ...product, images: [] }
+  attachImages(holder, imagesByRow)
+  return holder.images
+}
+
+export type ParseExcelOptions = {
+  /** Skip copying embedded image buffers (preview / pass writes). */
+  skipImages?: boolean
+}
+
+export function parseExcelFromWorkbook(
+  workbook: ExcelJS.Workbook,
+  options?: ParseExcelOptions
+): ExcelParseResult {
   let allProducts: ParsedExcelProduct[] = []
   let skippedOutOfStock = 0
   const productSheets: string[] = []
@@ -205,7 +223,7 @@ export async function parseExcelWorkbook(buffer: Buffer): Promise<ExcelParseResu
     const sheetName = worksheet.name.trim()
     if (!sheetName || isNonProductSheetName(sheetName)) continue
 
-    const parsed = parseProductSheet(sheetName, worksheet, workbook)
+    const parsed = parseProductSheet(sheetName, worksheet)
     const totalRows = parsed.products.length + parsed.skippedOutOfStock
     if (totalRows < MIN_PRODUCT_ROWS) continue
 
@@ -217,6 +235,12 @@ export async function parseExcelWorkbook(buffer: Buffer): Promise<ExcelParseResu
   const { products, skippedDuplicateCode } = dedupeByDealerCode(allProducts)
   const priceChanges = parsePriceChangesSheet(findPriceChangesWorksheet(workbook))
 
+  if (!options?.skipImages) {
+    for (const product of products) {
+      product.images = imagesForProduct(workbook, product)
+    }
+  }
+
   return {
     products,
     priceChanges,
@@ -224,4 +248,17 @@ export async function parseExcelWorkbook(buffer: Buffer): Promise<ExcelParseResu
     skippedDuplicateCode,
     productSheets,
   }
+}
+
+/**
+ * Parse a dealer-style .xlsx price list.
+ * Product sheets are auto-detected (any sheet with product rows that is not a
+ * price-changes / info sheet). Sheet name becomes the category name.
+ */
+export async function parseExcelWorkbook(
+  buffer: Buffer,
+  options?: ParseExcelOptions
+): Promise<ExcelParseResult> {
+  const workbook = await loadExcelWorkbook(buffer)
+  return parseExcelFromWorkbook(workbook, options)
 }

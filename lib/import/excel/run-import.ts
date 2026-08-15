@@ -3,7 +3,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { getSupabaseUrl } from '@/lib/supabase/env'
 import { slugify, slugifyName } from '@/lib/utils'
 import { resolveExcelCategoryIds } from './categories'
-import { parseExcelWorkbook } from './parser'
+import { imagesForProduct, loadExcelWorkbook, parseExcelFromWorkbook, parseExcelWorkbook } from './parser'
 import {
   DEALER_CODE_SPEC_KEY,
   type ImportPreview,
@@ -81,14 +81,25 @@ async function loadExistingProducts(supabase: SupabaseClient): Promise<{
   byCode: Map<string, ProductRow>
   byName: Map<string, ProductRow>
 }> {
-  const { data } = await supabase.from('products').select('id,slug,name_ua,specs')
   const byCode = new Map<string, ProductRow>()
   const byName = new Map<string, ProductRow>()
+  const pageSize = 1000
+  let from = 0
 
-  for (const row of (data ?? []) as ProductRow[]) {
-    const code = row.specs?.[DEALER_CODE_SPEC_KEY]
-    if (code) byCode.set(code, row)
-    byName.set(normalizeName(row.name_ua), row)
+  while (true) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id,slug,name_ua,specs')
+      .range(from, from + pageSize - 1)
+    if (error) throw new Error(error.message)
+    const page = (data ?? []) as ProductRow[]
+    for (const row of page) {
+      const code = row.specs?.[DEALER_CODE_SPEC_KEY]
+      if (code) byCode.set(code, row)
+      byName.set(normalizeName(row.name_ua), row)
+    }
+    if (page.length < pageSize) break
+    from += pageSize
   }
 
   return { byCode, byName }
@@ -133,7 +144,7 @@ function previewAction(
 }
 
 export async function buildExcelImportPreview(buffer: Buffer): Promise<ImportPreview> {
-  const parsed = await parseExcelWorkbook(buffer)
+  const parsed = await parseExcelWorkbook(buffer, { skipImages: true })
   const supabase = await createServerClient()
   const { byCode, byName } = await loadExistingProducts(supabase)
 
@@ -163,8 +174,25 @@ export async function buildExcelImportPreview(buffer: Buffer): Promise<ImportPre
   }
 }
 
-export async function runExcelImport(buffer: Buffer): Promise<ImportResult> {
-  const parsed = await parseExcelWorkbook(buffer)
+export type ExcelImportOptions = {
+  offset?: number
+  deadlineMs?: number
+  onProgress?: (progress: {
+    processed: number
+    total: number
+    created: number
+    updated: number
+    skipped: number
+    message?: string
+  }) => void
+}
+
+export async function runExcelImport(
+  buffer: Buffer,
+  options?: ExcelImportOptions
+): Promise<ImportResult> {
+  const workbook = await loadExcelWorkbook(buffer)
+  const parsed = parseExcelFromWorkbook(workbook, { skipImages: true })
   const supabase = await createServerClient()
   const serviceClient = await getServiceClient()
   await ensureBucket(serviceClient)
@@ -173,6 +201,9 @@ export async function runExcelImport(buffer: Buffer): Promise<ImportResult> {
   const categoryIds = await resolveExcelCategoryIds(supabase, sheetsUsed)
   const { byCode, byName } = await loadExistingProducts(supabase)
 
+  const offset = Math.max(0, Math.floor(options?.offset ?? 0))
+  const total = parsed.products.length
+  const deadlineMs = options?.deadlineMs
   const result: ImportResult = {
     created: 0,
     updated: 0,
@@ -180,9 +211,29 @@ export async function runExcelImport(buffer: Buffer): Promise<ImportResult> {
     priceUpdates: 0,
     imagesUploaded: 0,
     errors: [],
+    processed: offset,
+    total,
+    done: true,
   }
 
-  for (const product of parsed.products) {
+  options?.onProgress?.({
+    processed: offset,
+    total,
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    message: offset > 0 ? `Продовження з рядка ${offset + 1}…` : 'Запис товарів…',
+  })
+
+  for (let index = offset; index < parsed.products.length; index++) {
+    if (deadlineMs != null && Date.now() > deadlineMs) {
+      result.done = false
+      result.processed = index
+      return result
+    }
+
+    const product = parsed.products[index]!
+    result.processed = index + 1
     try {
       const categoryId = categoryIds.get(product.sheet)
       if (!categoryId) {
@@ -240,14 +291,12 @@ export async function runExcelImport(buffer: Buffer): Promise<ImportResult> {
 
       if (!productId) continue
 
-      const imageUrls: string[] = []
-      for (const image of product.images.slice(0, MAX_IMAGES_PER_PRODUCT)) {
-        const url = await uploadImage(serviceClient, productId, image)
-        if (url) {
-          imageUrls.push(url)
-          result.imagesUploaded++
-        }
-      }
+      const pendingImages = imagesForProduct(workbook, product).slice(0, MAX_IMAGES_PER_PRODUCT)
+      const uploaded = await Promise.all(
+        pendingImages.map(image => uploadImage(serviceClient, productId!, image))
+      )
+      const imageUrls = uploaded.filter((url): url is string => Boolean(url))
+      result.imagesUploaded += imageUrls.length
 
       if (imageUrls.length > 0) {
         const { error: imageError } = await supabase
@@ -263,7 +312,20 @@ export async function runExcelImport(buffer: Buffer): Promise<ImportResult> {
       result.errors.push(`${product.dealerCode}: ${message}`)
       result.skipped++
     }
+
+    if (result.processed % 5 === 0 || result.processed === total) {
+      options?.onProgress?.({
+        processed: result.processed,
+        total,
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+        message: `Оброблено ${result.processed} з ${total}`,
+      })
+    }
   }
+
+  if (result.done === false) return result
 
   for (const change of parsed.priceChanges) {
     const normalized = normalizeName(change.name)
