@@ -8,6 +8,10 @@ import {
 } from './category-match'
 import { formatCategoryPath, resolveFeedCategoryIdAtMaxDepth } from './category-tree'
 import { parseYmlFromUrl } from './parser'
+import {
+  coalesceImportImages,
+  pictureShareKey,
+} from './pictures'
 import { dbPricingFromYmlOffer } from './pricing'
 import {
   pricingNeedsUpdate,
@@ -300,6 +304,8 @@ export async function runYmlImport(
   const brandCache = new Map<string, string | null>()
   const reservedSlugs = new Set<string>()
   const writePool = createLimiter(WRITE_CONCURRENCY)
+  const picturesByShareKey = new Map<string, string[]>()
+  const needPictureBackfill: Array<{ id: string; key: string }> = []
   const expectedTotalRaw = options?.expectedTotal
   const expectedTotal = Number.isFinite(expectedTotalRaw)
     ? Math.max(0, Math.floor(expectedTotalRaw as number))
@@ -423,13 +429,26 @@ export async function runYmlImport(
 
       const brandId = await resolveVendorBrandId(product.vendor)
       const specs = buildSpecs(product)
-      const images = product.pictures.slice(0, MAX_IMAGES_PER_PRODUCT)
+      const shareKey = pictureShareKey(product.name)
+      const fromFeed = product.pictures.slice(0, MAX_IMAGES_PER_PRODUCT)
+      if (fromFeed.length > 0 && !picturesByShareKey.has(shareKey)) {
+        picturesByShareKey.set(shareKey, fromFeed)
+      }
       const existing = byOfferId.get(product.offerId)
+      const images = coalesceImportImages(
+        fromFeed,
+        existing?.images,
+        picturesByShareKey.get(shareKey),
+        MAX_IMAGES_PER_PRODUCT
+      )
       const payload = buildWritePayload(product, categoryId, brandId, specs, images)
 
       if (existing) {
         if (!productNeedsUpdate(existing, payload)) {
           result.skipped += 1
+          if (images.length === 0) {
+            needPictureBackfill.push({ id: existing.id, key: shareKey })
+          }
           return
         }
 
@@ -452,6 +471,10 @@ export async function runYmlImport(
         if (pricingNeedsUpdate(existing, payload)) result.priceUpdates += 1
         result.updated += 1
         result.imagesUploaded += images.length
+        existing.images = images
+        if (images.length === 0) {
+          needPictureBackfill.push({ id: existing.id, key: shareKey })
+        }
         return
       }
 
@@ -459,6 +482,9 @@ export async function runYmlImport(
       byOfferId.set(product.offerId, inserted)
       result.created += 1
       result.imagesUploaded += images.length
+      if (images.length === 0) {
+        needPictureBackfill.push({ id: inserted.id, key: shareKey })
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Невідома помилка'
       result.errors.push(`${product.offerId}: ${message}`)
@@ -488,6 +514,16 @@ export async function runYmlImport(
       emitProgress(true, `Читання фіду: ${totalOffers} offer…`)
     },
   })
+
+  for (const pending of needPictureBackfill) {
+    const shared = picturesByShareKey.get(pending.key)
+    if (!shared || shared.length === 0) continue
+    const { error } = await supabase
+      .from('products')
+      .update({ images: shared })
+      .eq('id', pending.id)
+    if (!error) result.imagesUploaded += shared.length
+  }
 
   result.processed = processed
   result.total = expectedTotal > 0 ? expectedTotal : processed

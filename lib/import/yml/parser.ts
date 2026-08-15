@@ -9,12 +9,14 @@ import {
 import { enrichMissingCategories } from './category-infer'
 import { canonicalizeImportCategoryName } from './category-locale'
 import { collectPdfUrlsFromText } from './pdf-text'
+import { collectOfferPictures } from './pictures'
 import type { ParsedYmlOffer, YmlCategory, YmlParseResult } from './types'
 
 export {
   decodeXmlEntities,
   stripHtmlToText,
 } from '@/lib/import/xml/text'
+export { collectOfferPictures } from './pictures'
 
 const OFFER_OPEN_RE = /<offer\b[^>]*>/i
 const OFFER_CLOSE_RE = /<\/offer>/i
@@ -55,32 +57,6 @@ function parseParams(offerXml: string): Record<string, string> {
 
 function isHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value)
-}
-
-function isImageUrl(value: string): boolean {
-  if (!isHttpUrl(value)) return false
-  if (/\.pdf(\?|$)/i.test(value)) return false
-  return true
-}
-
-/** Collect pictures from common YML / Google Merchant / custom tags. */
-export function collectOfferPictures(offerXml: string): string[] {
-  const tags = ['picture', 'image', 'additional_image_link', 'img', 'gallery_image']
-  const seen = new Set<string>()
-  const pictures: string[] = []
-
-  for (const tag of tags) {
-    for (const raw of allTagContents(offerXml, tag)) {
-      const src = decodeXmlEntities(raw).trim()
-      if (!isImageUrl(src)) continue
-      const key = src.toLowerCase()
-      if (seen.has(key)) continue
-      seen.add(key)
-      pictures.push(src)
-    }
-  }
-
-  return pictures
 }
 
 function collectOfferPdfUrls(offerXml: string, params: Record<string, string>, description: string): string[] {

@@ -641,4 +641,34 @@ describe('collectOfferPictures', () => {
     const xml = `<picture>https://a/x.jpg</picture><image>https://a/x.jpg</image><additional_image_link>https://a/y.jpg</additional_image_link>`
     expect(collectOfferPictures(xml)).toEqual(['https://a/x.jpg', 'https://a/y.jpg'])
   })
+
+  it('reads self-closing picture url attributes and html img src', () => {
+    expect(
+      collectOfferPictures(`<picture url="https://torssen.com/image/a.jpg" />`)
+    ).toEqual(['https://torssen.com/image/a.jpg'])
+    expect(
+      collectOfferPictures(
+        `<description><![CDATA[<img src="https://torssen.com/image/b.jpg">]]></description>`
+      )
+    ).toEqual(['https://torssen.com/image/b.jpg'])
+  })
+})
+
+describe('pictureShareKey / coalesceImportImages', () => {
+  it('groups Prado year variants so a photo can fill siblings', async () => {
+    const { pictureShareKey, coalesceImportImages } = await import(
+      '@/lib/import/yml/pictures'
+    )
+    const older =
+      'Штатна магнітола Torssen NRJ-B1-BE Toyota Prado 150 2009-2013'
+    const newer =
+      'Штатна магнітола Torssen NRJ-B1-BE Toyota Prado 150 2018-2024'
+    expect(pictureShareKey(older)).toBe(pictureShareKey(newer))
+    expect(
+      coalesceImportImages([], [], ['https://torssen.com/image/a.jpg'], 10)
+    ).toEqual(['https://torssen.com/image/a.jpg'])
+    expect(
+      coalesceImportImages([], ['https://keep.me/a.jpg'], ['https://new.me/b.jpg'], 10)
+    ).toEqual(['https://keep.me/a.jpg'])
+  })
 })

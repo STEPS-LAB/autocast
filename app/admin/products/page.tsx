@@ -360,7 +360,12 @@ function AdminProductsPageInner() {
         <div className="flex items-center gap-1.5 group/cell">
           {row.images[0] ? (
             <div className="relative size-10 rounded overflow-hidden bg-bg-elevated border border-border shrink-0">
-              <Image src={row.images[0]} alt={row.name_ua} fill className="object-cover" sizes="40px" />
+              {/* Native img: admin thumbs must show supplier URLs even when the optimizer rejects them. */}
+              <img
+                src={row.images[0]}
+                alt=""
+                className="size-full object-cover"
+              />
             </div>
           ) : (
             <div className="size-10 rounded bg-bg-elevated border border-border" />

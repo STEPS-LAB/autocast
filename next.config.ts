@@ -38,12 +38,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'torssen.com',
-        pathname: '/image/**',
+        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'www.torssen.com',
-        pathname: '/image/**',
+        pathname: '/**',
       },
       {
         protocol: 'https',
