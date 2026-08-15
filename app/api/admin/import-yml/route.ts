@@ -60,7 +60,16 @@ export async function POST(request: Request) {
       }
 
       try {
-        send({ type: 'status', message: 'Завантаження та розбір XML/YML…' })
+        send({ type: 'status', message: 'Завантаження фіду…' })
+        send({
+          type: 'progress',
+          processed: 0,
+          total: body.expectedTotal ?? 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          message: 'Завантаження фіду…',
+        })
         const result = await runYmlImport(resolved.url, {
           expectedTotal: body.expectedTotal,
           deadlineMs: Date.now() + TIME_BUDGET_MS,
@@ -72,7 +81,8 @@ export async function POST(request: Request) {
               created: progress.created,
               updated: progress.updated,
               skipped: progress.skipped,
-              message: `Оброблено ${progress.processed} з ${progress.total}`,
+              message:
+                progress.message ?? `Оброблено ${progress.processed} з ${progress.total}`,
             })
           },
         })

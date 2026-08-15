@@ -126,6 +126,7 @@ export type ParseYmlOptions = {
   skipPdfUrls?: boolean
   onCategories?: (categories: YmlCategory[]) => void | Promise<void>
   onProduct?: (product: ParsedYmlOffer) => void | Promise<void>
+  onScan?: (totalOffers: number) => void | Promise<void>
 }
 
 const MAX_DESCRIPTION_CHARS = 12_000
@@ -279,6 +280,9 @@ export async function parseYmlStream(
       insideOffer = false
       OFFER_CLOSE_RE.lastIndex = 0
       totalOffers += 1
+      if (totalOffers === 1 || totalOffers % 200 === 0) {
+        await options?.onScan?.(totalOffers)
+      }
 
       const { product, skipReason } = parseOfferXml(offerXml, categoryById, options)
       if (skipReason === 'oos') {

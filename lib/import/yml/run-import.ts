@@ -141,21 +141,32 @@ function isUniqueViolation(message: string): boolean {
   return /duplicate key|unique constraint|products_slug_key/i.test(message)
 }
 
-async function mapPool<T>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T, index: number) => Promise<void>
-) {
-  let index = 0
-  const runners = Array.from({ length: Math.min(concurrency, Math.max(1, items.length)) }, async () => {
-    while (index < items.length) {
-      const current = index
-      index += 1
-      const item = items[current]
-      if (item !== undefined) await worker(item, current)
+function createLimiter(concurrency: number) {
+  let active = 0
+  const waiting: Array<() => void> = []
+
+  async function acquire() {
+    if (active >= concurrency) {
+      await new Promise<void>(resolve => waiting.push(resolve))
     }
-  })
-  await Promise.all(runners)
+    active += 1
+  }
+
+  function release() {
+    active -= 1
+    waiting.shift()?.()
+  }
+
+  return {
+    async run<T>(fn: () => Promise<T>): Promise<T> {
+      await acquire()
+      try {
+        return await fn()
+      } finally {
+        release()
+      }
+    },
+  }
 }
 
 function previewAction(
@@ -260,6 +271,7 @@ export type YmlImportProgress = {
   created: number
   updated: number
   skipped: number
+  message?: string
 }
 
 export async function runYmlImport(
@@ -271,12 +283,10 @@ export async function runYmlImport(
   }
 ): Promise<ImportResult> {
   const supabase = await createServerClient()
-  const parsed = await parseYmlFromUrl(url)
   const byOfferId = await loadExistingByOfferId(supabase)
 
-  const usedLeafIds = parsed.products.map(product => product.categoryId)
-  const categoryIds = await importCategoryTree(supabase, parsed.categories, usedLeafIds)
-  const feedCategories = parsed.categories
+  let feedCategories: YmlCategory[] = []
+  let categoryIds = new Map<string, string>()
   const fallbackCache = new Map<string, string>()
   const { data: allCats } = await fetchAllCategories(supabase, 'id,name_ua,parent_id')
   const matchCandidates: CategoryMatchCandidate[] = (allCats ?? []).map(row => ({
@@ -289,10 +299,11 @@ export async function runYmlImport(
   let knownBrands = (brands ?? []) as Brand[]
   const brandCache = new Map<string, string | null>()
   const reservedSlugs = new Set<string>()
+  const writePool = createLimiter(WRITE_CONCURRENCY)
   const expectedTotalRaw = options?.expectedTotal
   const expectedTotal = Number.isFinite(expectedTotalRaw)
     ? Math.max(0, Math.floor(expectedTotalRaw as number))
-    : parsed.products.length
+    : 0
   const deadlineMs = options?.deadlineMs
 
   const result: ImportResult = {
@@ -302,7 +313,7 @@ export async function runYmlImport(
     priceUpdates: 0,
     imagesUploaded: 0,
     errors: [],
-    total: expectedTotal || parsed.products.length,
+    total: expectedTotal,
     processed: 0,
     done: true,
   }
@@ -311,18 +322,21 @@ export async function runYmlImport(
   let lastProgressAt = 0
   let abortedForDeadline = false
 
-  function emitProgress(force = false) {
+  function emitProgress(force = false, message?: string) {
     const now = Date.now()
     if (!force && now - lastProgressAt < 400) return
     lastProgressAt = now
     options?.onProgress?.({
       processed,
-      total: result.total ?? parsed.products.length,
+      total: expectedTotal > 0 ? expectedTotal : Math.max(processed, 1),
       created: result.created,
       updated: result.updated,
       skipped: result.skipped,
+      message,
     })
   }
+
+  emitProgress(true)
 
   async function resolveVendorBrandId(vendor: string | null): Promise<string | null> {
     const key = (vendor ?? '').trim()
@@ -391,7 +405,7 @@ export async function runYmlImport(
     throw lastError ?? new Error('Не вдалося створити товар після повторів slug.')
   }
 
-  await mapPool(parsed.products, WRITE_CONCURRENCY, async product => {
+  async function writeProduct(product: ParsedYmlOffer) {
     if (abortedForDeadline) return
     if (deadlineMs != null && Date.now() > deadlineMs) {
       abortedForDeadline = true
@@ -450,14 +464,33 @@ export async function runYmlImport(
       result.errors.push(`${product.offerId}: ${message}`)
       result.skipped += 1
     } finally {
-      processed += 1
-      result.processed = processed
-      emitProgress()
+      if (!abortedForDeadline) {
+        processed += 1
+        result.processed = processed
+        emitProgress()
+      }
     }
+  }
+
+  await parseYmlFromUrl(url, {
+    collectProducts: false,
+    onCategories: async cats => {
+      feedCategories = cats
+      categoryIds = await importCategoryTree(
+        supabase,
+        cats,
+        cats.map(category => category.id)
+      )
+      emitProgress(true)
+    },
+    onProduct: product => writePool.run(() => writeProduct(product)),
+    onScan: totalOffers => {
+      emitProgress(true, `Читання фіду: ${totalOffers} offer…`)
+    },
   })
 
   result.processed = processed
-  result.total = expectedTotal || parsed.products.length
+  result.total = expectedTotal > 0 ? expectedTotal : processed
   result.errors = result.errors.slice(0, 50)
   emitProgress(true)
   return result
