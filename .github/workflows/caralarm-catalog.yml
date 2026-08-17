@@ -1,63 +1,14 @@
-# Full Caralarm catalog sync (export + market) around 23:20 Europe/Kyiv.
-# GitHub cron is UTC-only; we schedule both winter (UTC+2) and summer (UTC+3)
-# offsets and gate on the actual Kyiv hour.
+# Caralarm catalog sync is disabled. Restore schedule + sync job to re-enable.
 name: Caralarm catalog sync
 
 on:
-  schedule:
-    # 23:20 Kyiv in winter (EET = UTC+2) → 21:20 UTC
-    - cron: '20 21 * * *'
-    # 23:20 Kyiv in summer (EEST = UTC+3) → 20:20 UTC
-    - cron: '20 20 * * *'
   workflow_dispatch:
-    inputs:
-      force:
-        description: 'Run even if Kyiv hour is not 23'
-        required: false
-        default: 'true'
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
     steps:
-      - name: Guard Kyiv hour
-        if: ${{ github.event_name == 'schedule' }}
-        env:
-          ALLOWED: '23'
+      - name: Disabled
         run: |
-          H=$(TZ=Europe/Kyiv date +%H)
-          echo "Kyiv hour=$H"
-          if [[ " ${ALLOWED} " != *" $H "* ]]; then
-            echo "Skipping — not an allowed Kyiv hour"
-            exit 0
-          fi
-          echo "GUARD_OK=1" >> "$GITHUB_ENV"
-
-      - name: Mark force run
-        if: ${{ github.event_name != 'schedule' }}
-        run: echo "GUARD_OK=1" >> "$GITHUB_ENV"
-
-      - uses: actions/checkout@v4
-        if: ${{ env.GUARD_OK == '1' }}
-
-      - uses: actions/setup-node@v4
-        if: ${{ env.GUARD_OK == '1' }}
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: Install dependencies
-        if: ${{ env.GUARD_OK == '1' }}
-        run: npm ci
-
-      - name: Run catalog sync
-        if: ${{ env.GUARD_OK == '1' }}
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          CARALARM_LOGIN: ${{ secrets.CARALARM_LOGIN }}
-          CARALARM_PASSWORD: ${{ secrets.CARALARM_PASSWORD }}
-          REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: npx tsx scripts/caralarm-sync.ts --mode=catalog
+          echo "Caralarm catalog sync is disabled."
+          exit 0

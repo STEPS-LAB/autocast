@@ -9,9 +9,8 @@ import { createClient } from '@/lib/supabase/client'
 import { EXCEL_IMPORT_BUCKET } from '@/lib/import/excel/storage'
 import type { ImportPreview, ImportProgressEvent, ImportResult } from '@/lib/import/types'
 
-type Mode = 'excel' | 'xml' | 'caralarm'
+type Mode = 'excel' | 'xml'
 type Step = 'upload' | 'preview' | 'importing' | 'done'
-type CaralarmMode = 'catalog' | 'prices'
 
 type LiveProgress = {
   processed: number
@@ -129,7 +128,6 @@ export default function AdminImportProductsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [mode, setMode] = useState<Mode>('xml')
-  const [caralarmMode, setCaralarmMode] = useState<CaralarmMode>('catalog')
   const [feedUrl, setFeedUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [excelStoragePath, setExcelStoragePath] = useState<string | null>(null)
@@ -196,22 +194,6 @@ export default function AdminImportProductsPage() {
     setLoading(true)
     setError('')
     try {
-      if (mode === 'caralarm') {
-        setPreview({
-          totalParsed: 0,
-          toCreate: 0,
-          toUpdate: 0,
-          skipped: 0,
-          skippedOutOfStock: 0,
-          skippedDuplicateCode: 0,
-          priceChanges: 0,
-          priceChangesMatched: 0,
-          categories: [],
-          sample: [],
-        })
-        setStep('preview')
-        return
-      }
       if (mode === 'excel') {
         const path = await ensureExcelUploaded()
         const response = await fetch('/api/admin/import-products/preview', {
@@ -243,78 +225,6 @@ export default function AdminImportProductsPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  async function runCaralarmPasses(): Promise<ImportResult> {
-    const accumulated: ImportResult = {
-      created: 0,
-      updated: 0,
-      skipped: 0,
-      priceUpdates: 0,
-      imagesUploaded: 0,
-      errors: [],
-      processed: 0,
-      total: 0,
-      deleted: 0,
-      done: false,
-    }
-
-    let pass = 0
-    while (pass < 20) {
-      pass += 1
-      const response = await fetch('/api/admin/import-caralarm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: caralarmMode }),
-      })
-      const passResult = await readNdjsonImportStream(response, event => {
-        if (event.type === 'status') {
-          setProgress(prev => ({
-            processed: prev?.processed ?? accumulated.processed ?? 0,
-            total: prev?.total ?? accumulated.total ?? 0,
-            created: accumulated.created,
-            updated: accumulated.updated,
-            skipped: accumulated.skipped,
-            deleted: accumulated.deleted,
-            message: event.message ?? `Caralarm · прохід ${pass}…`,
-          }))
-        }
-        if (event.type === 'progress') {
-          setProgress({
-            processed: event.processed ?? 0,
-            total: event.total ?? 0,
-            created: accumulated.created + (event.created ?? 0),
-            updated: accumulated.updated + (event.updated ?? 0),
-            skipped: accumulated.skipped + (event.skipped ?? 0),
-            deleted: (accumulated.deleted ?? 0) + (event.deleted ?? 0),
-            message: event.message ?? `Caralarm · прохід ${pass}…`,
-          })
-        }
-      })
-
-      accumulated.created += passResult.created
-      accumulated.updated += passResult.updated
-      accumulated.skipped += passResult.skipped
-      accumulated.priceUpdates += passResult.priceUpdates
-      accumulated.deleted = (accumulated.deleted ?? 0) + (passResult.deleted ?? 0)
-      accumulated.processed = (accumulated.processed ?? 0) + (passResult.processed ?? 0)
-      accumulated.total = passResult.total ?? accumulated.total
-      accumulated.errors.push(...passResult.errors)
-      accumulated.done = passResult.done !== false
-
-      if (passResult.done !== false) break
-      setProgress(prev =>
-        prev
-          ? {
-              ...prev,
-              message: `Часовий ліміт — прохід ${pass + 1}…`,
-            }
-          : prev
-      )
-    }
-
-    accumulated.errors = accumulated.errors.slice(0, 50)
-    return accumulated
   }
 
   async function runYmlPasses(url: string): Promise<ImportResult> {
@@ -458,9 +368,7 @@ export default function AdminImportProductsPage() {
     try {
       let importResult: ImportResult
 
-      if (mode === 'caralarm') {
-        importResult = await runCaralarmPasses()
-      } else if (mode === 'excel') {
+      if (mode === 'excel') {
         const path = await ensureExcelUploaded()
         importResult = await runExcelPasses(path)
       } else {
@@ -482,8 +390,7 @@ export default function AdminImportProductsPage() {
     }
   }
 
-  const canPreview =
-    mode === 'xml' ? Boolean(feedUrl.trim()) : mode === 'caralarm' ? true : Boolean(file)
+  const canPreview = mode === 'xml' ? Boolean(feedUrl.trim()) : Boolean(file)
   const previewCategories = preview ? [...new Set(preview.categories)] : []
   const progressPercent =
     progress && progress.total > 0
@@ -502,8 +409,7 @@ export default function AdminImportProductsPage() {
         </Link>
         <h1 className="text-2xl font-bold text-text-primary mt-3">Імпорт товарів</h1>
         <p className="text-sm text-text-muted mt-1">
-          XML/YML — каталожний фід за HTTPS-посиланням. Excel — таблиця дилера (.xlsx). Caralarm —
-          автоматичний імпорт з caralarm.com.ua (логін/пароль у env).
+          XML/YML — каталожний фід за HTTPS-посиланням. Excel — таблиця дилера (.xlsx).
         </p>
       </div>
 
@@ -513,13 +419,6 @@ export default function AdminImportProductsPage() {
         </ModeTab>
         <ModeTab active={mode === 'excel'} onClick={() => onModeChange('excel')} disabled={loading}>
           Excel
-        </ModeTab>
-        <ModeTab
-          active={mode === 'caralarm'}
-          onClick={() => onModeChange('caralarm')}
-          disabled={loading}
-        >
-          Caralarm
         </ModeTab>
       </div>
 
@@ -554,37 +453,6 @@ export default function AdminImportProductsPage() {
                 <p className="text-xs text-text-muted">
                   Будь-який `.xlsx` з каталожними листами: назва листа → категорія. Листи на кшталт
                   «Зміни у прайсі» пропускаються. Ідентифікатор оновлення — «Код база» у specs.
-                </p>
-              </div>
-            ) : mode === 'caralarm' ? (
-              <div className="space-y-3">
-                <p className="text-sm text-text-secondary">Режим синхронізації</p>
-                <div className="flex flex-wrap gap-2">
-                  <ModeTab
-                    active={caralarmMode === 'catalog'}
-                    onClick={() => {
-                      setCaralarmMode('catalog')
-                      resetFlow()
-                    }}
-                    disabled={loading}
-                  >
-                    Повний каталог
-                  </ModeTab>
-                  <ModeTab
-                    active={caralarmMode === 'prices'}
-                    onClick={() => {
-                      setCaralarmMode('prices')
-                      resetFlow()
-                    }}
-                    disabled={loading}
-                  >
-                    Ціни та залишки
-                  </ModeTab>
-                </div>
-                <p className="text-xs text-text-muted">
-                  {caralarmMode === 'catalog'
-                    ? 'Завантажує export (фото, описи) + market (наявність 1/3). Товари зі статусом 0/2 видаляються. Ціна = priceMinUAH.'
-                    : 'Оновлює ціни/наявність з market; нові доступні товари підтягуються з export. Потрібні CARALARM_LOGIN / CARALARM_PASSWORD.'}
                 </p>
               </div>
             ) : (
@@ -626,36 +494,14 @@ export default function AdminImportProductsPage() {
             {loading
               ? mode === 'xml'
                 ? 'Завантаження та аналіз XML…'
-                : mode === 'caralarm'
-                  ? 'Підготовка…'
-                  : 'Аналіз файлу…'
+                : 'Аналіз файлу…'
               : mode === 'xml'
                 ? 'Перевірити XML'
-                : mode === 'caralarm'
-                  ? 'Далі'
-                  : 'Перевірити файл'}
+                : 'Перевірити файл'}
           </Button>
         )}
 
-        {preview && step === 'preview' && mode === 'caralarm' && (
-          <div className="space-y-4 border-t border-border pt-4">
-            <p className="text-sm text-text-secondary">
-              Запустити синхронізацію Caralarm (
-              {caralarmMode === 'catalog' ? 'повний каталог' : 'ціни та залишки'})? Великий імпорт
-              може зайняти кілька проходів через ліміт часу сервера.
-            </p>
-            <Button
-              type="button"
-              onClick={() => void handleImport()}
-              disabled={loading}
-              className="inline-flex items-center gap-2"
-            >
-              Підтвердити синхронізацію
-            </Button>
-          </div>
-        )}
-
-        {preview && step === 'preview' && mode !== 'caralarm' && (
+        {preview && step === 'preview' && (
           <div className="space-y-4 border-t border-border pt-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
               <Stat label="До імпорту" value={preview.totalParsed} />
@@ -784,19 +630,14 @@ export default function AdminImportProductsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <Stat label="Створено" value={result.created} />
               <Stat label="Оновлено" value={result.updated} />
-              {(mode === 'excel' || mode === 'caralarm' || result.priceUpdates > 0) && (
+              {(mode === 'excel' || result.priceUpdates > 0) && (
                 <Stat label="Цін оновлено" value={result.priceUpdates} />
               )}
-              {mode === 'caralarm' && result.deleted != null && (
-                <Stat label="Видалено" value={result.deleted} />
-              )}
               <Stat label="Без змін / пропущено" value={result.skipped} />
-              {mode !== 'caralarm' && (
-                <Stat
-                  label={mode === 'xml' ? 'Фото (URL)' : 'Фото завантажено'}
-                  value={result.imagesUploaded}
-                />
-              )}
+              <Stat
+                label={mode === 'xml' ? 'Фото (URL)' : 'Фото завантажено'}
+                value={result.imagesUploaded}
+              />
               <Stat label="Помилок" value={result.errors.length} />
               {result.processed != null && <Stat label="Оброблено" value={result.processed} />}
             </div>
