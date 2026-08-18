@@ -76,7 +76,7 @@ async function loadExistingByOfferId(
       .select(select)
       .range(from, from + PAGE - 1)
     if (error) throw new Error(error.message)
-    const page = (data ?? []) as ProductRow[]
+    const page = (data ?? []) as unknown as ProductRow[]
     for (const row of page) {
       const offerId = offerIdFromSpecs(row.specs)
       if (offerId) byOfferId.set(offerId, row)
