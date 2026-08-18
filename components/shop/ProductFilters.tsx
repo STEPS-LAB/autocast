@@ -221,6 +221,7 @@ export default function ProductFilters({
       for (const child of getDirectChildren(categories, root.id)) {
         if (seen.has(child.slug)) continue
         if (isPlaceholderCategoryName(child.name_ua)) continue
+        if (/^інше$/i.test(child.name_ua.trim())) continue
         if (occupiedSet && !occupiedSet.has(child.id)) continue
         seen.add(child.slug)
         nodes.push({
@@ -228,6 +229,7 @@ export default function ProductFilters({
           children: (childrenByParentId.get(child.id) ?? []).filter(
             grand =>
               !isPlaceholderCategoryName(grand.name_ua) &&
+              !/^інше$/i.test(grand.name_ua.trim()) &&
               (!occupiedSet || occupiedSet.has(grand.id))
           ),
         })

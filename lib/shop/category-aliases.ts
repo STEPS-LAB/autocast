@@ -49,6 +49,7 @@ export function isShopNavCategory(
   occupiedIds?: Set<string> | null
 ): boolean {
   if (isPlaceholderCategoryName(cat.name_ua)) return false
+  if (/^інше$/i.test(cat.name_ua.trim())) return false
   if (occupiedIds && !occupiedIds.has(cat.id)) return false
   return true
 }

@@ -163,4 +163,12 @@ describe('shop display taxonomy', () => {
     expect(nav.some(c => c.name_ua.startsWith('Категорія'))).toBe(false)
     expect(nav.some(c => c.slug === 'kolesa')).toBe(false)
   })
+
+  it('hides the Інше dump category from hub tiles', () => {
+    const nav = getShopNavCategories([
+      cat({ id: 'chem', slug: 'avtokhimiya', name_ua: 'Автохімія', sort_order: 0 }),
+      cat({ id: 'misc', slug: 'inshe', name_ua: 'Інше', sort_order: 1 }),
+    ])
+    expect(nav.map(c => c.slug)).toEqual(['avtokhimiya'])
+  })
 })

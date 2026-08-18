@@ -7,9 +7,9 @@ import {
   Lightbulb,
   MonitorSmartphone,
   ParkingSquare,
+  Radio,
   Shield,
   Speaker,
-  Thermometer,
   Video,
   Wrench,
 } from 'lucide-react'
@@ -54,8 +54,8 @@ const CATEGORY_META: Record<
     blurb: 'Камери, парктроніки, відеопаркування',
   },
   multymedia: {
-    icon: Thermometer,
-    blurb: 'Клімат-панелі, захисне скло',
+    icon: Radio,
+    blurb: 'Магнітоли, перехідні рамки',
   },
   videoreyestratory: {
     icon: Video,
