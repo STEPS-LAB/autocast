@@ -14,7 +14,7 @@ export type ProductWritePayload = {
 /** Existing DB row fields needed for change detection. */
 export type ProductDiffRow = {
   name_ua: string
-  description_ua: string | null
+  description_ua?: string | null
   price: number | string
   sale_price: number | string | null
   stock: number | string
@@ -73,10 +73,12 @@ function salePricesEqual(
 export function productNeedsUpdate(
   existing: ProductDiffRow,
   next: ProductWritePayload,
-  options?: { ignoreCategoryAndBrand?: boolean }
+  options?: { ignoreCategoryAndBrand?: boolean; ignoreDescription?: boolean }
 ): boolean {
   if (existing.name_ua !== next.name_ua) return true
-  if ((existing.description_ua || '') !== next.description_ua) return true
+  if (!options?.ignoreDescription && (existing.description_ua || '') !== next.description_ua) {
+    return true
+  }
   if (!numbersEqual(existing.price, next.price)) return true
   if (!salePricesEqual(existing.sale_price, next.sale_price)) return true
   if (!numbersEqual(existing.stock, next.stock)) return true

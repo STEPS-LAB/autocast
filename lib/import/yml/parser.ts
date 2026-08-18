@@ -5,6 +5,7 @@ import {
   readTextChunks,
   stripHtmlToText,
   tagContent,
+  tagContentMax,
 } from '@/lib/import/xml/text'
 import { enrichMissingCategories } from './category-infer'
 import { canonicalizeImportCategoryName, isPlaceholderCategoryName } from './category-locale'
@@ -61,6 +62,9 @@ function isHttpUrl(value: string): boolean {
 }
 
 function collectOfferPdfUrls(offerXml: string, params: Record<string, string>, description: string): string[] {
+  if (!/\.pdf/i.test(offerXml) && !Object.values(params).some(value => /\.pdf/i.test(value))) {
+    return []
+  }
   const seen = new Set<string>()
   const urls: string[] = []
 
@@ -101,17 +105,24 @@ export type ParseYmlOptions = {
   collectProducts?: boolean
   /** Skip PDF URL extraction (faster preview). */
   skipPdfUrls?: boolean
+  /**
+   * Skip description HTML, params, and PDFs. Use for preview of large feeds
+   * so Vercel does not OOM on 100MB+ XML.
+   */
+  lite?: boolean
+  signal?: AbortSignal
   onCategories?: (categories: YmlCategory[]) => void | Promise<void>
   onProduct?: (product: ParsedYmlOffer) => void | Promise<void>
   onScan?: (totalOffers: number) => void | Promise<void>
 }
 
 const MAX_DESCRIPTION_CHARS = 12_000
+const MAX_DESCRIPTION_RAW_CHARS = 16_000
 
 export function parseOfferXml(
   offerXml: string,
   categoryById: Map<string, YmlCategory>,
-  options?: { skipOutOfStock?: boolean; skipPdfUrls?: boolean }
+  options?: { skipOutOfStock?: boolean; skipPdfUrls?: boolean; lite?: boolean }
 ): { product: ParsedYmlOffer | null; skipReason: 'oos' | 'invalid' | null } {
   const openTag = OFFER_OPEN_RE.exec(offerXml)?.[0] ?? ''
   const { id: offerId, available } = parseOfferAttributes(openTag)
@@ -143,11 +154,15 @@ export function parseOfferXml(
   const vendorCodeRaw = tagContent(offerXml, 'vendorCode')
   const vendorRaw = tagContent(offerXml, 'vendor')
   const urlRaw = tagContent(offerXml, 'url')
-  const descriptionRaw = tagContent(offerXml, 'description') ?? ''
-  const description = stripHtmlToText(descriptionRaw).slice(0, MAX_DESCRIPTION_CHARS)
-  const params = parseParams(offerXml)
+  const lite = options?.lite === true
+  const descriptionRaw = lite
+    ? ''
+    : (tagContentMax(offerXml, 'description', MAX_DESCRIPTION_RAW_CHARS) ?? '')
+  const description = lite ? '' : stripHtmlToText(descriptionRaw).slice(0, MAX_DESCRIPTION_CHARS)
+  const params = lite ? {} : parseParams(offerXml)
   const pictures = collectOfferPictures(offerXml)
-  const pdfUrls = options?.skipPdfUrls ? [] : collectOfferPdfUrls(offerXml, params, description)
+  const pdfUrls =
+    lite || options?.skipPdfUrls ? [] : collectOfferPdfUrls(offerXml, params, description)
 
   return {
     product: {
@@ -206,6 +221,10 @@ export async function parseYmlStream(
   let categoriesClosed = false
   let categoriesEmitted = false
 
+  function isAborted() {
+    return options?.signal?.aborted === true
+  }
+
   async function emitCategories() {
     if (categoriesEmitted || !options?.onCategories) return
     categoriesEmitted = true
@@ -218,75 +237,84 @@ export async function parseYmlStream(
     await options.onCategories([...categoryById.values()])
   }
 
-  for await (const chunk of readTextChunks(source)) {
-    buffer += chunk
+  try {
+    parseChunks: for await (const chunk of readTextChunks(source)) {
+      if (isAborted()) break
+      buffer += chunk
 
-    if (!categoriesClosed) {
-      ingestCategories(buffer, categoryById)
-      if (buffer.includes('</categories>')) {
-        categoriesClosed = true
-        // Keep a small tail before offers to avoid cutting an open category oddly;
-        // offers start after categories in YML.
-        const offersAt = buffer.search(/<offers[\s>]/i)
-        if (offersAt >= 0) buffer = buffer.slice(offersAt)
-        else if (buffer.length > 512_000) buffer = buffer.slice(-64_000)
-        await emitCategories()
-      } else if (buffer.length > 2_000_000) {
-        // Categories section unexpectedly huge — keep sliding window.
-        ingestCategories(buffer.slice(-500_000), categoryById)
-        buffer = buffer.slice(-250_000)
+      if (!categoriesClosed) {
+        ingestCategories(buffer, categoryById)
+        if (buffer.includes('</categories>')) {
+          categoriesClosed = true
+          // Keep a small tail before offers to avoid cutting an open category oddly;
+          // offers start after categories in YML.
+          const offersAt = buffer.search(/<offers[\s>]/i)
+          if (offersAt >= 0) buffer = buffer.slice(offersAt)
+          else if (buffer.length > 512_000) buffer = buffer.slice(-64_000)
+          await emitCategories()
+        } else if (buffer.length > 2_000_000) {
+          // Categories section unexpectedly huge — keep sliding window.
+          ingestCategories(buffer.slice(-500_000), categoryById)
+          buffer = buffer.slice(-250_000)
+        }
       }
-    }
 
-    while (true) {
-      if (!insideOffer) {
-        const open = OFFER_OPEN_RE.exec(buffer)
-        if (!open || open.index == null) {
-          if (buffer.length > 64_000) buffer = buffer.slice(-8_000)
+      while (true) {
+        if (!insideOffer) {
+          const open = OFFER_OPEN_RE.exec(buffer)
+          if (!open || open.index == null) {
+            if (buffer.length > 64_000) buffer = buffer.slice(-8_000)
+            break
+          }
+          buffer = buffer.slice(open.index)
+          insideOffer = true
+          OFFER_OPEN_RE.lastIndex = 0
+        }
+
+        const closeMatch = OFFER_CLOSE_RE.exec(buffer)
+        if (!closeMatch || closeMatch.index == null) {
+          OFFER_CLOSE_RE.lastIndex = 0
+          if (buffer.length > 4_000_000) {
+            throw new Error('Offer XML занадто великий для парсингу.')
+          }
           break
         }
-        buffer = buffer.slice(open.index)
-        insideOffer = true
-        OFFER_OPEN_RE.lastIndex = 0
-      }
 
-      const closeMatch = OFFER_CLOSE_RE.exec(buffer)
-      if (!closeMatch || closeMatch.index == null) {
+        const end = closeMatch.index + closeMatch[0].length
+        const offerXml = buffer.slice(0, end)
+        buffer = buffer.slice(end)
+        insideOffer = false
         OFFER_CLOSE_RE.lastIndex = 0
-        if (buffer.length > 4_000_000) {
-          throw new Error('Offer XML занадто великий для парсингу.')
+        totalOffers += 1
+        if (totalOffers === 1 || totalOffers % 200 === 0) {
+          await options?.onScan?.(totalOffers)
         }
-        break
-      }
+        if (isAborted()) break parseChunks
 
-      const end = closeMatch.index + closeMatch[0].length
-      const offerXml = buffer.slice(0, end)
-      buffer = buffer.slice(end)
-      insideOffer = false
-      OFFER_CLOSE_RE.lastIndex = 0
-      totalOffers += 1
-      if (totalOffers === 1 || totalOffers % 200 === 0) {
-        await options?.onScan?.(totalOffers)
+        const { product, skipReason } = parseOfferXml(offerXml, categoryById, options)
+        if (skipReason === 'oos') {
+          skippedOutOfStock += 1
+          continue
+        }
+        if (skipReason === 'invalid' || !product) {
+          skippedInvalid += 1
+          continue
+        }
+        if (seenIds.has(product.offerId)) {
+          skippedDuplicateId += 1
+          continue
+        }
+        seenIds.add(product.offerId)
+        await emitCategories()
+        if (options?.onProduct) await options.onProduct(product)
+        if (collectProducts) products.push(product)
       }
-
-      const { product, skipReason } = parseOfferXml(offerXml, categoryById, options)
-      if (skipReason === 'oos') {
-        skippedOutOfStock += 1
-        continue
-      }
-      if (skipReason === 'invalid' || !product) {
-        skippedInvalid += 1
-        continue
-      }
-      if (seenIds.has(product.offerId)) {
-        skippedDuplicateId += 1
-        continue
-      }
-      seenIds.add(product.offerId)
-      await emitCategories()
-      if (options?.onProduct) await options.onProduct(product)
-      if (collectProducts) products.push(product)
     }
+  } catch (error) {
+    const aborted =
+      isAborted() ||
+      (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError'))
+    if (!aborted) throw error
   }
 
   const categoryList = [...categoryById.values()]
@@ -310,39 +338,48 @@ export async function parseYmlFromUrl(
 ): Promise<YmlParseResult> {
   const controller = new AbortController()
   const connectTimer = setTimeout(() => controller.abort(), 90_000)
+  const onOuterAbort = () => controller.abort()
+  options?.signal?.addEventListener('abort', onOuterAbort, { once: true })
 
   let response: Response
   try {
-    response = await fetch(url, {
-      headers: {
-        'User-Agent': 'AutocastImporter/1.0',
-        Accept: 'application/xml,text/xml,*/*',
-        'Accept-Encoding': 'gzip, deflate, br',
-      },
-      signal: controller.signal,
-    })
-  } catch (error) {
-    const aborted =
-      (error instanceof Error && error.name === 'AbortError') ||
-      (error instanceof Error && error.name === 'TimeoutError') ||
-      (typeof error === 'object' &&
-        error !== null &&
-        'name' in error &&
-        (error.name === 'AbortError' || error.name === 'TimeoutError'))
-    if (aborted) {
-      throw new Error('Не вдалося дочекатися відповіді фіду (таймаут з’єднання).')
+    try {
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'AutocastImporter/1.0',
+          Accept: 'application/xml,text/xml,*/*',
+          'Accept-Encoding': 'gzip, deflate',
+        },
+        signal: controller.signal,
+      })
+    } catch (error) {
+      if (options?.signal?.aborted) {
+        throw new Error('Завантаження фіду зупинено (ліміт часу).')
+      }
+      const aborted =
+        (error instanceof Error && error.name === 'AbortError') ||
+        (error instanceof Error && error.name === 'TimeoutError') ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'name' in error &&
+          (error.name === 'AbortError' || error.name === 'TimeoutError'))
+      if (aborted) {
+        throw new Error('Не вдалося дочекатися відповіді фіду (таймаут з’єднання).')
+      }
+      throw error
+    } finally {
+      clearTimeout(connectTimer)
     }
-    throw error
+
+    if (!response.ok) {
+      throw new Error(`Не вдалося завантажити фід (HTTP ${response.status}).`)
+    }
+    if (!response.body) {
+      throw new Error('Порожня відповідь фіду.')
+    }
+
+    return await parseYmlStream(response.body, options)
   } finally {
-    clearTimeout(connectTimer)
+    options?.signal?.removeEventListener('abort', onOuterAbort)
   }
-
-  if (!response.ok) {
-    throw new Error(`Не вдалося завантажити фід (HTTP ${response.status}).`)
-  }
-  if (!response.body) {
-    throw new Error('Порожня відповідь фіду.')
-  }
-
-  return parseYmlStream(response.body, options)
 }

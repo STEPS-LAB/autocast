@@ -29,6 +29,7 @@ import {
   type ImportResult,
   type ParsedYmlOffer,
   type YmlCategory,
+  type YmlParseResult,
 } from './types'
 import type { Brand } from '@/types'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -38,11 +39,12 @@ export { ensureNamedCategory, importCategoryTree } from './category-import'
 const MAX_IMAGES_PER_PRODUCT = 10
 const WRITE_CONCURRENCY = 8
 const PRODUCT_DIFF_SELECT =
-  'id,slug,name_ua,description_ua,price,sale_price,stock,category_id,brand_id,specs,images'
+  'id,slug,name_ua,price,sale_price,stock,category_id,brand_id,specs,images'
+const PREVIEW_SELECT = 'id,name_ua,price,sale_price,stock,specs'
 
 type ProductRow = ProductDiffRow & {
   id: string
-  slug: string
+  slug?: string
 }
 
 function buildSpecs(product: ParsedYmlOffer): Record<string, string> {
@@ -60,7 +62,10 @@ function offerIdFromSpecs(specs: Record<string, string> | null): string | undefi
   return specs[YML_OFFER_ID_SPEC_KEY] || specs[LEGACY_OFFER_ID_SPEC_KEY]
 }
 
-async function loadExistingByOfferId(supabase: SupabaseClient): Promise<Map<string, ProductRow>> {
+async function loadExistingByOfferId(
+  supabase: SupabaseClient,
+  select: string = PRODUCT_DIFF_SELECT
+): Promise<Map<string, ProductRow>> {
   const byOfferId = new Map<string, ProductRow>()
   const PAGE = 1000
   let from = 0
@@ -68,7 +73,7 @@ async function loadExistingByOfferId(supabase: SupabaseClient): Promise<Map<stri
   while (true) {
     const { data, error } = await supabase
       .from('products')
-      .select(PRODUCT_DIFF_SELECT)
+      .select(select)
       .range(from, from + PAGE - 1)
     if (error) throw new Error(error.message)
     const page = (data ?? []) as ProductRow[]
@@ -148,6 +153,7 @@ function isUniqueViolation(message: string): boolean {
 function createLimiter(concurrency: number) {
   let active = 0
   const waiting: Array<() => void> = []
+  const drain: Array<() => void> = []
 
   async function acquire() {
     if (active >= concurrency) {
@@ -159,6 +165,9 @@ function createLimiter(concurrency: number) {
   function release() {
     active -= 1
     waiting.shift()?.()
+    if (active === 0) {
+      while (drain.length) drain.shift()?.()
+    }
   }
 
   return {
@@ -170,6 +179,22 @@ function createLimiter(concurrency: number) {
         release()
       }
     },
+    async schedule(fn: () => Promise<void>): Promise<void> {
+      await acquire()
+      void fn().finally(() => {
+        release()
+      })
+    },
+    async idle() {
+      if (active === 0) return
+      await new Promise<void>(resolve => {
+        if (active === 0) {
+          resolve()
+          return
+        }
+        drain.push(resolve)
+      })
+    },
   }
 }
 
@@ -179,14 +204,14 @@ function previewAction(
 ): { action: ImportPreviewItem['action']; reason?: string; priceChanged: boolean } {
   if (!existing) return { action: 'create', priceChanged: false }
 
-  const specs = buildSpecs(product)
-  const images = product.pictures.slice(0, MAX_IMAGES_PER_PRODUCT)
-  // Preview cannot cheaply resolve category/brand; compare commercial fields.
-  const payload = buildWritePayload(product, existing.category_id ?? '', existing.brand_id, specs, images)
-  const priceChanged = pricingNeedsUpdate(existing, payload)
-  if (
-    !productNeedsUpdate(existing, payload, { ignoreCategoryAndBrand: true })
-  ) {
+  const pricing = dbPricingFromYmlOffer(product)
+  const priceChanged = pricingNeedsUpdate(existing, {
+    price: pricing.price,
+    sale_price: pricing.sale_price,
+  })
+  const nameChanged = existing.name_ua !== product.name
+  const stockChanged = Number(existing.stock) !== product.stock
+  if (!priceChanged && !nameChanged && !stockChanged) {
     return { action: 'skip', reason: 'без змін', priceChanged: false }
   }
   return { action: 'update', priceChanged }
@@ -211,9 +236,24 @@ function previewItem(
   }
 }
 
-export async function buildYmlImportPreview(url: string): Promise<ImportPreview> {
+export type YmlImportProgress = {
+  processed: number
+  total: number
+  created: number
+  updated: number
+  skipped: number
+  message?: string
+}
+
+export async function buildYmlImportPreview(
+  url: string,
+  options?: {
+    onProgress?: (progress: YmlImportProgress) => void
+    deadlineMs?: number
+  }
+): Promise<ImportPreview> {
   const supabase = await createServerClient()
-  const byOfferId = await loadExistingByOfferId(supabase)
+  const byOfferId = await loadExistingByOfferId(supabase, PREVIEW_SELECT)
 
   let toCreate = 0
   let toUpdate = 0
@@ -223,33 +263,81 @@ export async function buildYmlImportPreview(url: string): Promise<ImportPreview>
   const sample: ImportPreviewItem[] = []
   const usedLeafIds = new Set<string>()
   let categories: YmlCategory[] = []
+  let scannedOffers = 0
+  const abort = new AbortController()
+  const deadlineMs = options?.deadlineMs
+  let lastProgressAt = 0
 
-  const parsed = await parseYmlFromUrl(url, {
-    collectProducts: false,
-    skipPdfUrls: true,
-    onCategories: cats => {
-      categories = cats
-    },
-    onProduct: product => {
-      usedLeafIds.add(product.categoryId)
-      const existing = byOfferId.get(product.offerId)
-      const { action, priceChanged } = previewAction(product, existing)
-      if (action === 'create') toCreate += 1
-      else if (action === 'update') toUpdate += 1
-      else unchanged += 1
-      if (priceChanged) {
-        priceChanges += 1
-        if (existing) priceChangesMatched += 1
-      }
-      if (sample.length < 20) {
-        sample.push(previewItem(product, byOfferId, formatCategoryPath(categories, product.categoryId)))
-      }
-    },
-  })
+  function emitProgress(force = false, message?: string) {
+    const now = Date.now()
+    if (!force && now - lastProgressAt < 400) return
+    lastProgressAt = now
+    const processed = toCreate + toUpdate + unchanged
+    options?.onProgress?.({
+      processed,
+      total: Math.max(scannedOffers, processed, 1),
+      created: toCreate,
+      updated: toUpdate,
+      skipped: unchanged,
+      message,
+    })
+  }
+
+  emitProgress(true, 'Завантаження фіду…')
+
+  let parsed: YmlParseResult
+  try {
+    parsed = await parseYmlFromUrl(url, {
+      collectProducts: false,
+      skipPdfUrls: true,
+      lite: true,
+      signal: abort.signal,
+      onCategories: cats => {
+        categories = cats
+        emitProgress(true, 'Категорії прочитано, аналіз товарів…')
+      },
+      onScan: totalOffers => {
+        scannedOffers = totalOffers
+        if (deadlineMs != null && Date.now() > deadlineMs) abort.abort()
+        emitProgress(false, `Читання фіду: ${totalOffers} offer…`)
+      },
+      onProduct: product => {
+        if (deadlineMs != null && Date.now() > deadlineMs) {
+          abort.abort()
+          return
+        }
+        usedLeafIds.add(product.categoryId)
+        const existing = byOfferId.get(product.offerId)
+        const { action, priceChanged } = previewAction(product, existing)
+        if (action === 'create') toCreate += 1
+        else if (action === 'update') toUpdate += 1
+        else unchanged += 1
+        if (priceChanged) {
+          priceChanges += 1
+          if (existing) priceChangesMatched += 1
+        }
+        if (sample.length < 20) {
+          sample.push(previewItem(product, byOfferId, formatCategoryPath(categories, product.categoryId)))
+        }
+      },
+    })
+  } catch (error) {
+    if (!abort.signal.aborted) throw error
+    parsed = {
+      categories,
+      products: [],
+      skippedOutOfStock: 0,
+      skippedDuplicateId: 0,
+      skippedInvalid: 0,
+      totalOffers: scannedOffers,
+    }
+  }
 
   const categoryLabels = [...new Set([...usedLeafIds].map(id => formatCategoryPath(categories, id)))]
     .filter(label => !/^категорія\s+\d+$/i.test(label))
     .sort((a, b) => a.localeCompare(b, 'uk'))
+
+  emitProgress(true, abort.signal.aborted ? 'Часовий ліміт — частковий результат' : 'Готово')
 
   return {
     totalParsed: toCreate + toUpdate + unchanged,
@@ -266,16 +354,8 @@ export async function buildYmlImportPreview(url: string): Promise<ImportPreview>
     priceChangesMatched,
     categories: categoryLabels,
     sample,
+    partial: abort.signal.aborted,
   }
-}
-
-export type YmlImportProgress = {
-  processed: number
-  total: number
-  created: number
-  updated: number
-  skipped: number
-  message?: string
 }
 
 export async function runYmlImport(
@@ -311,6 +391,7 @@ export async function runYmlImport(
     ? Math.max(0, Math.floor(expectedTotalRaw as number))
     : 0
   const deadlineMs = options?.deadlineMs
+  const abort = new AbortController()
 
   const result: ImportResult = {
     created: 0,
@@ -416,6 +497,7 @@ export async function runYmlImport(
     if (deadlineMs != null && Date.now() > deadlineMs) {
       abortedForDeadline = true
       result.done = false
+      abort.abort()
       return
     }
 
@@ -444,7 +526,7 @@ export async function runYmlImport(
       const payload = buildWritePayload(product, categoryId, brandId, specs, images)
 
       if (existing) {
-        if (!productNeedsUpdate(existing, payload)) {
+        if (!productNeedsUpdate(existing, payload, { ignoreDescription: true })) {
           result.skipped += 1
           if (images.length === 0) {
             needPictureBackfill.push({ id: existing.id, key: shareKey })
@@ -498,31 +580,51 @@ export async function runYmlImport(
     }
   }
 
-  await parseYmlFromUrl(url, {
-    collectProducts: false,
-    onCategories: async cats => {
-      feedCategories = cats
-      categoryIds = await importCategoryTree(
-        supabase,
-        cats,
-        cats.map(category => category.id)
-      )
-      emitProgress(true)
-    },
-    onProduct: product => writePool.run(() => writeProduct(product)),
-    onScan: totalOffers => {
-      emitProgress(true, `Читання фіду: ${totalOffers} offer…`)
-    },
-  })
+  try {
+    await parseYmlFromUrl(url, {
+      collectProducts: false,
+      signal: abort.signal,
+      onCategories: async cats => {
+        feedCategories = cats
+        categoryIds = await importCategoryTree(
+          supabase,
+          cats,
+          cats.map(category => category.id)
+        )
+        emitProgress(true)
+      },
+      onProduct: product => writePool.schedule(() => writeProduct(product)),
+      onScan: totalOffers => {
+        if (deadlineMs != null && Date.now() > deadlineMs) {
+          abortedForDeadline = true
+          result.done = false
+          abort.abort()
+        }
+        emitProgress(true, `Читання фіду: ${totalOffers} offer…`)
+      },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (abort.signal.aborted || /ліміт часу/i.test(message)) {
+      abortedForDeadline = true
+      result.done = false
+    } else {
+      throw error
+    }
+  } finally {
+    await writePool.idle()
+  }
 
-  for (const pending of needPictureBackfill) {
-    const shared = picturesByShareKey.get(pending.key)
-    if (!shared || shared.length === 0) continue
-    const { error } = await supabase
-      .from('products')
-      .update({ images: shared })
-      .eq('id', pending.id)
-    if (!error) result.imagesUploaded += shared.length
+  if (!abortedForDeadline) {
+    for (const pending of needPictureBackfill) {
+      const shared = picturesByShareKey.get(pending.key)
+      if (!shared || shared.length === 0) continue
+      const { error } = await supabase
+        .from('products')
+        .update({ images: shared })
+        .eq('id', pending.id)
+      if (!error) result.imagesUploaded += shared.length
+    }
   }
 
   result.processed = processed

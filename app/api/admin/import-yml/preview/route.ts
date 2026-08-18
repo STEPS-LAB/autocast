@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/security/rateLimit'
 import { resolveYmlFeedUrl } from '@/lib/import/yml/feeds'
 import { buildYmlImportPreview } from '@/lib/import/yml/run-import'
+import type { ImportProgressEvent } from '@/lib/import/types'
+import { NextResponse } from 'next/server'
 
 async function isCurrentUserAdmin() {
   const supabase = await createClient()
@@ -22,6 +23,8 @@ async function isCurrentUserAdmin() {
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
+const TIME_BUDGET_MS = 240_000
+
 export async function POST(request: Request) {
   const rl = rateLimit(request, { bucket: 'admin:import-yml-preview', limit: 5, windowMs: 60_000 })
   if (!rl.ok) return rl.response
@@ -36,12 +39,60 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Очікується JSON з feedId або url.' }, { status: 400 })
   }
 
+  let resolved: ReturnType<typeof resolveYmlFeedUrl>
   try {
-    const resolved = resolveYmlFeedUrl(body)
-    const preview = await buildYmlImportPreview(resolved.url)
-    return NextResponse.json({ ...preview, feedUrl: resolved.url, feedId: resolved.feedId })
+    resolved = resolveYmlFeedUrl(body)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Не вдалося зробити превʼю фіду.'
-    return NextResponse.json({ error: message }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Некоректне посилання на XML/YML.'
+    return NextResponse.json({ error: message }, { status: 400 })
   }
+
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: ImportProgressEvent) => {
+        try {
+          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`))
+        } catch {
+          // Client disconnected or the stream already closed.
+        }
+      }
+
+      try {
+        send({ type: 'status', message: 'Завантаження фіду…' })
+        const preview = await buildYmlImportPreview(resolved.url, {
+          deadlineMs: Date.now() + TIME_BUDGET_MS,
+          onProgress: progress => {
+            send({
+              type: 'progress',
+              processed: progress.processed,
+              total: progress.total,
+              created: progress.created,
+              updated: progress.updated,
+              skipped: progress.skipped,
+              message: progress.message ?? `Прочитано ${progress.processed} товарів`,
+            })
+          },
+        })
+        send({
+          type: 'done',
+          preview,
+          message: preview.partial ? 'Часовий ліміт — частковий результат' : 'Готово',
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Не вдалося зробити превʼю фіду.'
+        send({ type: 'error', error: message })
+      } finally {
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  })
 }

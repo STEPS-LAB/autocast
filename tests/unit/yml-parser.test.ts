@@ -20,6 +20,7 @@ import {
   stripHtmlToText,
 } from '@/lib/import/yml/parser'
 import { extractTextFromPdfBuffer } from '@/lib/import/yml/pdf-text'
+import { tagContentMax } from '@/lib/import/xml/text'
 import { resolveYmlFeedUrl } from '@/lib/import/yml/feeds'
 import type { ParsedYmlOffer, YmlCategory } from '@/lib/import/yml/types'
 import { slugifyName } from '@/lib/utils'
@@ -70,6 +71,10 @@ describe('YML / XML catalog parser', () => {
     )
   })
 
+  it('caps XML tag bodies so huge descriptions stay bounded', () => {
+    expect(tagContentMax('<description>abcdefghij</description>', 'description', 4)).toBe('abcd')
+  })
+
   it('parses double-escaped category labels from the catalog section', async () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE yml_catalog SYSTEM "shops.dtd">
@@ -107,6 +112,32 @@ describe('YML / XML catalog parser', () => {
     expect(product?.pictures).toHaveLength(2)
     expect(product?.params['Цоколь']).toBe('H11')
     expect(product?.description).toContain('Опис ламп')
+  })
+
+  it('lite parse skips description and params', () => {
+    const categories = new Map<string, YmlCategory>([
+      ['44', { id: '44', name: 'LED лампи', parentId: '17', url: null }],
+    ])
+    const offerXml = SAMPLE_YML.slice(SAMPLE_YML.indexOf('<offer id="614"'), SAMPLE_YML.indexOf('</offer>') + 8)
+    const { product, skipReason } = parseOfferXml(offerXml, categories, { lite: true })
+    expect(skipReason).toBeNull()
+    expect(product?.name).toContain('Світлодіодні лампи')
+    expect(product?.price).toBe(2893)
+    expect(product?.description).toBe('')
+    expect(product?.params).toEqual({})
+    expect(product?.pdfUrls).toEqual([])
+    expect(product?.pictures).toHaveLength(2)
+  })
+
+  it('stops parsing when the abort signal is already fired', async () => {
+    const abort = new AbortController()
+    abort.abort()
+    const parsed = await parseYmlStream(Readable.from([SAMPLE_YML]), {
+      signal: abort.signal,
+      collectProducts: true,
+    })
+    expect(parsed.totalOffers).toBe(0)
+    expect(parsed.products).toHaveLength(0)
   })
 
   it('maps feed discount into DB price/sale_price shape', async () => {
@@ -159,6 +190,10 @@ describe('YML / XML catalog parser', () => {
         specs: { 'Offer ID': '614', Цоколь: 'H7' },
       })
     ).toBe(true)
+    expect(
+      productNeedsUpdate(existing, { ...next, description_ua: 'Інший опис' }, { ignoreDescription: true })
+    ).toBe(false)
+    expect(productNeedsUpdate(existing, { ...next, description_ua: 'Інший опис' })).toBe(true)
   })
 
   it('streams whole catalog and skips out of stock', async () => {

@@ -20,6 +20,8 @@ export interface ImportPreview {
   priceChangesMatched: number
   categories: string[]
   sample: ImportPreviewItem[]
+  /** True when the feed scan stopped early (time budget). */
+  partial?: boolean
 }
 
 export interface ImportResult {
@@ -48,5 +50,6 @@ export interface ImportProgressEvent {
   skipped?: number
   deleted?: number
   result?: ImportResult
+  preview?: ImportPreview
   error?: string
 }

@@ -27,7 +27,7 @@ function messageFromNonJson(text: string, status: number): string {
     return 'Файл завеликий для прямого запиту. Завантажте ще раз — Excel іде через сховище, не через ліміт Vercel.'
   }
   if (/An error occurred with your deployment/i.test(text) || text.startsWith('An error')) {
-    return 'Сервер обірвав запит (таймаут або брак памʼяті). Великий Excel імпортується кількома проходами — спробуйте ще раз.'
+    return 'Сервер обірвав запит (таймаут або брак памʼяті). Великий XML/Excel обробляється кількома проходами — спробуйте ще раз.'
   }
   if (text.trim().startsWith('<')) {
     return `Сервер повернув HTML замість JSON (HTTP ${status}).`
@@ -123,6 +123,74 @@ async function readNdjsonImportStream(
   }
 }
 
+async function readNdjsonPreviewStream(
+  response: Response,
+  onEvent: (event: ImportProgressEvent) => void
+): Promise<ImportPreview> {
+  if (!response.ok) {
+    const data = await readJsonPayload(response).catch((error: unknown) =>
+      error instanceof Error ? { error: error.message } : {}
+    )
+    throw new Error((data as { error?: string }).error ?? 'Помилка превʼю XML')
+  }
+  if (!response.body) {
+    throw new Error('Порожня відповідь сервера.')
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let preview: ImportPreview | null = null
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      let event: ImportProgressEvent
+      try {
+        event = JSON.parse(trimmed) as ImportProgressEvent
+      } catch {
+        continue
+      }
+      onEvent(event)
+      if (event.type === 'error') {
+        throw new Error(event.error ?? 'Помилка превʼю XML')
+      }
+      if (event.type === 'done' && event.preview) {
+        preview = event.preview
+      }
+    }
+  }
+
+  if (buffer.trim()) {
+    try {
+      const event = JSON.parse(buffer.trim()) as ImportProgressEvent
+      onEvent(event)
+      if (event.type === 'error') throw new Error(event.error ?? 'Помилка превʼю XML')
+      if (event.type === 'done' && event.preview) preview = event.preview
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        // truncated stream
+      } else {
+        throw error
+      }
+    }
+  }
+
+  if (!preview) {
+    throw new Error(
+      'Сервер обірвав перевірку XML (таймаут або брак памʼяті). Спробуйте ще раз.'
+    )
+  }
+  return preview
+}
+
 export default function AdminImportProductsPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -215,9 +283,26 @@ export default function AdminImportProductsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
         })
-        const data = await readJsonPayload(response)
-        if (!response.ok) throw new Error(String(data.error ?? 'Помилка превʼю XML'))
-        setPreview(data as unknown as ImportPreview)
+        const contentType = response.headers.get('content-type') ?? ''
+        if (contentType.includes('ndjson') || contentType.includes('x-ndjson')) {
+          const data = await readNdjsonPreviewStream(response, event => {
+            if (event.type === 'status' || event.type === 'progress') {
+              setProgress({
+                processed: event.processed ?? 0,
+                total: event.total ?? 0,
+                created: event.created ?? 0,
+                updated: event.updated ?? 0,
+                skipped: event.skipped ?? 0,
+                message: event.message ?? 'Аналіз XML…',
+              })
+            }
+          })
+          setPreview(data)
+        } else {
+          const data = await readJsonPayload(response)
+          if (!response.ok) throw new Error(String(data.error ?? 'Помилка превʼю XML'))
+          setPreview(data as unknown as ImportPreview)
+        }
       }
       setStep('preview')
     } catch (err) {
@@ -484,21 +569,31 @@ export default function AdminImportProductsPage() {
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         {step === 'upload' && (
-          <Button
-            type="button"
-            onClick={() => void handlePreview()}
-            disabled={!canPreview || loading}
-            className="inline-flex items-center gap-2"
-          >
-            <Upload size={16} />
-            {loading
-              ? mode === 'xml'
-                ? 'Завантаження та аналіз XML…'
-                : 'Аналіз файлу…'
-              : mode === 'xml'
-                ? 'Перевірити XML'
-                : 'Перевірити файл'}
-          </Button>
+          <>
+            {loading && progress && mode === 'xml' && (
+              <p className="text-xs text-text-muted">
+                {progress.message}
+                {progress.processed > 0
+                  ? ` · ${progress.processed} товарів`
+                  : ''}
+              </p>
+            )}
+            <Button
+              type="button"
+              onClick={() => void handlePreview()}
+              disabled={!canPreview || loading}
+              className="inline-flex items-center gap-2"
+            >
+              <Upload size={16} />
+              {loading
+                ? mode === 'xml'
+                  ? 'Завантаження та аналіз XML…'
+                  : 'Аналіз файлу…'
+                : mode === 'xml'
+                  ? 'Перевірити XML'
+                  : 'Перевірити файл'}
+            </Button>
+          </>
         )}
 
         {preview && step === 'preview' && (
@@ -524,6 +619,13 @@ export default function AdminImportProductsPage() {
               )}
               {mode === 'xml' && (
                 <> Незмінені товари з каталогу не оновлюються повторно.</>
+              )}
+              {preview.partial && (
+                <>
+                  {' '}
+                  Перевірку зупинено через ліміт часу — цифри можуть бути неповними. Імпорт
+                  усе одно пройде весь фід кількома проходами.
+                </>
               )}
             </p>
             <div>

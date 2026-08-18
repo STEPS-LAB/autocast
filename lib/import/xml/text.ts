@@ -52,6 +52,18 @@ export function tagContent(xml: string, tag: string): string | null {
   return match[1].trim()
 }
 
+/** Read a tag body without copying an unbounded description into memory. */
+export function tagContentMax(xml: string, tag: string, maxChars: number): string | null {
+  const open = new RegExp(`<${tag}(?:\\s[^>]*)?>`, 'i').exec(xml)
+  if (!open || open.index == null) return null
+  const start = open.index + open[0].length
+  const close = new RegExp(`</${tag}>`, 'i').exec(xml.slice(start))
+  const rawEnd = close ? start + close.index : xml.length
+  const end = Math.min(rawEnd, start + Math.max(0, maxChars))
+  const value = xml.slice(start, end).trim()
+  return value || null
+}
+
 export function allTagContents(xml: string, tag: string): string[] {
   const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'gi')
   const values: string[] = []
