@@ -14,7 +14,7 @@ A production-ready, ultra-premium automotive parts and electronics store built w
 | Forms | React Hook Form + Zod |
 | Backend | Supabase (PostgreSQL, Auth, Storage) |
 | Testing | Vitest + Playwright |
-| Deployment | Vercel |
+| Deployment | Self-hosted Node (standalone) behind nginx |
 
 ## Features
 
@@ -150,17 +150,64 @@ npm run test:e2e:ui  # Playwright with UI
 - **Display**: Inter (variable font, Latin + Cyrillic)
 - **Mono**: JetBrains Mono (prices, VIN codes, specs)
 
-## Deployment (Vercel)
+## Deployment (self-hosted VPS)
 
-1. Push to GitHub
-2. Connect repository in Vercel dashboard
-3. Add environment variables in Vercel project settings
-4. Deploy
+The app is platform-agnostic: no `vercel.json`, no edge-runtime routes, no
+provider SDKs. It builds to a standalone Node server (`output: 'standalone'`
+in `next.config.ts`) that runs behind nginx.
 
-The app is pre-configured for Vercel with:
-- Next.js Image optimization
-- Edge caching headers
-- `generateStaticParams` for product pages
+### Recommended: build off-server
+
+`next build` needs 2-4 GB of RAM. On a small VPS, build in CI or locally and
+ship the artifact — building on a 2 GB box will get OOM-killed.
+
+### Option A — Docker Compose
+
+```bash
+cp .env.example .env      # fill in Supabase keys and NEXT_PUBLIC_SITE_URL
+docker compose up -d --build
+```
+
+Then put nginx in front:
+
+```bash
+sudo cp deploy/nginx-cache.conf /etc/nginx/conf.d/autocast-cache.conf
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/autocast
+sudo ln -s /etc/nginx/sites-available/autocast /etc/nginx/sites-enabled/
+sudo certbot --nginx -d your-domain.com
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Option B — bare Node + systemd
+
+```bash
+npm run build:standalone                        # produces .next/standalone
+rsync -a .next/standalone/ user@server:/srv/autocast/
+scp .env user@server:/srv/autocast/.env
+sudo cp deploy/autocast.service /etc/systemd/system/
+sudo systemctl enable --now autocast
+```
+
+### Environment variables
+
+Copy `.env.example` and fill it in. Note that every `NEXT_PUBLIC_*` value is
+**inlined at build time** — changing one requires a rebuild, not a restart.
+`NEXT_PUBLIC_SITE_URL` is required in production: auth redirects and
+password-reset emails fall back to `localhost:3000` without it.
+
+Verify what the server actually resolved at `GET /api/health/env`.
+
+### Notes for small servers
+
+- Image optimization (AVIF/WebP) is the heaviest CPU work here. The nginx
+  config caches `/_next/image` on disk for 30 days — keep that in place, or
+  drop `'image/avif'` from `next.config.ts` if the box still struggles.
+- ISR and `unstable_cache` write to `.next/cache`. Docker Compose mounts a
+  volume there so the cache survives restarts.
+- Admin Excel/YML imports are memory-hungry. Prefer running the sync scripts
+  (`npm run caralarm:catalog`) off-server rather than through the admin UI.
+- Catalog revalidation is a plain webhook: `POST /api/cron/revalidate-catalog`
+  with `Authorization: Bearer $CRON_SECRET`. Drive it from cron or CI.
 
 ## Auth Setup (Google OAuth)
 

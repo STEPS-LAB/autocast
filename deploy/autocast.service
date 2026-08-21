@@ -1,0 +1,44 @@
+# Autocast — systemd unit for running the standalone build without Docker.
+#
+# Assumes the contents of `.next/standalone` (plus `public/` and
+# `.next/static`) were copied to /srv/autocast, and `.env` sits alongside.
+#
+# Install:
+#   sudo cp deploy/autocast.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now autocast
+
+[Unit]
+Description=Autocast (Next.js standalone server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=autocast
+Group=autocast
+WorkingDirectory=/srv/autocast
+EnvironmentFile=/srv/autocast/.env
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3000
+ExecStart=/usr/bin/node server.js
+
+# Next drains in-flight requests and pending after() callbacks on SIGTERM.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=always
+RestartSec=5
+
+# On a 2 GB box, cap the heap so an oversized Excel import cannot take the
+# whole machine down with it — the process restarts instead.
+Environment=NODE_OPTIONS=--max-old-space-size=1024
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/autocast/.next/cache
+
+[Install]
+WantedBy=multi-user.target

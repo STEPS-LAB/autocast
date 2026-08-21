@@ -32,12 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # local database dumps (never commit)
 *.dump
 
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo

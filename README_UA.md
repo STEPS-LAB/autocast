@@ -18,7 +18,7 @@
 | Форми | React Hook Form + Zod |
 | Backend | Supabase (PostgreSQL, Auth, Storage) |
 | Тестування | Vitest + Playwright |
-| Деплой | Vercel |
+| Деплой | Власний Node-сервер (standalone) за nginx |
 
 ## Функціональність
 
@@ -149,12 +149,64 @@ npm run test:e2e:ui  # Playwright з UI
 | `--color-accent` | `#DC2626` | Автомобільний червоний акцент |
 | `--color-border` | `#3F3F46` | Границі |
 
-## Деплой (Vercel)
+## Деплой (власний VPS)
 
-1. Завантажте на GitHub
-2. Підключіть репозиторій у Vercel dashboard
-3. Додайте змінні середовища в налаштуваннях проекту Vercel
-4. Деплой
+Проєкт не привʼязаний до жодної платформи: немає `vercel.json`, немає
+edge-роутів, немає SDK провайдера. Збірка дає автономний Node-сервер
+(`output: 'standalone'` у `next.config.ts`), який працює за nginx.
+
+### Рекомендація: збирайте не на сервері
+
+`next build` потребує 2-4 ГБ RAM. На малому VPS збирайте локально або в CI і
+відправляйте готовий артефакт — на 2 ГБ збірку вбʼє OOM.
+
+### Варіант A — Docker Compose
+
+```bash
+cp .env.example .env      # впишіть ключі Supabase і NEXT_PUBLIC_SITE_URL
+docker compose up -d --build
+```
+
+Далі — nginx попереду:
+
+```bash
+sudo cp deploy/nginx-cache.conf /etc/nginx/conf.d/autocast-cache.conf
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/autocast
+sudo ln -s /etc/nginx/sites-available/autocast /etc/nginx/sites-enabled/
+sudo certbot --nginx -d your-domain.com
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Варіант B — чистий Node + systemd
+
+```bash
+npm run build:standalone                        # створює .next/standalone
+rsync -a .next/standalone/ user@server:/srv/autocast/
+scp .env user@server:/srv/autocast/.env
+sudo cp deploy/autocast.service /etc/systemd/system/
+sudo systemctl enable --now autocast
+```
+
+### Змінні середовища
+
+Скопіюйте `.env.example` і заповніть. Важливо: кожне значення `NEXT_PUBLIC_*`
+**вшивається під час збірки** — щоб змінити його, потрібен ребілд, а не
+рестарт. `NEXT_PUBLIC_SITE_URL` обовʼязковий у продакшені: без нього редиректи
+авторизації та листи відновлення пароля вказуватимуть на `localhost:3000`.
+
+Перевірити, що саме побачив сервер: `GET /api/health/env`.
+
+### Нотатки для слабких серверів
+
+- Оптимізація зображень (AVIF/WebP) — найважча CPU-операція. Конфіг nginx
+  кешує `/_next/image` на диску 30 днів; якщо серверу все одно важко —
+  приберіть `'image/avif'` з `next.config.ts`.
+- ISR та `unstable_cache` пишуть у `.next/cache`. Docker Compose монтує туди
+  volume, щоб кеш переживав рестарти.
+- Імпорти Excel/YML в адмінці їдять багато памʼяті. Краще запускати скрипти
+  синхронізації (`npm run caralarm:catalog`) поза сервером.
+- Ревалідація каталогу — звичайний вебхук: `POST /api/cron/revalidate-catalog`
+  із заголовком `Authorization: Bearer $CRON_SECRET`. Викликайте з cron або CI.
 
 ## Налаштування Google OAuth
 

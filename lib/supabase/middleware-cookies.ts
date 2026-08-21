@@ -13,10 +13,10 @@ export function getAuthCookieStorageKey(supabaseUrl: string): string {
 
 /**
  * Reads the Supabase session user from request cookies only — no Auth API or
- * refresh calls. Used in Edge middleware to avoid Vercel
- * MIDDLEWARE_INVOCATION_TIMEOUT when tokens are expired (getSession() would
- * block on refresh). Token refresh happens in Server Components / route
- * handlers via createClient().
+ * refresh calls. Used in middleware so an expired token cannot stall every
+ * request on a network round-trip (getSession() would block on refresh).
+ * Token refresh happens in Server Components / route handlers via
+ * createClient().
  */
 export async function getSessionUserFromCookies(
   request: NextRequest,

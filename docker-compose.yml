@@ -1,0 +1,37 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        # Read from the host `.env` — these are baked into the client bundle,
+        # so the image must be rebuilt when any of them changes.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}
+    image: autocast:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    # Bound to loopback: nginx on the host terminates TLS and proxies here.
+    # Drop the `127.0.0.1:` prefix only if nothing else fronts the app.
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      # ISR + `unstable_cache` entries survive container restarts.
+      - next-cache:/app/.next/cache
+    # Give in-flight requests time to drain on redeploy.
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+volumes:
+  next-cache:

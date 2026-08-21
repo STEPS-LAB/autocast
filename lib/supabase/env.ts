@@ -28,8 +28,10 @@ export function getSupabaseAnonKey() {
 
 /**
  * Public site base URL for redirects, metadata, and auth email links.
- * With `request`, prefers `x-forwarded-*` over `request.url` so serverless
- * does not emit links using an internal localhost origin.
+ * Set `NEXT_PUBLIC_SITE_URL` in production — it is the only source that is
+ * correct for links generated outside a request (emails, sitemap, metadata).
+ * With `request`, prefers `x-forwarded-*` over `request.url` so a reverse
+ * proxy does not make us emit links pointing at the internal origin.
  */
 export function getSiteUrl(request?: Request) {
   const configured =
@@ -47,17 +49,7 @@ export function getSiteUrl(request?: Request) {
         forwardedProto?.split(',')[0]?.trim().replace(/:$/, '') ?? 'https'
       if (host) return normalizeBaseUrl(`${proto}://${host}`)
     }
-  }
 
-  const vercelProduction = process.env['VERCEL_PROJECT_PRODUCTION_URL']
-  if (vercelProduction) {
-    return normalizeBaseUrl(vercelProduction)
-  }
-
-  const vercelUrl = process.env['VERCEL_URL']
-  if (vercelUrl) return normalizeBaseUrl(`https://${vercelUrl}`)
-
-  if (request) {
     try {
       const origin = new URL(request.url).origin
       if (origin && origin !== 'null') return trimTrailingSlash(origin)

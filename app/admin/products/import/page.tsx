@@ -24,7 +24,7 @@ type LiveProgress = {
 
 function messageFromNonJson(text: string, status: number): string {
   if (/FUNCTION_PAYLOAD_TOO_LARGE|Request Entity Too Large/i.test(text)) {
-    return 'Файл завеликий для прямого запиту. Завантажте ще раз — Excel іде через сховище, не через ліміт Vercel.'
+    return 'Файл завеликий для прямого запиту. Завантажте ще раз — Excel іде через сховище, не через ліміт тіла запиту.'
   }
   if (/An error occurred with your deployment/i.test(text) || text.startsWith('An error')) {
     return 'Сервер обірвав запит (таймаут або брак памʼяті). Великий XML/Excel обробляється кількома проходами — спробуйте ще раз.'

@@ -6,13 +6,25 @@ const IMMUTABLE_ONE_YEAR = 'public, max-age=31536000, immutable'
 /** Public files without content hashes — short browser TTL + long SWR. */
 const PUBLIC_ASSET_SHORT = 'public, max-age=86400, stale-while-revalidate=604800'
 
-/** HTML / public JSON at the CDN edge (Vercel) with quick revalidation. */
+/** HTML / public JSON at the reverse proxy or CDN edge, with quick revalidation. */
 const HTML_CDN = 'public, max-age=0, must-revalidate, s-maxage=60, stale-while-revalidate=30'
 
 /** Auth, checkout, admin — never cache. */
 const PRIVATE_NO_STORE = 'private, no-store, max-age=0, must-revalidate'
 
 const nextConfig: NextConfig = {
+  /**
+   * Self-hosted build: emits `.next/standalone` with a minimal `server.js` and
+   * only the traced `node_modules`, so the VPS never needs `npm install`.
+   * `public/` and `.next/static` must be copied in manually — see Dockerfile.
+   */
+  output: 'standalone',
+
+  /** Native image codecs are loaded at runtime, so tracing can miss them. */
+  outputFileTracingIncludes: {
+    '/*': ['node_modules/sharp/**/*'],
+  },
+
   images: {
     /** Дозволяє `next/image` для файлів з `public/images/` і query (напр. `?rev=` для скидання кешу). */
     localPatterns: [{ pathname: '/images/**' }],

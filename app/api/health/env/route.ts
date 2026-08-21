@@ -31,8 +31,6 @@ export async function GET() {
         SUPABASE_SERVICE_ROLE_KEY: Boolean(process.env['SUPABASE_SERVICE_ROLE_KEY']),
         NEXT_PUBLIC_SITE_URL: Boolean(process.env['NEXT_PUBLIC_SITE_URL']),
         SITE_URL: Boolean(process.env['SITE_URL']),
-        VERCEL_PROJECT_PRODUCTION_URL: Boolean(process.env['VERCEL_PROJECT_PRODUCTION_URL']),
-        VERCEL_URL: Boolean(process.env['VERCEL_URL']),
       },
     },
     {

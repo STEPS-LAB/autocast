@@ -107,7 +107,7 @@ export type ParseYmlOptions = {
   skipPdfUrls?: boolean
   /**
    * Skip description HTML, params, and PDFs. Use for preview of large feeds
-   * so Vercel does not OOM on 100MB+ XML.
+   * so the server does not OOM on 100MB+ XML.
    */
   lite?: boolean
   signal?: AbortSignal
