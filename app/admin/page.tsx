@@ -42,11 +42,22 @@ export default async function AdminDashboard() {
   const { formatDual } = await getServerAdminPriceFormatter()
   const supabase = await createClient()
   const { startOfPreviousMonth, startOfCurrentMonth, startOfNextMonth } = getMonthBounds()
-  const [productsResult, categoriesResult, ordersResult, profilesResult, currentMonthOrdersResult, previousMonthOrdersResult] = await Promise.all([
+  // The dashboard only needs a count and five rows. Selecting the whole table
+  // pulled ~1000 products per load — and silently reported 1000 as the total,
+  // because PostgREST caps an unbounded response at 1000 rows.
+  const [productsCountResult, featuredResult, recentResult, categoriesResult, ordersResult, profilesResult, currentMonthOrdersResult, previousMonthOrdersResult] = await Promise.all([
+    supabase.from('products').select('id', { count: 'exact', head: true }),
     supabase
       .from('products')
       .select('id,name_ua,price,sale_price,stock,is_featured,created_at')
-      .order('created_at', { ascending: false }),
+      .eq('is_featured', true)
+      .order('created_at', { ascending: false })
+      .limit(5),
+    supabase
+      .from('products')
+      .select('id,name_ua,price,sale_price,stock,is_featured,created_at')
+      .order('created_at', { ascending: false })
+      .limit(5),
     supabase.from('categories').select('id', { count: 'exact', head: true }),
     supabase.from('orders').select('id,status,total,shipping_info,created_at').order('created_at', { ascending: false }).limit(5),
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
@@ -62,7 +73,7 @@ export default async function AdminDashboard() {
       .lt('created_at', startOfCurrentMonth),
   ])
 
-  const products = productsResult.data ?? []
+  const productsCount = productsCountResult.count ?? 0
   const categoriesCount = categoriesResult.count ?? 0
   const orders = ordersResult.data ?? []
   const currentMonthOrders = currentMonthOrdersResult.data ?? []
@@ -74,8 +85,8 @@ export default async function AdminDashboard() {
   const usersCount = profilesResult.count ?? 0
   // On the dashboard we want to show products from the "Товари" section.
   // If featured products are configured, prefer them; otherwise fall back to any products.
-  const featuredProducts = products.filter(p => p.is_featured)
-  const topProducts = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 5)
+  const featuredProducts = featuredResult.data ?? []
+  const topProducts = featuredProducts.length > 0 ? featuredProducts : (recentResult.data ?? [])
 
   return (
     <div className="fade-up-in">
@@ -104,7 +115,7 @@ export default async function AdminDashboard() {
         />
         <AnalyticsCard
           title="Товарів"
-          value={String(products.length)}
+          value={String(productsCount)}
           icon={Package}
           description={`${categoriesCount} категорій`}
         />

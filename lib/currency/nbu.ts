@@ -31,9 +31,18 @@ export function parseNbuExchangeDate(value?: string): string {
   return new Date().toISOString()
 }
 
+/**
+ * The admin dashboard awaits this before rendering anything, so an
+ * unresponsive bank.gov.ua would otherwise hang the whole page until Node's
+ * socket timeout. `getUsdRate()` falls back to a static rate on throw, so
+ * failing fast here is strictly better than waiting.
+ */
+const NBU_TIMEOUT_MS = 5_000
+
 export async function fetchNbuUsdRate(): Promise<NbuUsdRate> {
   const response = await fetch(NBU_USD_URL, {
     next: { revalidate: 86_400 },
+    signal: AbortSignal.timeout(NBU_TIMEOUT_MS),
   })
 
   if (!response.ok) {
