@@ -29,6 +29,23 @@ const nextConfig: NextConfig = {
     /** Дозволяє `next/image` для файлів з `public/images/` і query (напр. `?rev=` для скидання кешу). */
     localPatterns: [{ pathname: '/images/**' }],
     qualities: [75, 80],
+
+    /**
+     * Кожна унікальна комбінація (url, w, q, format) — це окреме кодування
+     * ціною ~450 мс CPU, і воно не залежить від розміру. Дефолтні 8
+     * deviceSizes + 7 imageSizes дають до 15 варіантів на картинку, хоча
+     * реальні `sizes` у проєкті — це 40–112px іконки та 25vw–100vw картки.
+     * Вужчий набір прямо ділить навантаження на CPU.
+     */
+    deviceSizes: [640, 828, 1080, 1920],
+    imageSizes: [64, 128, 256, 384],
+
+    /**
+     * Картинки товарів не змінюються — переоптимізовувати їх кожні 4 години
+     * (дефолт) немає сенсу. Кеш живе у .next/cache/images, який змонтований
+     * як volume, тож переживає перезапуск.
+     */
+    minimumCacheTTL: 2678400,
     // DNS (e.g. NAT64 / 64:ff9b::…) can make public CDNs resolve to addresses Next
     // treats as “private”, which breaks `/_next/image` for Supabase storage.
     dangerouslyAllowLocalIP: true,
@@ -93,7 +110,14 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    formats: ['image/avif', 'image/webp'],
+    /**
+     * Тільки WebP. AVIF стискає на ~27% краще, але кодується довше і — що
+     * важливіше — зберігається окремим набором варіантів, тобто подвоює
+     * кількість кодувань на ту саму картинку. Документація Next теж радить
+     * WebP для більшості випадків. На VPS із 1–2 ядрами CPU дорожчий за
+     * трафік; поверніть 'image/avif' першим, якщо пріоритети зміняться.
+     */
+    formats: ['image/webp'],
   },
   serverExternalPackages: ['exceljs'],
   experimental: {
