@@ -28,7 +28,7 @@ export default function HomeProductsSection({ products }: HomeProductsSectionPro
           <div className="max-w-2xl">
             <h2 className="text-headline text-text-primary mb-3">Наші товари</h2>
             <p className="text-text-secondary">
-              Добірка з каталогу Autocast — автозвук, магнітоли, світло та відеореєстратори.
+              Випадкова добірка з каталогу Autocast — автозвук, світло, електроніка та все для монтажу.
             </p>
           </div>
           <Link href="/shop" title={linkTitleShop()} className="block w-full md:w-auto md:shrink-0">
