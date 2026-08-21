@@ -145,16 +145,23 @@ async function fetchCategories(_dbOnly: boolean): Promise<Category[]> {
   }
 }
 
+/**
+ * TTLs here are a safety net, not the primary freshness mechanism: imports and
+ * admin edits call `revalidateCatalogCache()`, which busts these tags at once.
+ * A short TTL only forced the category taxonomy pass to re-run for no benefit.
+ */
+const CATALOG_CACHE_TTL = 600
+
 const getCategoriesCached = unstable_cache(
   () => fetchCategories(false),
   ['catalog-categories', 'db-only'],
-  { revalidate: 120, tags: ['catalog-categories'] }
+  { revalidate: CATALOG_CACHE_TTL, tags: ['catalog-categories'] }
 )
 
 const getCategoriesDbOnlyCached = unstable_cache(
   () => fetchCategories(true),
   ['catalog-categories-dbonly', 'db-only'],
-  { revalidate: 120, tags: ['catalog-categories'] }
+  { revalidate: CATALOG_CACHE_TTL, tags: ['catalog-categories'] }
 )
 
 export async function getCategories(options?: CatalogReadOptions): Promise<Category[]> {
@@ -188,7 +195,9 @@ async function fetchUsedCategoryIds(): Promise<string[]> {
 const getUsedCategoryIdsCached = unstable_cache(
   fetchUsedCategoryIds,
   ['catalog-used-category-ids', 'db-only'],
-  { revalidate: 60, tags: ['catalog-products', 'catalog-categories'] }
+  // Pages through every product row, so keep it cached until an import
+  // invalidates the tag rather than re-scanning each minute.
+  { revalidate: CATALOG_CACHE_TTL, tags: ['catalog-products', 'catalog-categories'] }
 )
 
 export async function getUsedCategoryIds(): Promise<Set<string>> {
@@ -213,7 +222,8 @@ async function fetchBrands(_dbOnly: boolean): Promise<Brand[]> {
 const getBrandsCached = unstable_cache(
   () => fetchBrands(false),
   ['catalog-brands', 'db-only'],
-  { revalidate: 120 }
+  // Tagged so an import refreshes brands too — previously time-only.
+  { revalidate: CATALOG_CACHE_TTL, tags: ['catalog-products', 'catalog-categories'] }
 )
 
 export async function getBrands(options?: CatalogReadOptions): Promise<Brand[]> {

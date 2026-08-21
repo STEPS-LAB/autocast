@@ -1,6 +1,7 @@
 /**
  * Normalize feed category labels to Ukrainian and avoid creating Russian names.
  */
+import { memoizeByString } from './memo'
 
 /** Parent category for car-care / chemistry leaves. */
 export const CANONICAL_CAR_CARE_CATEGORY = 'Автохімія'
@@ -121,24 +122,38 @@ export function looksRussian(value: string): boolean {
   return RU_MARKERS.test(text)
 }
 
+/**
+ * Exact-match lookup, built once. Replaces a linear scan of RU_TO_UA that ran
+ * on every call — and this function sits at the bottom of the category
+ * predicate cascade, so it is called hundreds of thousands of times per
+ * catalog render.
+ */
+const RU_TO_UA_EXACT = new Map(RU_TO_UA)
+
+/**
+ * Phrase replacements, sorted longest-first and pre-compiled once at module
+ * load. Building these per call cost ~36 `new RegExp` plus a full sort on
+ * every invocation, which dominated the shop page's cold render.
+ */
+const RU_TO_UA_PATTERNS: Array<{ re: RegExp; ua: string }> = [...RU_TO_UA]
+  .sort((a, b) => b[0].length - a[0].length)
+  .map(([ru, ua]) => ({ re: new RegExp(escapeRegExp(ru), 'gi'), ua }))
+
 /** Apply known RU→UA phrase replacements (case-insensitive). */
 export function translateCategoryToUkrainian(name: string): string {
   let result = name.trim()
   if (!result) return result
 
-  const lower = result.toLowerCase()
-  for (const [ru, ua] of RU_TO_UA) {
-    if (lower === ru) {
-      return capitalizeUa(ua)
-    }
-  }
+  const exact = RU_TO_UA_EXACT.get(result.toLowerCase())
+  if (exact !== undefined) return capitalizeUa(exact)
 
-  const sorted = [...RU_TO_UA].sort((a, b) => b[0].length - a[0].length)
   let replaced = false
-  for (const [ru, ua] of sorted) {
-    const re = new RegExp(escapeRegExp(ru), 'gi')
-    if (re.test(result)) {
-      result = result.replace(re, ua)
+  for (const { re, ua } of RU_TO_UA_PATTERNS) {
+    // `replace` with a /g/ regex always scans from 0 and resets lastIndex, so
+    // a shared instance is safe here — `test` on a shared /g/ regex is not.
+    const next = result.replace(re, ua)
+    if (next !== result) {
+      result = next
       replaced = true
     }
   }
@@ -157,10 +172,14 @@ export function translateCategoryToUkrainian(name: string): string {
   return result.trim()
 }
 
-export function ensureUkrainianCategoryName(name: string): string {
+const ensureUkrainianCategoryNameMemo = memoizeByString((name: string): string => {
   const trimmed = name.trim()
   if (!trimmed) return trimmed
   return translateCategoryToUkrainian(trimmed)
+})
+
+export function ensureUkrainianCategoryName(name: string): string {
+  return ensureUkrainianCategoryNameMemo(name)
 }
 
 function aliasKey(name: string): string {
@@ -207,7 +226,7 @@ export function isCarCareCategoryName(name: string): boolean {
  * subcategory names (Шампуні, Очисники, Віск…). Does not flatten children
  * into the parent.
  */
-export function canonicalizeImportCategoryName(name: string): string {
+const canonicalizeImportCategoryNameMemo = memoizeByString((name: string): string => {
   const ua = ensureUkrainianCategoryName(name)
   if (!ua) return ua
 
@@ -225,6 +244,10 @@ export function canonicalizeImportCategoryName(name: string): string {
   }
 
   return ua
+})
+
+export function canonicalizeImportCategoryName(name: string): string {
+  return canonicalizeImportCategoryNameMemo(name)
 }
 
 function capitalizeUa(value: string): string {

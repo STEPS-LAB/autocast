@@ -1,5 +1,6 @@
 import { slugifyName } from '@/lib/utils'
 import { canonicalizeImportCategoryName } from './category-locale'
+import { memoizeByString } from './memo'
 
 /** Synonym groups: any member matches any other (after normalization). */
 const SYNONYM_GROUPS: string[][] = [
@@ -32,7 +33,7 @@ const STOP_TOKENS = new Set([
   'of',
 ])
 
-export function normalizeCategoryKey(name: string): string {
+const normalizeCategoryKeyMemo = memoizeByString((name: string): string => {
   // Canonicalize first so шампуні / віск / ароматизатори → автохімія
   const canonical = canonicalizeImportCategoryName(name)
   return canonical
@@ -43,10 +44,19 @@ export function normalizeCategoryKey(name: string): string {
     .replace(/\bавто(?!хімі|догляд|звук)(?=\p{L})/gu, '')
     .replace(/\s+/g, ' ')
     .trim()
+})
+
+/** Hot path: called for both sides of every `categoryKeysEquivalent` check. */
+export function normalizeCategoryKey(name: string): string {
+  return normalizeCategoryKeyMemo(name)
 }
 
+const categorySlugKeyMemo = memoizeByString((name: string): string =>
+  slugifyName(canonicalizeImportCategoryName(name), '')
+)
+
 export function categorySlugKey(name: string): string {
-  return slugifyName(canonicalizeImportCategoryName(name), '')
+  return categorySlugKeyMemo(name)
 }
 
 function tokensOf(normalized: string): string[] {
